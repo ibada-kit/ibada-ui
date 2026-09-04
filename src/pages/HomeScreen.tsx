@@ -763,23 +763,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             {/* Detailed Rankings List */}
             <div className="glass-card" style={{ overflow: 'hidden' }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '60px 2fr 1.2fr 1fr 1.2fr',
-                padding: '14px 20px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderBottom: '1px solid var(--border-subtle)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: 'var(--text-muted)',
-                letterSpacing: '0.04em'
-              }}>
-                <span>Rank</span>
+              <div className="leaderboard-row leaderboard-header">
+                <span>#</span>
                 <span>Name</span>
-                <span>Ward & Role</span>
+                <span>Ward</span>
                 <span style={{ textAlign: 'center' }}>Kits</span>
-                <span style={{ textAlign: 'right' }}>Total Raised</span>
+                <span style={{ textAlign: 'right' }}>Raised</span>
               </div>
 
               {rankedVolunteers.map((vol) => {
@@ -787,31 +776,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 return (
                   <div
                     key={vol.id}
-                    className="glass-card-interactive"
+                    className="leaderboard-row glass-card-interactive"
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '60px 2fr 1.2fr 1fr 1.2fr',
-                      padding: '16px 20px',
-                      alignItems: 'center',
                       borderBottom: '1px solid var(--border-subtle)',
                       background: isCurrentUser ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
                       borderLeft: isCurrentUser ? '3px solid var(--primary)' : 'none'
                     }}
                   >
                     {/* Rank */}
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                       {vol.dynamicRank === 1 ? (
-                        <span style={{ fontSize: '1.2rem' }}>🥇</span>
+                        <span style={{ fontSize: '1.15rem' }}>🥇</span>
                       ) : vol.dynamicRank === 2 ? (
-                        <span style={{ fontSize: '1.2rem' }}>🥈</span>
+                        <span style={{ fontSize: '1.15rem' }}>🥈</span>
                       ) : vol.dynamicRank === 3 ? (
-                        <span style={{ fontSize: '1.2rem' }}>🥉</span>
+                        <span style={{ fontSize: '1.15rem' }}>🥉</span>
                       ) : (
                         <span style={{
                           fontWeight: 700,
-                          fontSize: '0.92rem',
-                          color: 'var(--text-muted)',
-                          paddingLeft: 4
+                          fontSize: '0.85rem',
+                          color: 'var(--text-muted)'
                         }}>
                           #{vol.dynamicRank}
                         </span>
@@ -819,10 +803,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     </div>
 
                     {/* Member Info */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                       <div style={{
-                        width: 36,
-                        height: 36,
+                        width: 30,
+                        height: 30,
                         borderRadius: '50%',
                         background: vol.role === 'Coordinator'
                           ? 'linear-gradient(135deg, #38bdf8, #6366f1)'
@@ -831,48 +815,61 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontWeight: 700,
-                        fontSize: '0.85rem'
+                        fontSize: '0.78rem',
+                        flexShrink: 0
                       }}>
                         {vol.name.charAt(0)}
                       </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{vol.name}</span>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '0.88rem',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {vol.name}
+                          </span>
                           {isCurrentUser && (
-                            <span className="badge badge-emerald" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                            <span className="badge badge-emerald" style={{ fontSize: '0.58rem', padding: '1px 4px' }}>
                               You
                             </span>
                           )}
                         </div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                          {vol.donationsCount} donations logged
+                        <span style={{
+                          fontSize: '0.68rem',
+                          color: 'var(--text-secondary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: 'block'
+                        }}>
+                          {vol.donationsCount} logs
                         </span>
                       </div>
                     </div>
 
                     {/* Ward & Role */}
-                    <div>
-                      <span className="badge badge-blue" style={{ fontSize: '0.7rem' }}>
-                        Ward {vol.wardNumber}
-                      </span>
-                      <span className={`badge ${vol.role === 'Coordinator' ? 'badge-purple' : 'badge-emerald'}`} style={{ fontSize: '0.66rem', marginLeft: 6, padding: '2px 6px' }}>
-                        {vol.role}
+                    <div style={{ minWidth: 0 }}>
+                      <span className="badge badge-blue" style={{ fontSize: '0.65rem', padding: '2px 5px' }}>
+                        W{vol.wardNumber}
                       </span>
                     </div>
 
                     {/* Kits */}
                     <div style={{ textAlign: 'center' }}>
-                      <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary-light)' }}>
+                      <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--primary-light)' }}>
                         {vol.kitsCollected}
                       </span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block' }}>
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', display: 'block' }}>
                         kits
                       </span>
                     </div>
 
                     {/* Total Raised */}
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
+                      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
                         ₹{vol.totalAmount.toLocaleString('en-IN')}
                       </span>
                     </div>
