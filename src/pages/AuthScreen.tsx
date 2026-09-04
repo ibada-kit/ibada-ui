@@ -163,22 +163,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px 16px',
+      padding: 'max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)) 16px',
       position: 'relative'
     }}>
       {/* Decorative Glow Elements */}
       <div style={{
         position: 'absolute',
-        top: '15%',
+        top: '10%',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: 320,
-        height: 320,
+        width: 'min(320px, 90vw)',
+        height: 260,
         borderRadius: '50%',
         background: 'radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, transparent 70%)',
         filter: 'blur(40px)',
@@ -189,30 +189,30 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
       <div style={{ width: '100%', maxWidth: 460, position: 'relative', zIndex: 2 }}>
         
         {/* Logo & Headline */}
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <div style={{ textAlign: 'center', marginBottom: 22 }}>
           <div style={{
-            width: 58,
-            height: 58,
-            borderRadius: 18,
+            width: 52,
+            height: 52,
+            borderRadius: 16,
             background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-            margin: '0 auto 16px auto',
+            margin: '0 auto 12px auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
           }}>
-            <Heart size={30} color="#ffffff" fill="#ffffff" />
+            <Heart size={26} color="#ffffff" fill="#ffffff" />
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6 }}>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>
             Madavoor Relief Drive
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
-            Official Volunteer & Coordinator Donation Portal
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+            Volunteer & Coordinator Portal
           </p>
         </div>
 
         {/* Card */}
-        <div className="glass-card" style={{ padding: '32px 28px' }}>
+        <div className="glass-card" style={{ padding: '24px 20px' }}>
           
           {/* Tabs: Sign In vs Sign Up */}
           {step === 'phone' && (
@@ -462,13 +462,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                 </p>
               </div>
 
-              {/* 6-box segmented OTP inputs */}
+              {/* 6-box segmented OTP inputs with mobile fluid sizing */}
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'center',
-                  gap: 10,
-                  marginBottom: 20
+                  gap: 'min(10px, 2vw)',
+                  marginBottom: 20,
+                  width: '100%'
                 }}
                 onPaste={handlePaste}
               >
@@ -485,10 +486,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
                     style={{
-                      width: 48,
-                      height: 54,
+                      width: 'clamp(40px, 12vw, 48px)',
+                      height: 'clamp(46px, 14vw, 54px)',
                       textAlign: 'center',
-                      fontSize: '1.4rem',
+                      fontSize: 'clamp(1.15rem, 4vw, 1.4rem)',
                       fontWeight: 700,
                       background: 'rgba(15, 23, 42, 0.7)',
                       border: digit ? '2px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.15)',

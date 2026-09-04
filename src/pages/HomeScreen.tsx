@@ -140,7 +140,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }
 
   return (
-    <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px 80px 20px' }}>
+    <main style={{
+      maxWidth: 1200,
+      margin: '0 auto',
+      padding: '16px 14px calc(90px + var(--safe-area-bottom)) 14px',
+      width: '100%'
+    }}>
       
       {/* =========================================================================
           SECTION 1: TOTAL COLLECTED DONATIONS THIS WEEK
@@ -1032,24 +1037,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
       </section>
 
-      {/* Quick Floating Action on Mobile */}
-      <div style={{
-        position: 'fixed',
-        bottom: 24,
-        right: 24,
-        zIndex: 40
-      }}>
+      {/* Quick Floating Action on Mobile with PWA Safe Area */}
+      <div className="pwa-floating-btn">
         <button
           id="btn-floating-record"
           onClick={onOpenRecordModal}
           className="btn-primary"
           style={{
-            padding: '14px 22px',
+            padding: '13px 20px',
             borderRadius: 'var(--radius-full)',
             boxShadow: '0 8px 25px rgba(16, 185, 129, 0.5)'
           }}
         >
-          <Package size={20} />
+          <Package size={19} />
           <span>Record Donation</span>
         </button>
       </div>
