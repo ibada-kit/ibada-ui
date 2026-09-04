@@ -802,50 +802,33 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       )}
                     </div>
 
-                    {/* Member Info */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                      <div style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: '50%',
-                        background: vol.role === 'Coordinator'
-                          ? 'linear-gradient(135deg, #38bdf8, #6366f1)'
-                          : 'linear-gradient(135deg, #10b981, #0ea5e9)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '0.78rem',
-                        flexShrink: 0
-                      }}>
-                        {vol.name.charAt(0)}
-                      </div>
-                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{
-                            fontWeight: 700,
-                            fontSize: '0.88rem',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}>
-                            {vol.name}
+                    {/* Member Info: No avatar icon, wrapping name, and user role badge */}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                        <span style={{
+                          fontWeight: 700,
+                          fontSize: '0.88rem',
+                          lineHeight: 1.25,
+                          wordBreak: 'break-word',
+                          color: '#ffffff'
+                        }}>
+                          {vol.name}
+                        </span>
+                        {isCurrentUser && (
+                          <span className="badge badge-emerald" style={{ fontSize: '0.58rem', padding: '1px 4px' }}>
+                            You
                           </span>
-                          {isCurrentUser && (
-                            <span className="badge badge-emerald" style={{ fontSize: '0.58rem', padding: '1px 4px' }}>
-                              You
-                            </span>
-                          )}
-                        </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 3 }}>
+                        <span className={`badge ${vol.role === 'Coordinator' ? 'badge-blue' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', padding: '1px 5px' }}>
+                          {vol.role}
+                        </span>
                         <span style={{
                           fontSize: '0.68rem',
-                          color: 'var(--text-secondary)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: 'block'
+                          color: 'var(--text-secondary)'
                         }}>
-                          {vol.donationsCount} logs
+                          • {vol.donationsCount} logs
                         </span>
                       </div>
                     </div>
