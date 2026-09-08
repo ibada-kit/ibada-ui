@@ -4,11 +4,13 @@ import { getCurrentUser, setCurrentUser } from './services/api';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './pages/AuthScreen';
 import { HomeScreen } from './pages/HomeScreen';
+import { AdminPanel } from './pages/AdminPanel';
 import { RecordDonationModal } from './components/RecordDonationModal';
 import { ReceiptModal } from './components/ReceiptModal';
 
 export const App: React.FC = () => {
   const [currentUser, setCurUser] = useState<User | null>(null);
+  const [activeView, setActiveView] = useState<'home' | 'admin'>('home');
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<Donation | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -22,11 +24,13 @@ export const App: React.FC = () => {
 
   const handleAuthSuccess = (user: User) => {
     setCurUser(user);
+    setActiveView('home');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setCurUser(null);
+    setActiveView('home');
   };
 
   const handleDonationRecorded = (donation: Donation) => {
@@ -41,16 +45,25 @@ export const App: React.FC = () => {
         <>
           <Navbar
             user={currentUser}
+            activeView={activeView}
+            onNavigateView={(view) => setActiveView(view)}
             onOpenRecordModal={() => setIsRecordModalOpen(true)}
             onLogout={handleLogout}
           />
 
-          <HomeScreen
-            key={refreshKey}
-            user={currentUser}
-            onOpenRecordModal={() => setIsRecordModalOpen(true)}
-            onViewReceipt={(don) => setActiveReceipt(don)}
-          />
+          {activeView === 'admin' && currentUser.role === 'Admin' ? (
+            <AdminPanel
+              currentUser={currentUser}
+              onNavigateHome={() => setActiveView('home')}
+            />
+          ) : (
+            <HomeScreen
+              key={refreshKey}
+              user={currentUser}
+              onOpenRecordModal={() => setIsRecordModalOpen(true)}
+              onViewReceipt={(don) => setActiveReceipt(don)}
+            />
+          )}
 
           {/* Record Donation Modal */}
           {isRecordModalOpen && (

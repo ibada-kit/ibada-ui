@@ -126,7 +126,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
       const clean = phoneNumber.replace(/\D/g, '');
       const loginRes = await authApi.verifyOtp(clean, otpCode);
 
-      // If sign up mode was chosen with custom name, enhance user profile
       const storedUser: User = {
         userId: `usr-${Date.now()}`,
         fullName: mode === 'signup' && fullName ? fullName : loginRes.fullName,
@@ -169,22 +168,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 'max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)) 16px',
+      backgroundColor: '#F8FAFC',
       position: 'relative'
     }}>
-      {/* Decorative Glow Elements */}
-      <div style={{
-        position: 'absolute',
-        top: '10%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'min(320px, 90vw)',
-        height: 260,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, transparent 70%)',
-        filter: 'blur(40px)',
-        pointerEvents: 'none'
-      }} />
-
       {/* Main Container */}
       <div style={{ width: '100%', maxWidth: 460, position: 'relative', zIndex: 2 }}>
         
@@ -193,32 +179,32 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
           <div style={{
             width: 52,
             height: 52,
-            borderRadius: 16,
-            background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+            borderRadius: 14,
+            background: '#42B06F',
             margin: '0 auto 12px auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
+            boxShadow: '0 4px 12px rgba(66, 176, 111, 0.25)'
           }}>
             <Heart size={26} color="#ffffff" fill="#ffffff" />
           </div>
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4, color: '#0F172A' }}>
             Madavoor Relief Drive
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
             Volunteer & Coordinator Portal
           </p>
         </div>
 
         {/* Card */}
-        <div className="glass-card" style={{ padding: '24px 20px' }}>
+        <div className="glass-card" style={{ padding: '24px 20px', background: '#FFFFFF' }}>
           
           {/* Tabs: Sign In vs Sign Up */}
           {step === 'phone' && (
             <div style={{
               display: 'flex',
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: '#F1F5F9',
               borderRadius: 'var(--radius-md)',
               padding: 4,
               marginBottom: 24,
@@ -237,12 +223,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                   padding: '9px 12px',
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
-                  background: mode === 'login' ? 'var(--primary)' : 'transparent',
+                  background: mode === 'login' ? '#42B06F' : 'transparent',
                   color: mode === 'login' ? '#ffffff' : 'var(--text-secondary)',
                   fontWeight: 600,
                   fontSize: '0.88rem',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.15s ease'
                 }}
               >
                 <LogIn size={16} />
@@ -261,12 +247,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                   padding: '9px 12px',
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
-                  background: mode === 'signup' ? 'var(--primary)' : 'transparent',
+                  background: mode === 'signup' ? '#256CAA' : 'transparent',
                   color: mode === 'signup' ? '#ffffff' : 'var(--text-secondary)',
                   fontWeight: 600,
                   fontSize: '0.88rem',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.15s ease'
                 }}
               >
                 <UserPlus size={16} />
@@ -283,10 +269,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
               gap: 10,
               padding: '12px 14px',
               borderRadius: 'var(--radius-md)',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#fca5a5',
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: '#B91C1C',
               fontSize: '0.85rem',
+              fontWeight: 600,
               marginBottom: 20
             }}>
               <AlertCircle size={18} style={{ flexShrink: 0 }} />
@@ -302,10 +289,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
               gap: 10,
               padding: '12px 14px',
               borderRadius: 'var(--radius-md)',
-              background: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: '#6ee7b7',
+              background: '#EBF7F0',
+              border: '1px solid #A5D6B8',
+              color: '#1E6B3E',
               fontSize: '0.85rem',
+              fontWeight: 600,
               marginBottom: 20
             }}>
               <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
@@ -379,13 +367,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                     alignItems: 'center',
                     gap: 6,
                     padding: '0 14px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    background: '#F8FAFC',
+                    border: '1px solid #CBD5E1',
                     borderRight: 'none',
                     borderRadius: 'var(--radius-md) 0 0 var(--radius-md)',
                     color: 'var(--text-secondary)',
                     fontSize: '0.95rem',
-                    fontWeight: 500
+                    fontWeight: 600
                   }}>
                     🇮🇳 +91
                   </span>
@@ -401,7 +389,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                     required
                   />
                 </div>
-                <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
                   A 6-digit verification code will be sent via WhatsApp OTP.
                 </p>
               </div>
@@ -431,17 +419,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                   width: 44,
                   height: 44,
                   borderRadius: '50%',
-                  background: 'rgba(16, 185, 129, 0.12)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  background: '#EBF7F0',
+                  border: '1px solid #A5D6B8',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 10px auto',
-                  color: 'var(--primary)'
+                  color: '#1E6B3E'
                 }}>
                   <KeyRound size={22} />
                 </div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Enter Verification Code</h3>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>Enter Verification Code</h3>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 4 }}>
                   Sent to +91 {phoneNumber.replace(/\D/g, '').slice(-10)}
                   <button
@@ -450,9 +438,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: 'var(--primary)',
+                      color: '#256CAA',
                       marginLeft: 8,
                       fontSize: '0.82rem',
+                      fontWeight: 600,
                       cursor: 'pointer',
                       textDecoration: 'underline'
                     }}
@@ -462,7 +451,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                 </p>
               </div>
 
-              {/* 6-box segmented OTP inputs with mobile fluid sizing */}
+              {/* 6-box segmented OTP inputs */}
               <div
                 style={{
                   display: 'flex',
@@ -490,14 +479,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                       height: 'clamp(46px, 14vw, 54px)',
                       textAlign: 'center',
                       fontSize: 'clamp(1.15rem, 4vw, 1.4rem)',
-                      fontWeight: 700,
-                      background: 'rgba(15, 23, 42, 0.7)',
-                      border: digit ? '2px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.15)',
+                      fontWeight: 800,
+                      background: '#FFFFFF',
+                      border: digit ? '2px solid #42B06F' : '1px solid #CBD5E1',
                       borderRadius: 'var(--radius-md)',
-                      color: '#ffffff',
+                      color: '#0F172A',
                       outline: 'none',
-                      transition: 'all 0.18s ease',
-                      boxShadow: digit ? '0 0 12px rgba(16, 185, 129, 0.25)' : 'none'
+                      transition: 'all 0.15s ease'
                     }}
                   />
                 ))}
@@ -510,10 +498,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                   id="btn-autofill-otp"
                   onClick={handleAutofillDemoOtp}
                   style={{
-                    background: 'rgba(16, 185, 129, 0.12)',
-                    border: '1px dashed rgba(16, 185, 129, 0.4)',
-                    color: '#34d399',
+                    background: '#EDF4FA',
+                    border: '1px dashed #256CAA',
+                    color: '#256CAA',
                     fontSize: '0.78rem',
+                    fontWeight: 600,
                     padding: '5px 12px',
                     borderRadius: 'var(--radius-full)',
                     cursor: 'pointer',
@@ -552,7 +541,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: 'var(--primary)',
+                      color: '#256CAA',
                       cursor: 'pointer',
                       fontWeight: 600
                     }}
@@ -566,8 +555,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
 
           {/* Quick Demo Test Presets */}
           <div style={{
-            marginTop: 28,
-            paddingTop: 20,
+            marginTop: 26,
+            paddingTop: 18,
             borderTop: '1px solid var(--border-subtle)'
           }}>
             <p style={{
@@ -589,12 +578,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                   type="button"
                   onClick={() => handleQuickDemo(u)}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.04)',
+                    background: '#F8FAFC',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: 'var(--radius-sm)',
                     padding: '8px 4px',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.72rem',
+                    color: '#0F172A',
+                    fontSize: '0.74rem',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
@@ -603,7 +592,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <span style={{ fontWeight: 600 }}>{u.fullName.split(' ')[0]}</span>
+                  <span style={{ fontWeight: 700 }}>{u.fullName.split(' ')[0]}</span>
                   <span style={{ fontSize: '0.66rem', color: 'var(--text-secondary)' }}>{u.role}</span>
                 </button>
               ))}

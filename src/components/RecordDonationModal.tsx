@@ -85,16 +85,17 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
               width: 36,
               height: 36,
               borderRadius: 10,
-              background: 'rgba(16, 185, 129, 0.15)',
+              background: '#EBF7F0',
+              border: '1px solid #A5D6B8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--primary)'
+              color: '#42B06F'
             }}>
               <Heart size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Record Kit Donation</h3>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>Record Kit Donation</h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 ₹500 per relief food & essential kit
               </p>
@@ -114,10 +115,11 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
               gap: 8,
               padding: '10px 14px',
               borderRadius: 'var(--radius-md)',
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#fca5a5',
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: '#B91C1C',
               fontSize: '0.84rem',
+              fontWeight: 600,
               marginBottom: 18
             }}>
               <AlertCircle size={16} />
@@ -151,12 +153,13 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0 12px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                background: '#F8FAFC',
+                border: '1px solid #CBD5E1',
                 borderRight: 'none',
                 borderRadius: 'var(--radius-md) 0 0 var(--radius-md)',
                 color: 'var(--text-secondary)',
-                fontSize: '0.9rem'
+                fontSize: '0.9rem',
+                fontWeight: 600
               }}>
                 +91
               </span>
@@ -191,10 +194,10 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
                     flex: 1,
                     padding: '8px 4px',
                     borderRadius: 'var(--radius-sm)',
-                    border: kitCount === num ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
-                    background: kitCount === num ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                    color: kitCount === num ? 'var(--primary-light)' : 'var(--text-primary)',
-                    fontWeight: 600,
+                    border: kitCount === num ? '1px solid #42B06F' : '1px solid var(--border-subtle)',
+                    background: kitCount === num ? '#EBF7F0' : '#FFFFFF',
+                    color: kitCount === num ? '#1E6B3E' : 'var(--text-primary)',
+                    fontWeight: 700,
                     fontSize: '0.85rem',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease'
@@ -223,8 +226,8 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
 
           {/* Live Total Calculation Card */}
           <div style={{
-            background: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
+            background: '#F8FAFC',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
             padding: '16px',
             marginBottom: 24,
@@ -233,10 +236,10 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
             alignItems: 'center'
           }}>
             <div>
-              <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
                 Total Donation Amount
               </span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#256CAA' }}>
                 ₹{totalAmount.toLocaleString('en-IN')}
               </div>
             </div>

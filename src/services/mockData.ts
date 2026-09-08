@@ -1,6 +1,79 @@
-import type { User, WeeklyMetrics, LeaderboardEntry, WardLeaderboardEntry, Donation } from '../types';
+import type { User, WeeklyMetrics, LeaderboardEntry, WardLeaderboardEntry, Donation, ManagedUser } from '../types';
 
 export const KIT_UNIT_RATE = 500;
+
+export const INITIAL_MANAGED_USERS: ManagedUser[] = [
+  {
+    userId: 'mng-001',
+    fullName: 'Anas Madavoor',
+    phoneNumber: '9895098765',
+    role: 'Coordinator',
+    panchayath: 'Madavoor',
+    wardNumber: 7,
+    district: 'Kozhikode',
+    targetKits: 100,
+    kitsCollected: 76,
+    totalAmount: 76 * 500,
+    donationsCount: 24,
+    createdAt: '2026-08-28T10:00:00Z'
+  },
+  {
+    userId: 'mng-002',
+    fullName: 'Musthafa Haji',
+    phoneNumber: '9447213456',
+    role: 'WardCommittee',
+    panchayath: 'Madavoor',
+    wardNumber: 4,
+    district: 'Kozhikode',
+    targetKits: 120,
+    kitsCollected: 45,
+    totalAmount: 45 * 500,
+    donationsCount: 15,
+    createdAt: '2026-08-29T11:30:00Z'
+  },
+  {
+    userId: 'mng-003',
+    fullName: 'Basheer C.K.',
+    phoneNumber: '9846123987',
+    role: 'Coordinator',
+    panchayath: 'Madavoor',
+    wardNumber: 11,
+    district: 'Kozhikode',
+    targetKits: 80,
+    kitsCollected: 39,
+    totalAmount: 39 * 500,
+    donationsCount: 13,
+    createdAt: '2026-08-30T09:15:00Z'
+  },
+  {
+    userId: 'mng-004',
+    fullName: 'Zainul Abideen',
+    phoneNumber: '9744882211',
+    role: 'WardCommittee',
+    panchayath: 'Madavoor',
+    wardNumber: 2,
+    district: 'Kozhikode',
+    targetKits: 90,
+    kitsCollected: 30,
+    totalAmount: 30 * 500,
+    donationsCount: 10,
+    createdAt: '2026-09-01T14:20:00Z'
+  },
+  {
+    userId: 'mng-005',
+    fullName: 'Ashraf Master',
+    phoneNumber: '9946554433',
+    role: 'Coordinator',
+    panchayath: 'Madavoor',
+    wardNumber: 5,
+    district: 'Kozhikode',
+    targetKits: 75,
+    kitsCollected: 25,
+    totalAmount: 25 * 500,
+    donationsCount: 8,
+    createdAt: '2026-09-02T16:45:00Z'
+  }
+];
 
 export const DEMO_USERS: User[] = [
   {

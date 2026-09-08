@@ -191,24 +191,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* Hero Banner with Big Stats */}
         <div className="glass-card" style={{
-          padding: '32px 28px',
-          background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.35) 0%, rgba(15, 23, 42, 0.85) 60%)',
-          border: '1px solid rgba(16, 185, 129, 0.25)',
+          padding: '30px 26px',
+          background: '#FFFFFF',
+          border: '1px solid var(--border-subtle)',
           position: 'relative',
           overflow: 'hidden'
         }}>
-          {/* Subtle Ambient Glow */}
-          <div style={{
-            position: 'absolute',
-            top: -50,
-            right: -50,
-            width: 250,
-            height: 250,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%)',
-            pointerEvents: 'none'
-          }} />
-
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -222,23 +210,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 textTransform: 'uppercase',
                 fontWeight: 700,
                 color: 'var(--text-secondary)',
-                letterSpacing: '0.06em',
+                letterSpacing: '0.05em',
                 display: 'block',
                 marginBottom: 4
               }}>
                 Total Funds Collected This Week
               </span>
               <div style={{
-                fontSize: '3rem',
+                fontSize: '2.8rem',
                 fontWeight: 800,
                 letterSpacing: '-0.03em',
-                color: '#ffffff',
+                color: '#0F172A',
                 lineHeight: 1.1,
                 display: 'flex',
                 alignItems: 'baseline',
-                gap: 8
+                gap: 6
               }}>
-                <span style={{ color: 'var(--accent-gold)' }}>₹</span>
+                <span style={{ color: '#256CAA' }}>₹</span>
                 <span>{metrics?.totalAmount.toLocaleString('en-IN') || '0'}</span>
               </div>
 
@@ -247,14 +235,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  background: 'rgba(255, 255, 255, 0.08)',
+                  background: '#EBF7F0',
+                  border: '1px solid #A5D6B8',
                   padding: '6px 14px',
                   borderRadius: 'var(--radius-full)',
-                  fontSize: '0.95rem',
+                  fontSize: '0.92rem',
                   fontWeight: 700,
-                  color: 'var(--primary-light)'
+                  color: '#1E6B3E'
                 }}>
-                  <Package size={18} color="var(--primary)" />
+                  <Package size={18} color="#42B06F" />
                   <span>{metrics?.totalKits || 0} Relief Kits</span>
                 </div>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
@@ -265,21 +254,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             {/* Target Progress Bar & Daily Breakdown */}
             <div style={{
-              background: 'rgba(0, 0, 0, 0.25)',
-              padding: '20px 22px',
+              background: '#F8FAFC',
+              padding: '18px 20px',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border-subtle)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
                 <div>
-                  <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
                     Weekly Campaign Target
                   </span>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
                     {metrics?.totalKits} / {metrics?.targetKits} Kits ({progressPercentage}%)
                   </div>
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.82rem', color: '#256CAA', fontWeight: 700 }}>
                   Target: ₹{metrics?.targetAmount.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -296,7 +285,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               {/* Daily Velocity Mini-Graph */}
               <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 700 }}>
                   Daily Kit Collections (Mon - Sun)
                 </span>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 44 }}>
@@ -310,12 +299,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           style={{
                             width: '100%',
                             height: `${heightPercent}%`,
-                            background: i === 4 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.15)',
+                            background: i === 4 ? '#42B06F' : '#CBD5E1',
                             borderRadius: 3,
                             transition: 'all 0.3s ease'
                           }}
                         />
-                        <span style={{ fontSize: '0.66rem', color: i === 4 ? '#ffffff' : 'var(--text-muted)', fontWeight: i === 4 ? 700 : 400 }}>
+                        <span style={{ fontSize: '0.68rem', color: i === 4 ? '#1E6B3E' : 'var(--text-muted)', fontWeight: i === 4 ? 700 : 500 }}>
                           {d.day}
                         </span>
                       </div>
@@ -340,19 +329,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: 'rgba(56, 189, 248, 0.12)',
+              background: '#EDF4FA',
+              border: '1px solid #B8D4EE',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#38bdf8'
+              color: '#256CAA'
             }}>
               <Users size={22} />
             </div>
             <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
                 Donors Participated
               </span>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>
+              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A' }}>
                 {metrics?.donorsCount || 0} Families
               </div>
             </div>
@@ -364,19 +354,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: 'rgba(245, 158, 11, 0.12)',
+              background: '#EBF7F0',
+              border: '1px solid #A5D6B8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--accent-gold)'
+              color: '#1E6B3E'
             }}>
               <Sparkles size={22} />
             </div>
             <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
                 Average Kits / Donor
               </span>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>
+              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A' }}>
                 {metrics ? (metrics.totalKits / (metrics.donorsCount || 1)).toFixed(1) : '3.0'} Kits
               </div>
             </div>
@@ -388,19 +379,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: 'rgba(168, 85, 247, 0.12)',
+              background: '#FEF3C7',
+              border: '1px solid #FCD34D',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#c084fc'
+              color: '#92400E'
             }}>
               <Trophy size={22} />
             </div>
             <div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
                 Leading Ward
               </span>
-              <div style={{ fontSize: '1.35rem', fontWeight: 800 }}>
+              <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A' }}>
                 Ward {wards[0]?.wardNumber || 4} - {wards[0]?.wardName.split(' ')[0] || 'Kakkad'}
               </div>
             </div>
@@ -435,7 +427,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           {/* Tab Switcher */}
           <div style={{
             display: 'flex',
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: '#FFFFFF',
             padding: 4,
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--border-subtle)'
@@ -450,7 +442,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 padding: '8px 14px',
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
-                background: activeTab === 'volunteers' ? 'var(--primary)' : 'transparent',
+                background: activeTab === 'volunteers' ? '#42B06F' : 'transparent',
                 color: activeTab === 'volunteers' ? '#ffffff' : 'var(--text-secondary)',
                 fontSize: '0.84rem',
                 fontWeight: 600,
@@ -474,7 +466,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 padding: '8px 14px',
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
-                background: activeTab === 'wards' ? 'var(--primary)' : 'transparent',
+                background: activeTab === 'wards' ? '#256CAA' : 'transparent',
                 color: activeTab === 'wards' ? '#ffffff' : 'var(--text-secondary)',
                 fontSize: '0.84rem',
                 fontWeight: 600,
@@ -496,7 +488,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 padding: '8px 14px',
                 borderRadius: 'var(--radius-sm)',
                 border: 'none',
-                background: activeTab === 'recent' ? 'var(--primary)' : 'transparent',
+                background: activeTab === 'recent' ? '#256CAA' : 'transparent',
                 color: activeTab === 'recent' ? '#ffffff' : 'var(--text-secondary)',
                 fontSize: '0.84rem',
                 fontWeight: 600,
@@ -520,20 +512,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           padding: '12px 18px',
           borderRadius: 'var(--radius-md)',
           background: user?.role === 'Admin'
-            ? 'rgba(245, 158, 11, 0.1)'
+            ? '#FEF3C7'
             : user?.role === 'Coordinator'
-            ? 'rgba(56, 189, 248, 0.1)'
-            : 'rgba(16, 185, 129, 0.1)',
+            ? '#EDF4FA'
+            : '#EBF7F0',
           border: user?.role === 'Admin'
-            ? '1px solid rgba(245, 158, 11, 0.3)'
+            ? '1px solid #FCD34D'
             : user?.role === 'Coordinator'
-            ? '1px solid rgba(56, 189, 248, 0.3)'
-            : '1px solid rgba(16, 185, 129, 0.3)',
+            ? '1px solid #B8D4EE'
+            : '1px solid #A5D6B8',
           marginBottom: 20
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Eye size={18} color={user?.role === 'Admin' ? 'var(--accent-gold)' : user?.role === 'Coordinator' ? '#38bdf8' : 'var(--primary)'} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+            <Eye size={18} color={user?.role === 'Admin' ? '#92400E' : user?.role === 'Coordinator' ? '#256CAA' : '#1E6B3E'} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: user?.role === 'Admin' ? '#92400E' : user?.role === 'Coordinator' ? '#256CAA' : '#1E6B3E' }}>
               {user?.role === 'Volunteer' && (
                 <>Volunteer Access Mode: You can see only other volunteers' data.</>
               )}
@@ -549,18 +541,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           {/* Admin-only quick role filter buttons */}
           {user?.role === 'Admin' && activeTab === 'volunteers' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: 4 }}>Filter View:</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: 4, fontWeight: 600 }}>Filter View:</span>
               <button
                 id="filter-admin-all"
                 onClick={() => setAdminRoleFilter('all')}
                 style={{
                   padding: '4px 10px',
                   borderRadius: 'var(--radius-sm)',
-                  border: adminRoleFilter === 'all' ? '1px solid var(--accent-gold)' : '1px solid var(--border-subtle)',
-                  background: adminRoleFilter === 'all' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                  color: adminRoleFilter === 'all' ? '#fbbf24' : 'var(--text-secondary)',
+                  border: adminRoleFilter === 'all' ? '1px solid #B45309' : '1px solid var(--border-subtle)',
+                  background: adminRoleFilter === 'all' ? '#FDE68A' : '#FFFFFF',
+                  color: adminRoleFilter === 'all' ? '#78350F' : 'var(--text-secondary)',
                   fontSize: '0.74rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
@@ -572,11 +564,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 style={{
                   padding: '4px 10px',
                   borderRadius: 'var(--radius-sm)',
-                  border: adminRoleFilter === 'Volunteer' ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
-                  background: adminRoleFilter === 'Volunteer' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                  color: adminRoleFilter === 'Volunteer' ? '#34d399' : 'var(--text-secondary)',
+                  border: adminRoleFilter === 'Volunteer' ? '1px solid #42B06F' : '1px solid var(--border-subtle)',
+                  background: adminRoleFilter === 'Volunteer' ? '#EBF7F0' : '#FFFFFF',
+                  color: adminRoleFilter === 'Volunteer' ? '#1E6B3E' : 'var(--text-secondary)',
                   fontSize: '0.74rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
@@ -588,11 +580,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 style={{
                   padding: '4px 10px',
                   borderRadius: 'var(--radius-sm)',
-                  border: adminRoleFilter === 'Coordinator' ? '1px solid #38bdf8' : '1px solid var(--border-subtle)',
-                  background: adminRoleFilter === 'Coordinator' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                  color: adminRoleFilter === 'Coordinator' ? '#7dd3fc' : 'var(--text-secondary)',
+                  border: adminRoleFilter === 'Coordinator' ? '1px solid #256CAA' : '1px solid var(--border-subtle)',
+                  background: adminRoleFilter === 'Coordinator' ? '#EDF4FA' : '#FFFFFF',
+                  color: adminRoleFilter === 'Coordinator' ? '#256CAA' : 'var(--text-secondary)',
                   fontSize: '0.74rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
@@ -618,73 +610,72 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <div className="glass-card" style={{
                   padding: '24px 16px',
                   textAlign: 'center',
-                  background: 'linear-gradient(180deg, rgba(148, 163, 184, 0.15) 0%, rgba(18, 26, 42, 0.7) 100%)',
-                  border: '1px solid rgba(148, 163, 184, 0.3)'
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1'
                 }}>
                   <div style={{
-                    width: 46,
-                    height: 46,
+                    width: 44,
+                    height: 44,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #94a3b8, #64748b)',
+                    background: '#E2E8F0',
                     margin: '0 auto 10px auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '1.2rem',
                     fontWeight: 800,
-                    color: '#ffffff',
-                    boxShadow: '0 4px 14px rgba(148, 163, 184, 0.4)'
+                    color: '#475569'
                   }}>
                     🥈 2
                   </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>{top3[1]?.name}</h4>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A' }}>{top3[1]?.name}</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
                     Ward {top3[1]?.wardNumber} • {top3[1]?.role}
                   </p>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary-light)' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#42B06F' }}>
                     {top3[1]?.kitsCollected} Kits
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.82rem', color: '#256CAA', fontWeight: 700 }}>
                     ₹{top3[1]?.totalAmount.toLocaleString('en-IN')}
                   </div>
                 </div>
 
                 {/* 1st Place - Champion */}
                 <div className="glass-card" style={{
-                  padding: '30px 18px',
+                  padding: '28px 18px',
                   textAlign: 'center',
-                  background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.2) 0%, rgba(18, 26, 42, 0.85) 100%)',
-                  border: '2px solid rgba(245, 158, 11, 0.5)',
-                  transform: 'translateY(-8px)',
-                  boxShadow: '0 12px 30px rgba(245, 158, 11, 0.2)'
+                  background: '#FFFFFF',
+                  border: '2px solid #F59E0B',
+                  transform: 'translateY(-6px)',
+                  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.06)'
                 }}>
                   <div style={{
-                    width: 56,
-                    height: 56,
+                    width: 52,
+                    height: 52,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    background: '#FEF3C7',
+                    border: '1px solid #FCD34D',
                     margin: '0 auto 12px auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.5rem',
+                    fontSize: '1.4rem',
                     fontWeight: 800,
-                    color: '#ffffff',
-                    boxShadow: '0 6px 20px rgba(245, 158, 11, 0.6)'
+                    color: '#92400E'
                   }}>
                     👑 1
                   </div>
                   <span className="badge badge-gold" style={{ marginBottom: 6 }}>
                     Drive Champion
                   </span>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: 4 }}>{top3[0]?.name}</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: 4, color: '#0F172A' }}>{top3[0]?.name}</h3>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
                     Ward {top3[0]?.wardNumber} • {top3[0]?.role}
                   </p>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary-light)' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#42B06F' }}>
                     {top3[0]?.kitsCollected} Kits
                   </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--accent-gold)', fontWeight: 700 }}>
+                  <div style={{ fontSize: '0.9rem', color: '#256CAA', fontWeight: 800 }}>
                     ₹{top3[0]?.totalAmount.toLocaleString('en-IN')}
                   </div>
                 </div>
@@ -693,33 +684,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <div className="glass-card" style={{
                   padding: '22px 16px',
                   textAlign: 'center',
-                  background: 'linear-gradient(180deg, rgba(180, 83, 9, 0.15) 0%, rgba(18, 26, 42, 0.7) 100%)',
-                  border: '1px solid rgba(180, 83, 9, 0.3)'
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1'
                 }}>
                   <div style={{
-                    width: 46,
-                    height: 46,
+                    width: 44,
+                    height: 44,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #b45309, #78350f)',
+                    background: '#FEF3C7',
                     margin: '0 auto 10px auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '1.2rem',
                     fontWeight: 800,
-                    color: '#ffffff',
-                    boxShadow: '0 4px 14px rgba(180, 83, 9, 0.4)'
+                    color: '#92400E'
                   }}>
                     🥉 3
                   </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>{top3[2]?.name}</h4>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A' }}>{top3[2]?.name}</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
                     Ward {top3[2]?.wardNumber} • {top3[2]?.role}
                   </p>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary-light)' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#42B06F' }}>
                     {top3[2]?.kitsCollected} Kits
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', fontWeight: 600 }}>
+                  <div style={{ fontSize: '0.82rem', color: '#256CAA', fontWeight: 700 }}>
                     ₹{top3[2]?.totalAmount.toLocaleString('en-IN')}
                   </div>
                 </div>
@@ -779,8 +769,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     className="leaderboard-row glass-card-interactive"
                     style={{
                       borderBottom: '1px solid var(--border-subtle)',
-                      background: isCurrentUser ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
-                      borderLeft: isCurrentUser ? '3px solid var(--primary)' : 'none'
+                      background: isCurrentUser ? '#EBF7F0' : '#FFFFFF',
+                      borderLeft: isCurrentUser ? '3px solid #42B06F' : 'none'
                     }}
                   >
                     {/* Rank */}
@@ -810,7 +800,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           fontSize: '0.88rem',
                           lineHeight: 1.25,
                           wordBreak: 'break-word',
-                          color: '#ffffff'
+                          color: '#0F172A'
                         }}>
                           {vol.name}
                         </span>
@@ -842,7 +832,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
                     {/* Kits */}
                     <div style={{ textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--primary-light)' }}>
+                      <span style={{ fontSize: '0.98rem', fontWeight: 800, color: '#42B06F' }}>
                         {vol.kitsCollected}
                       </span>
                       <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', display: 'block' }}>
@@ -852,7 +842,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
                     {/* Total Raised */}
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#256CAA', whiteSpace: 'nowrap' }}>
                         ₹{vol.totalAmount.toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -873,7 +863,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {activeTab === 'wards' && (
           <div style={{ display: 'grid', gap: 16 }}>
             {wards.map((ward) => (
-              <div key={ward.wardNumber} className="glass-card" style={{ padding: '22px 24px' }}>
+              <div key={ward.wardNumber} className="glass-card" style={{ padding: '22px 24px', background: '#FFFFFF' }}>
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -887,19 +877,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       width: 40,
                       height: 40,
                       borderRadius: 10,
-                      background: ward.rank === 1 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                      border: ward.rank === 1 ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid var(--border-subtle)',
+                      background: ward.rank === 1 ? '#FEF3C7' : '#F1F5F9',
+                      border: ward.rank === 1 ? '1px solid #FCD34D' : '1px solid var(--border-subtle)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
                       fontSize: '1rem',
-                      color: ward.rank === 1 ? 'var(--accent-gold)' : 'var(--text-primary)'
+                      color: ward.rank === 1 ? '#92400E' : 'var(--text-primary)'
                     }}>
                       #{ward.rank}
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0F172A' }}>
                         Ward {ward.wardNumber} — {ward.wardName}
                       </h3>
                       <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
@@ -909,10 +899,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#256CAA' }}>
                       ₹{ward.totalAmount.toLocaleString('en-IN')}
                     </div>
-                    <div style={{ fontSize: '0.84rem', color: 'var(--primary-light)', fontWeight: 600 }}>
+                    <div style={{ fontSize: '0.84rem', color: '#1E6B3E', fontWeight: 700 }}>
                       {ward.kitsCollected} / {ward.targetKits} Kits ({ward.progressPercentage}%)
                     </div>
                   </div>
@@ -924,9 +914,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     className="progress-fill"
                     style={{
                       width: `${Math.min(100, ward.progressPercentage)}%`,
-                      background: ward.rank === 1
-                        ? 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)'
-                        : undefined
+                      background: ward.rank === 1 ? '#D97706' : '#42B06F'
                     }}
                   />
                 </div>
@@ -944,6 +932,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 className="glass-card glass-card-interactive"
                 style={{
                   padding: '18px 22px',
+                  background: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -956,16 +945,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     width: 44,
                     height: 44,
                     borderRadius: 12,
-                    background: 'rgba(16, 185, 129, 0.12)',
+                    background: '#EBF7F0',
+                    border: '1px solid #A5D6B8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--primary)'
+                    color: '#1E6B3E'
                   }}>
                     <Package size={22} />
                   </div>
                   <div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 700 }}>{don.donorName}</h4>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>{don.donorName}</h4>
                     <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
                       Ward {don.wardNumber}, {don.panchayath} • Logged by{' '}
                       <strong>{don.collectedByName || 'Volunteer'}</strong>
@@ -988,7 +978,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#256CAA' }}>
                       ₹{don.totalAmount.toLocaleString('en-IN')}
                     </div>
                     <span className="badge badge-emerald" style={{ fontSize: '0.72rem' }}>

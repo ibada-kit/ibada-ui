@@ -83,6 +83,7 @@ export interface LeaderboardEntry {
   kitsCollected: number;
   totalAmount: number;
   donationsCount: number;
+  targetKits?: number;
   rank: number;
   avatarUrl?: string;
 }
@@ -96,4 +97,31 @@ export interface WardLeaderboardEntry {
   progressPercentage: number;
   volunteerCount: number;
   rank: number;
+}
+
+export type ManagedUserRole = 'WardCommittee' | 'Coordinator';
+
+export interface ManagedUser {
+  userId: string;
+  fullName: string;
+  phoneNumber: string;
+  role: ManagedUserRole;
+  panchayath: string;
+  wardNumber: number;
+  district?: string;
+  targetKits: number;
+  kitsCollected: number;
+  totalAmount: number;
+  donationsCount: number;
+  createdAt: string;
+}
+
+export interface CreateManagedUserRequest {
+  fullName: string;
+  phoneNumber: string;
+  role: ManagedUserRole;
+  wardNumber: number;
+  panchayath?: string;
+  district?: string;
+  targetKits: number;
 }

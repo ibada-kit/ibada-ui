@@ -7,7 +7,9 @@ import type {
   CreateDonationRequest,
   WeeklyMetrics,
   LeaderboardEntry,
-  WardLeaderboardEntry
+  WardLeaderboardEntry,
+  ManagedUser,
+  CreateManagedUserRequest
 } from '../types';
 import {
   DEMO_USERS,
@@ -15,6 +17,7 @@ import {
   INITIAL_VOLUNTEER_LEADERBOARD,
   INITIAL_WARD_LEADERBOARD,
   INITIAL_DONATIONS,
+  INITIAL_MANAGED_USERS,
   KIT_UNIT_RATE
 } from './mockData';
 
@@ -28,6 +31,21 @@ const STORAGE_METRICS = 'charity_weekly_metrics';
 const STORAGE_LEADERBOARD = 'charity_leaderboard';
 const STORAGE_WARD_LEADERBOARD = 'charity_ward_leaderboard';
 const STORAGE_DONATIONS = 'charity_donations';
+const STORAGE_MANAGED_USERS = 'charity_managed_users';
+
+// Initialize mock storage if not already present
+function getStoredManagedUsers(): ManagedUser[] {
+  const data = localStorage.getItem(STORAGE_MANAGED_USERS);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      // ignore
+    }
+  }
+  localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(INITIAL_MANAGED_USERS));
+  return INITIAL_MANAGED_USERS;
+}
 
 // Initialize mock storage if not already present
 function getStoredMetrics(): WeeklyMetrics {
@@ -146,19 +164,39 @@ export const authApi = {
         throw new Error('Invalid OTP code. For demo testing, please use 123456.');
       }
 
-      // Check if matches known demo user or auto-create a Volunteer profile
-      const matched = DEMO_USERS.find((u) => u.phoneNumber.endsWith(cleanPhone.slice(-10)));
-      const user: User = matched || {
-        userId: `usr-${Date.now()}`,
-        fullName: 'Community Volunteer',
-        phoneNumber: cleanPhone.slice(-10),
-        role: 'Volunteer',
-        panchayath: 'Madavoor',
-        wardNumber: 4,
-        district: 'Kozhikode',
-        token: `jwt-mock-${Date.now()}`,
-        expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
-      };
+      // Check if matches known demo user or managed user or auto-create a Volunteer profile
+      const managedUsers = getStoredManagedUsers();
+      const matchedManaged = managedUsers.find((u) => u.phoneNumber.replace(/\D/g, '').endsWith(cleanPhone.slice(-10)));
+      const matchedDemo = DEMO_USERS.find((u) => u.phoneNumber.endsWith(cleanPhone.slice(-10)));
+
+      let user: User;
+      if (matchedManaged) {
+        user = {
+          userId: matchedManaged.userId,
+          fullName: matchedManaged.fullName,
+          phoneNumber: matchedManaged.phoneNumber,
+          role: matchedManaged.role,
+          panchayath: matchedManaged.panchayath,
+          wardNumber: matchedManaged.wardNumber,
+          district: matchedManaged.district || 'Kozhikode',
+          token: `jwt-mock-${matchedManaged.userId}`,
+          expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+        };
+      } else if (matchedDemo) {
+        user = matchedDemo;
+      } else {
+        user = {
+          userId: `usr-${Date.now()}`,
+          fullName: 'Community Volunteer',
+          phoneNumber: cleanPhone.slice(-10),
+          role: 'Volunteer',
+          panchayath: 'Madavoor',
+          wardNumber: 4,
+          district: 'Kozhikode',
+          token: `jwt-mock-${Date.now()}`,
+          expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+        };
+      }
 
       setCurrentUser(user);
 
@@ -368,6 +406,18 @@ export const donationsApi = {
       });
       localStorage.setItem(STORAGE_WARD_LEADERBOARD, JSON.stringify(wardBoard));
 
+      // 5. Update managed users if collected by a Coordinator or WardCommittee member
+      const managedList = getStoredManagedUsers();
+      const mIndex = managedList.findIndex(
+        (m) => m.userId === currentUser?.userId || m.fullName.toLowerCase() === (currentUser?.fullName || '').toLowerCase()
+      );
+      if (mIndex !== -1) {
+        managedList[mIndex].kitsCollected += kitCount;
+        managedList[mIndex].totalAmount += totalAmount;
+        managedList[mIndex].donationsCount += 1;
+        localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(managedList));
+      }
+
       return newDonation;
     }
 
@@ -400,5 +450,137 @@ export const donationsApi = {
     const res = await fetch(`${API_BASE_URL}/donations/receipt/${token}`);
     if (!res.ok) throw new Error('Receipt not found');
     return res.json();
+  }
+};
+
+// Admin API: Management of Ward Committee and Coordinator users only
+export const adminApi = {
+  // Get managed users (Ward Committee & Coordinator ONLY, volunteers excluded)
+  getManagedUsers: async (): Promise<ManagedUser[]> => {
+    if (USE_MOCK) {
+      await delay(250);
+      const all = getStoredManagedUsers();
+      // Enforce: only WardCommittee and Coordinator, never Volunteer
+      return all.filter((u) => u.role === 'WardCommittee' || u.role === 'Coordinator');
+    }
+
+    const token = getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/admin/managed-users`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    if (!res.ok) throw new Error('Failed to load managed users');
+    return res.json();
+  },
+
+  // Create a new Ward Committee or Coordinator user
+  createManagedUser: async (data: CreateManagedUserRequest): Promise<ManagedUser> => {
+    if (USE_MOCK) {
+      await delay(350);
+      const users = getStoredManagedUsers();
+      const cleanPhone = data.phoneNumber.replace(/\D/g, '');
+
+      if (!cleanPhone || cleanPhone.length < 10) {
+        throw new Error('Please enter a valid 10-digit mobile number.');
+      }
+      if (!data.fullName.trim()) {
+        throw new Error('User full name is required.');
+      }
+
+      // Check duplicate phone
+      const exists = users.find((u) => u.phoneNumber.replace(/\D/g, '').endsWith(cleanPhone.slice(-10)));
+      if (exists) {
+        throw new Error(`A member with phone number +91 ${cleanPhone.slice(-10)} already exists (${exists.fullName} - ${exists.role}).`);
+      }
+
+      const target = Number(data.targetKits) > 0 ? Number(data.targetKits) : 50;
+
+      const newUser: ManagedUser = {
+        userId: `mng-${Date.now()}`,
+        fullName: data.fullName.trim(),
+        phoneNumber: cleanPhone.slice(-10),
+        role: data.role,
+        wardNumber: Number(data.wardNumber),
+        panchayath: data.panchayath || 'Madavoor',
+        district: data.district || 'Kozhikode',
+        targetKits: target,
+        kitsCollected: 0,
+        totalAmount: 0,
+        donationsCount: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      const updated = [newUser, ...users];
+      localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(updated));
+      return newUser;
+    }
+
+    const token = getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/admin/managed-users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to create user' }));
+      throw new Error(err.message || 'Failed to create user');
+    }
+    return res.json();
+  },
+
+  // Set target for a user
+  updateUserTarget: async (userId: string, targetKits: number): Promise<ManagedUser> => {
+    if (USE_MOCK) {
+      await delay(250);
+      const users = getStoredManagedUsers();
+      const idx = users.findIndex((u) => u.userId === userId);
+      if (idx === -1) {
+        throw new Error('User not found.');
+      }
+
+      const validTarget = Math.max(1, Math.round(Number(targetKits) || 1));
+      users[idx].targetKits = validTarget;
+      localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(users));
+      return users[idx];
+    }
+
+    const token = getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/admin/managed-users/${userId}/target`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ targetKits })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to update target' }));
+      throw new Error(err.message || 'Failed to update target');
+    }
+    return res.json();
+  },
+
+  // Delete a managed user
+  deleteManagedUser: async (userId: string): Promise<boolean> => {
+    if (USE_MOCK) {
+      await delay(250);
+      const users = getStoredManagedUsers();
+      const filtered = users.filter((u) => u.userId !== userId);
+      localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(filtered));
+      return true;
+    }
+
+    const token = getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/admin/managed-users/${userId}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to delete user' }));
+      throw new Error(err.message || 'Failed to delete user');
+    }
+    return true;
   }
 };

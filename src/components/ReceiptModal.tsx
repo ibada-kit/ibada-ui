@@ -44,33 +44,33 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
         {/* Badge Card Container */}
         <div style={{ padding: '24px' }}>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(6, 78, 59, 0.4) 0%, rgba(15, 23, 42, 0.9) 100%)',
-            border: '2px solid rgba(16, 185, 129, 0.4)',
+            background: '#FFFFFF',
+            border: '2px solid #A5D6B8',
             borderRadius: 'var(--radius-lg)',
             padding: '28px 20px',
             textAlign: 'center',
             position: 'relative',
-            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.5)'
+            boxShadow: 'var(--shadow-md)'
           }}>
             <div style={{
               width: 52,
               height: 52,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: '#EBF7F0',
+              border: '2px solid #42B06F',
               margin: '0 auto 12px auto',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 20px rgba(16, 185, 129, 0.6)'
+              justifyContent: 'center'
             }}>
-              <CheckCircle size={28} color="#ffffff" />
+              <CheckCircle size={28} color="#42B06F" />
             </div>
 
             <span className="badge badge-emerald" style={{ marginBottom: 12 }}>
               Verified Donation Receipt
             </span>
 
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, marginTop: 4, marginBottom: 4 }}>
+            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, marginTop: 4, marginBottom: 4, color: '#0F172A' }}>
               {donation.donorName}
             </h2>
             <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
@@ -83,23 +83,24 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               gridTemplateColumns: '1fr 1fr',
               gap: 12,
               margin: '20px 0',
-              background: 'rgba(255, 255, 255, 0.04)',
+              background: '#F8FAFC',
+              border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-md)',
               padding: '16px'
             }}>
               <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
                   Kits Sponsored
                 </span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary-light)' }}>
+                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#42B06F' }}>
                   {donation.kitCount} Kits
                 </span>
               </div>
               <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
                   Total Amount
                 </span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-gold)' }}>
+                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#256CAA' }}>
                   ₹{donation.totalAmount.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -107,7 +108,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
 
             {/* Token details */}
             <div style={{
-              background: 'rgba(0, 0, 0, 0.3)',
+              background: '#F1F5F9',
               padding: '10px 14px',
               borderRadius: 'var(--radius-sm)',
               fontSize: '0.8rem',
@@ -115,10 +116,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              border: '1px dashed rgba(255, 255, 255, 0.15)'
+              border: '1px solid var(--border-subtle)'
             }}>
               <span>Receipt Token:</span>
-              <strong style={{ color: '#ffffff', letterSpacing: '0.05em' }}>{donation.receiptToken}</strong>
+              <strong style={{ color: '#0F172A', letterSpacing: '0.05em' }}>{donation.receiptToken}</strong>
             </div>
 
             <div style={{ marginTop: 12, fontSize: '0.74rem', color: 'var(--text-muted)' }}>
@@ -139,8 +140,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               className="btn-primary"
               style={{
                 flex: 1,
-                background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
-                boxShadow: '0 4px 14px rgba(37, 211, 102, 0.35)'
+                background: '#25D366',
+                borderColor: '#20BA5C'
               }}
             >
               <Share2 size={16} />
