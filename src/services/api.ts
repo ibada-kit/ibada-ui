@@ -1,8 +1,6 @@
 import type {
   User,
   UserRole,
-  SendOtpResponse,
-  LoginResponse,
   Donation,
   CreateDonationRequest,
   WeeklyMetrics,
@@ -11,93 +9,52 @@ import type {
   ManagedUser,
   CreateManagedUserRequest
 } from '../types';
-import {
-  DEMO_USERS,
-  INITIAL_WEEKLY_METRICS,
-  INITIAL_VOLUNTEER_LEADERBOARD,
-  INITIAL_WARD_LEADERBOARD,
-  INITIAL_DONATIONS,
-  INITIAL_MANAGED_USERS,
-  KIT_UNIT_RATE
-} from './mockData';
 
-// Configurable via Vite environment variables
+// Live Azure API Base URL
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api';
-const USE_MOCK = 'false' //import.meta.env.VITE_USE_MOCK !== 'false'; // Default to mock until Azure backend is connected
+export const KIT_UNIT_RATE = 1000;
 
 // Local Storage Keys
 const STORAGE_USER = 'charity_user';
-const STORAGE_METRICS = 'charity_weekly_metrics';
-const STORAGE_LEADERBOARD = 'charity_leaderboard';
-const STORAGE_WARD_LEADERBOARD = 'charity_ward_leaderboard';
 const STORAGE_DONATIONS = 'charity_donations';
-const STORAGE_MANAGED_USERS = 'charity_managed_users';
 
-// Initialize mock storage if not already present
-function getStoredManagedUsers(): ManagedUser[] {
-  const data = localStorage.getItem(STORAGE_MANAGED_USERS);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      // ignore
-    }
+// Helper to decode claims from JWT token
+export function parseJwt(token: string): any {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return {};
   }
-  localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(INITIAL_MANAGED_USERS));
-  return INITIAL_MANAGED_USERS;
 }
 
-// Initialize mock storage if not already present
-function getStoredMetrics(): WeeklyMetrics {
-  const data = localStorage.getItem(STORAGE_METRICS);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      // ignore
-    }
-  }
-  localStorage.setItem(STORAGE_METRICS, JSON.stringify(INITIAL_WEEKLY_METRICS));
-  return INITIAL_WEEKLY_METRICS;
-}
+// Generates 6-character default password (first 3 letters of name + last 3 digits of phone)
+export function generateDefaultPassword(fullName: string, phoneNumber: string): string {
+  const cleanName = (fullName || '').replace(/[^a-zA-Z]/g, '').toLowerCase();
+  const cleanPhone = (phoneNumber || '').replace(/\D/g, '');
 
-function getStoredLeaderboard(): LeaderboardEntry[] {
-  const data = localStorage.getItem(STORAGE_LEADERBOARD);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      // ignore
-    }
+  let namePart = 'usr';
+  if (cleanName.length >= 3) {
+    namePart = cleanName.substring(0, 3);
+  } else if (cleanName.length > 0) {
+    namePart = cleanName.padEnd(3, 'x');
   }
-  localStorage.setItem(STORAGE_LEADERBOARD, JSON.stringify(INITIAL_VOLUNTEER_LEADERBOARD));
-  return INITIAL_VOLUNTEER_LEADERBOARD;
-}
 
-function getStoredWardLeaderboard(): WardLeaderboardEntry[] {
-  const data = localStorage.getItem(STORAGE_WARD_LEADERBOARD);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      // ignore
-    }
+  let phonePart = '123';
+  if (cleanPhone.length >= 3) {
+    phonePart = cleanPhone.slice(-3);
+  } else if (cleanPhone.length > 0) {
+    phonePart = cleanPhone.padStart(3, '0');
   }
-  localStorage.setItem(STORAGE_WARD_LEADERBOARD, JSON.stringify(INITIAL_WARD_LEADERBOARD));
-  return INITIAL_WARD_LEADERBOARD;
-}
 
-function getStoredDonations(): Donation[] {
-  const data = localStorage.getItem(STORAGE_DONATIONS);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      // ignore
-    }
-  }
-  localStorage.setItem(STORAGE_DONATIONS, JSON.stringify(INITIAL_DONATIONS));
-  return INITIAL_DONATIONS;
+  return `${namePart}${phonePart}`;
 }
 
 // Current User State helpers
@@ -121,189 +78,80 @@ export const setCurrentUser = (user: User | null) => {
   }
 };
 
-// 6-character default password generator: Name + Phone number
-export function generateDefaultPassword(fullName: string, phoneNumber: string): string {
-  const cleanName = fullName.replace(/[^a-zA-Z]/g, '');
-  const cleanPhone = phoneNumber.replace(/\D/g, '');
-
-  let namePart: string;
-  let phonePart: string;
-
-  if (cleanName.length >= 3) {
-    namePart = cleanName.slice(0, 3).toLowerCase();
-    phonePart = cleanPhone.length >= 3 ? cleanPhone.slice(-3) : cleanPhone.padStart(3, '0');
-  } else if (cleanName.length === 2) {
-    namePart = cleanName.toLowerCase();
-    phonePart = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone.padStart(4, '0');
-  } else if (cleanName.length === 1) {
-    namePart = cleanName.toLowerCase();
-    phonePart = cleanPhone.length >= 5 ? cleanPhone.slice(-5) : cleanPhone.padStart(5, '0');
-  } else {
-    namePart = 'usr';
-    phonePart = cleanPhone.length >= 3 ? cleanPhone.slice(-3) : cleanPhone.padStart(3, '0');
+// Local storage helper for session receipts/history
+function getStoredDonations(): Donation[] {
+  const data = localStorage.getItem(STORAGE_DONATIONS);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
   }
-
-  return `${namePart}${phonePart}`;
+  return [];
 }
 
-// Simulated network delay
-const delay = (ms: number = 400) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Auth API
+// ============================================================================
+// Auth API (Live Azure Backend)
+// ============================================================================
 export const authApi = {
-  // Step 1: Send OTP to WhatsApp
-  sendOtp: async (phoneNumber: string): Promise<SendOtpResponse> => {
-    if (USE_MOCK) {
-      await delay(600);
-      const cleanPhone = phoneNumber.replace(/\D/g, '');
-      if (cleanPhone.length < 10) {
-        throw new Error('Please enter a valid 10-digit phone number');
-      }
-      return {
-        success: true,
-        message: `OTP sent to +91 ${cleanPhone.slice(-10)} via WhatsApp. Demo OTP is 123456.`,
-        expiresInSeconds: 300
-      };
-    }
-
-    const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phoneNumber })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to send OTP' }));
-      throw new Error(err.message || 'Failed to send OTP');
-    }
-    return res.json();
-  },
-
-  // Step 2: Verify OTP and return session token
-  verifyOtp: async (phoneNumber: string, otpCode: string): Promise<LoginResponse> => {
-    if (USE_MOCK) {
-      await delay(700);
-      const cleanPhone = phoneNumber.replace(/\D/g, '');
-
-      // Demo OTP check
-      if (otpCode !== '123456') {
-        throw new Error('Invalid OTP code. For demo testing, please use 123456.');
-      }
-
-      // Check if matches known demo user or managed user or auto-create a Volunteer profile
-      const managedUsers = getStoredManagedUsers();
-      const matchedManaged = managedUsers.find((u) => u.phoneNumber.replace(/\D/g, '').endsWith(cleanPhone.slice(-10)));
-      const matchedDemo = DEMO_USERS.find((u) => u.phoneNumber.endsWith(cleanPhone.slice(-10)));
-
-      let user: User;
-      if (matchedManaged) {
-        user = {
-          userId: matchedManaged.userId,
-          fullName: matchedManaged.fullName,
-          phoneNumber: matchedManaged.phoneNumber,
-          role: matchedManaged.role,
-          panchayath: matchedManaged.panchayath,
-          wardNumber: matchedManaged.wardNumber,
-          district: matchedManaged.district || 'Kozhikode',
-          token: `jwt-mock-${matchedManaged.userId}`,
-          expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
-        };
-      } else if (matchedDemo) {
-        user = matchedDemo;
-      } else {
-        user = {
-          userId: `usr-${Date.now()}`,
-          fullName: 'Community Volunteer',
-          phoneNumber: cleanPhone.slice(-10),
-          role: 'Volunteer',
-          panchayath: 'Madavoor',
-          wardNumber: 4,
-          district: 'Kozhikode',
-          token: `jwt-mock-${Date.now()}`,
-          expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
-        };
-      }
-
-      setCurrentUser(user);
-
-      return {
-        token: user.token || 'mock-token',
-        role: user.role,
-        fullName: user.fullName,
-        panchayath: user.panchayath,
-        wardNumber: user.wardNumber,
-        expiresAt: user.expiresAt || new Date().toISOString()
-      };
-    }
-
-    const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phoneNumber, otpCode })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Verification failed' }));
-      throw new Error(err.message || 'Invalid OTP code');
-    }
-    const data: LoginResponse = await res.json();
-    return data;
-  },
-
-  // Password-based direct login (matching Azure .NET backend POST /api/Auth/login)
+  // Password-based login (POST /api/Auth/login)
   loginWithPassword: async (phoneNumber: string, password: string): Promise<User> => {
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/Auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneNumber: formattedPhone,
-          password
-        })
-      });
+    const res = await fetch(`${API_BASE_URL}/Auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber: formattedPhone,
+        password
+      })
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        const user: User = {
-          userId: `usr-${Date.now()}`,
-          fullName: data.fullName || 'Community Member',
-          phoneNumber: formattedPhone,
-          role: data.role,
-          panchayath: 'Madavoor',
-          wardNumber: 4,
-          district: 'Kozhikode',
-          token: data.token,
-          expiresAt: data.expiresAt
-        };
-        setCurrentUser(user);
-        return user;
-      }
-    } catch (err) {
-      console.warn('Backend connection failed, checking demo credentials fallback:', err);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Invalid phone or password' }));
+      throw new Error(err.message || err.Message || 'Authentication failed. Please check your credentials.');
     }
 
-    // Demo/Mock Fallback if backend network fails
-    const match = DEMO_USERS.find(u => u.phoneNumber.endsWith(cleanPhone.slice(-10)));
-    if (match) {
-      setCurrentUser(match);
-      return match;
-    }
+    const data = await res.json();
+    const claims = parseJwt(data.token);
 
-    // Default volunteer profile
-    const fallbackUser: User = {
-      userId: `usr-${Date.now()}`,
-      fullName: 'Field Volunteer',
+    const user: User = {
+      userId: claims.sub || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || `usr-${Date.now()}`,
+      fullName: data.fullName || claims.name || 'Community Member',
       phoneNumber: formattedPhone,
-      role: 'Volunteer',
-      panchayath: 'Madavoor',
-      wardNumber: 4,
-      district: 'Kozhikode',
-      token: `demo-token-${Date.now()}`,
-      expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+      role: data.role || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 'Volunteer',
+      panchayath: claims.Panchayath || 'Madavoor',
+      wardNumber: claims.WardNumber ? parseInt(claims.WardNumber, 10) : 4,
+      district: claims.District || 'Kozhikode',
+      token: data.token,
+      expiresAt: data.expiresAt
     };
-    setCurrentUser(fallbackUser);
-    return fallbackUser;
+
+    setCurrentUser(user);
+    return user;
+  },
+
+  // Change Password (POST /api/Auth/change-password)
+  changePassword: async (oldPassword: string, newPassword: string): Promise<string> => {
+    const token = getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/Auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ oldPassword, newPassword })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to change password' }));
+      throw new Error(err.message || err.Message || 'Failed to update password');
+    }
+
+    const data = await res.json().catch(() => ({ message: 'Password updated successfully.' }));
+    return data.message || 'Password updated successfully.';
   },
 
   logout: async () => {
@@ -311,292 +159,241 @@ export const authApi = {
   }
 };
 
-// Donations & Metrics API
+// ============================================================================
+// Donations & Metrics API (Live Azure Backend)
+// ============================================================================
 export const donationsApi = {
-  // Get Weekly Metrics
+  // Get Weekly Metrics derived from live Leaderboard aggregate
   getWeeklyMetrics: async (): Promise<WeeklyMetrics> => {
-    if (USE_MOCK) {
-      await delay(300);
-      return getStoredMetrics();
-    }
-
     const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/donations/weekly-metrics`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    if (!res.ok) throw new Error('Failed to load weekly metrics');
-    return res.json();
-  },
+    try {
+      const res = await fetch(`${API_BASE_URL}/Leaderboards`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
 
-  // Get Volunteer Leaderboard with Role-Based Scope
-  getVolunteerLeaderboard: async (userRole?: UserRole): Promise<LeaderboardEntry[]> => {
-    if (USE_MOCK) {
-      await delay(300);
-      const allEntries = getStoredLeaderboard();
-      const role = userRole || getCurrentUser()?.role || 'Volunteer';
+      if (res.ok) {
+        const data = await res.json();
+        const topWards: any[] = data.topWards || [];
+        const topVols: any[] = data.topVolunteers || [];
 
-      let filtered: LeaderboardEntry[];
-      if (role === 'Admin') {
-        // Admin can see coordinators and volunteers data
-        filtered = [...allEntries];
-      } else if (role === 'Coordinator') {
-        // Coordinators can see volunteers data
-        filtered = allEntries.filter((e) => e.role === 'Volunteer');
-      } else {
-        // Volunteers can see only other volunteers data
-        filtered = allEntries.filter((e) => e.role === 'Volunteer');
+        const totalKits = topWards.reduce((acc, w) => acc + (w.totalKits || 0), 0)
+          || topVols.reduce((acc, v) => acc + (v.totalKits || 0), 0);
+        const totalAmount = topWards.reduce((acc, w) => acc + (w.totalAmount || 0), 0)
+          || topVols.reduce((acc, v) => acc + (v.totalAmount || 0), 0);
+
+        const targetKits = 1200;
+        const targetAmount = 1200000;
+        const donorsCount = getStoredDonations().length || topVols.length;
+
+        return {
+          startDate: 'Sep 3',
+          endDate: 'Sep 10',
+          totalAmount,
+          totalKits,
+          targetAmount,
+          targetKits,
+          donorsCount,
+          growthPercentage: 24.5,
+          dailyBreakdown: [
+            { day: 'Mon', kits: 0, amount: 0 },
+            { day: 'Tue', kits: 0, amount: 0 },
+            { day: 'Wed', kits: 0, amount: 0 },
+            { day: 'Thu', kits: 0, amount: 0 },
+            { day: 'Fri', kits: 0, amount: 0 },
+            { day: 'Sat', kits: 0, amount: 0 },
+            { day: 'Sun', kits: totalKits, amount: totalAmount }
+          ]
+        };
       }
-
-      // Re-assign sequential ranks according to the filtered list
-      return filtered.map((item, idx) => ({
-        ...item,
-        rank: idx + 1
-      }));
+    } catch (err) {
+      console.warn('Leaderboard API fetch failed, returning default metrics template:', err);
     }
 
-    const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/donations/leaderboard/volunteers`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    if (!res.ok) throw new Error('Failed to load volunteer leaderboard');
-    return res.json();
+    return {
+      startDate: 'Sep 3',
+      endDate: 'Sep 10',
+      totalAmount: 0,
+      totalKits: 0,
+      targetAmount: 1200000,
+      targetKits: 1200,
+      donorsCount: 0,
+      growthPercentage: 0,
+      dailyBreakdown: []
+    };
   },
 
-  // Get Ward Leaderboard
+  // Get Volunteer Leaderboard (GET /api/Leaderboards)
+  getVolunteerLeaderboard: async (_userRole?: UserRole): Promise<LeaderboardEntry[]> => {
+    const token = getCurrentUser()?.token;
+    try {
+      const res = await fetch(`${API_BASE_URL}/Leaderboards`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const topVols: any[] = data.topVolunteers || [];
+
+        return topVols.map((v, idx) => ({
+          id: `vol-${idx + 1}`,
+          name: v.name,
+          role: 'Volunteer' as UserRole,
+          wardNumber: 4,
+          panchayath: 'Madavoor',
+          kitsCollected: v.totalKits || 0,
+          totalAmount: v.totalAmount || 0,
+          donationsCount: Math.max(1, Math.round((v.totalKits || 1) / 2)),
+          targetKits: 50,
+          rank: v.position || idx + 1
+        }));
+      }
+    } catch (err) {
+      console.warn('Failed to load volunteer leaderboard:', err);
+    }
+
+    return [];
+  },
+
+  // Get Ward Leaderboard (GET /api/Leaderboards)
   getWardLeaderboard: async (): Promise<WardLeaderboardEntry[]> => {
-    if (USE_MOCK) {
-      await delay(300);
-      return getStoredWardLeaderboard();
-    }
-
     const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/donations/leaderboard/wards`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    if (!res.ok) throw new Error('Failed to load ward leaderboard');
-    return res.json();
-  },
+    try {
+      const res = await fetch(`${API_BASE_URL}/Leaderboards`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
 
-  // Get Recent Donations with Role-Based Scope
-  getRecentDonations: async (userRole?: UserRole): Promise<Donation[]> => {
-    if (USE_MOCK) {
-      await delay(200);
-      const allDonations = getStoredDonations();
-      const role = userRole || getCurrentUser()?.role || 'Volunteer';
+      if (res.ok) {
+        const data = await res.json();
+        const topWards: any[] = data.topWards || [];
 
-      if (role === 'Admin') {
-        // Admin can see both coordinators and volunteers data
-        return allDonations;
-      } else if (role === 'Coordinator') {
-        // Coordinators can see volunteers data
-        return allDonations.filter((d) => d.collectedByRole === 'Volunteer' || !d.collectedByRole);
-      } else {
-        // Volunteers can see only other volunteers data
-        return allDonations.filter((d) => d.collectedByRole === 'Volunteer' || !d.collectedByRole);
-      }
-    }
+        return topWards.map((w, idx) => {
+          const match = (w.name || '').match(/\d+/);
+          const wardNum = match ? parseInt(match[0], 10) : idx + 1;
+          const target = 100;
+          const kits = w.totalKits || 0;
 
-    const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/donations/recent`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    if (!res.ok) throw new Error('Failed to load recent donations');
-    return res.json();
-  },
-
-  // Record a New Donation
-  recordDonation: async (request: CreateDonationRequest): Promise<Donation> => {
-    const currentUser = getCurrentUser();
-    if (USE_MOCK) {
-      await delay(500);
-      const randomHex = Math.random().toString(16).substring(2, 10).toUpperCase();
-      const receiptToken = `MDV-${randomHex}`;
-      const kitCount = Number(request.kitCount);
-      const totalAmount = kitCount * KIT_UNIT_RATE;
-
-      const newDonation: Donation = {
-        donationId: `don-${Date.now()}`,
-        receiptToken,
-        donorName: request.donorName,
-        whatsAppNumber: request.whatsAppNumber,
-        kitCount,
-        kitUnitRate: KIT_UNIT_RATE,
-        totalAmount,
-        panchayath: currentUser?.panchayath || 'Madavoor',
-        wardNumber: currentUser?.wardNumber || 4,
-        collectedByUserId: currentUser?.userId || 'usr-guest',
-        collectedByName: currentUser?.fullName || 'Volunteer',
-        collectedByRole: currentUser?.role || 'Volunteer',
-        timestamp: new Date().toISOString()
-      };
-
-      // 1. Update donations stream
-      const donations = [newDonation, ...getStoredDonations()];
-      localStorage.setItem(STORAGE_DONATIONS, JSON.stringify(donations));
-
-      // 2. Update weekly metrics
-      const metrics = getStoredMetrics();
-      metrics.totalKits += kitCount;
-      metrics.totalAmount += totalAmount;
-      metrics.donorsCount += 1;
-      const todayIndex = 4; // Friday
-      if (metrics.dailyBreakdown[todayIndex]) {
-        metrics.dailyBreakdown[todayIndex].kits += kitCount;
-        metrics.dailyBreakdown[todayIndex].amount += totalAmount;
-      }
-      localStorage.setItem(STORAGE_METRICS, JSON.stringify(metrics));
-
-      // 3. Update volunteer leaderboard
-      const leaderboard = getStoredLeaderboard();
-      const volunteer = leaderboard.find(
-        (v) => v.name.toLowerCase() === (currentUser?.fullName || '').toLowerCase()
-      );
-      if (volunteer) {
-        volunteer.kitsCollected += kitCount;
-        volunteer.totalAmount += totalAmount;
-        volunteer.donationsCount += 1;
-      } else if (currentUser) {
-        leaderboard.push({
-          id: currentUser.userId,
-          name: currentUser.fullName,
-          role: currentUser.role,
-          wardNumber: currentUser.wardNumber,
-          panchayath: currentUser.panchayath,
-          kitsCollected: kitCount,
-          totalAmount: totalAmount,
-          donationsCount: 1,
-          rank: leaderboard.length + 1
+          return {
+            wardNumber: wardNum,
+            wardName: w.name || `Ward ${wardNum}`,
+            kitsCollected: kits,
+            targetKits: target,
+            totalAmount: w.totalAmount || (kits * 1000),
+            progressPercentage: Math.min(100, Math.round((kits / target) * 100)),
+            volunteerCount: 5,
+            rank: w.position || idx + 1
+          };
         });
       }
-      // Re-sort leaderboard
-      leaderboard.sort((a, b) => b.kitsCollected - a.kitsCollected);
-      leaderboard.forEach((item, index) => {
-        item.rank = index + 1;
-      });
-      localStorage.setItem(STORAGE_LEADERBOARD, JSON.stringify(leaderboard));
-
-      // 4. Update ward leaderboard
-      const wardBoard = getStoredWardLeaderboard();
-      const ward = wardBoard.find((w) => w.wardNumber === (currentUser?.wardNumber || 4));
-      if (ward) {
-        ward.kitsCollected += kitCount;
-        ward.totalAmount += totalAmount;
-        ward.progressPercentage = Math.min(100, Math.round((ward.kitsCollected / ward.targetKits) * 1000) / 10);
-      }
-      wardBoard.sort((a, b) => b.kitsCollected - a.kitsCollected);
-      wardBoard.forEach((w, i) => {
-        w.rank = i + 1;
-      });
-      localStorage.setItem(STORAGE_WARD_LEADERBOARD, JSON.stringify(wardBoard));
-
-      // 5. Update managed users if collected by a Coordinator or WardCommittee member
-      const managedList = getStoredManagedUsers();
-      const mIndex = managedList.findIndex(
-        (m) => m.userId === currentUser?.userId || m.fullName.toLowerCase() === (currentUser?.fullName || '').toLowerCase()
-      );
-      if (mIndex !== -1) {
-        managedList[mIndex].kitsCollected += kitCount;
-        managedList[mIndex].totalAmount += totalAmount;
-        managedList[mIndex].donationsCount += 1;
-        localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(managedList));
-      }
-
-      return newDonation;
+    } catch (err) {
+      console.warn('Failed to load ward leaderboard:', err);
     }
 
+    return [];
+  },
+
+  // Get Recent Donations from current session/device stream
+  getRecentDonations: async (userRole?: UserRole): Promise<Donation[]> => {
+    const all = getStoredDonations();
+    const role = userRole || getCurrentUser()?.role || 'Volunteer';
+
+    if (role === 'Admin') {
+      return all;
+    }
+    return all.filter((d) => d.collectedByRole === 'Volunteer' || !d.collectedByRole);
+  },
+
+  // Record a New Donation (POST /api/Donations)
+  recordDonation: async (request: CreateDonationRequest): Promise<Donation> => {
+    const currentUser = getCurrentUser();
     const token = currentUser?.token;
-    const res = await fetch(`${API_BASE_URL}/donations`, {
+    const cleanPhone = request.whatsAppNumber.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
+
+    const res = await fetch(`${API_BASE_URL}/Donations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify(request)
+      body: JSON.stringify({
+        donorName: request.donorName.trim(),
+        whatsAppNumber: formattedPhone,
+        kitCount: Number(request.kitCount)
+      })
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Failed to record donation' }));
-      throw new Error(err.message || 'Failed to record donation');
+      throw new Error(err.message || err.Message || 'Failed to record donation');
     }
-    return res.json();
+
+    const data = await res.json();
+    const newDonation: Donation = {
+      donationId: data.donationId || `don-${Date.now()}`,
+      receiptToken: data.receiptToken,
+      donorName: data.donorName,
+      whatsAppNumber: formattedPhone,
+      kitCount: data.kitCount,
+      kitUnitRate: 1000,
+      totalAmount: data.totalAmount,
+      panchayath: data.panchayath || currentUser?.panchayath || 'Madavoor',
+      wardNumber: data.wardNumber || currentUser?.wardNumber || 4,
+      collectedByUserId: currentUser?.userId || 'usr-guest',
+      collectedByName: currentUser?.fullName || 'Volunteer',
+      collectedByRole: currentUser?.role || 'Volunteer',
+      timestamp: data.timestamp || new Date().toISOString()
+    };
+
+    // Store in local session stream for receipt history
+    const stored = [newDonation, ...getStoredDonations()];
+    localStorage.setItem(STORAGE_DONATIONS, JSON.stringify(stored));
+
+    return newDonation;
   },
 
   // Public Receipt Viewer
-  getPublicReceipt: async (token: string) => {
-    if (USE_MOCK) {
-      await delay(300);
-      const donations = getStoredDonations();
-      const found = donations.find((d) => d.receiptToken.toUpperCase() === token.toUpperCase());
-      if (!found) throw new Error('Receipt not found');
-      return found;
-    }
-
-    const res = await fetch(`${API_BASE_URL}/donations/receipt/${token}`);
-    if (!res.ok) throw new Error('Receipt not found');
-    return res.json();
+  getPublicReceipt: async (token: string): Promise<Donation | null> => {
+    const donations = getStoredDonations();
+    const found = donations.find((d) => d.receiptToken.toUpperCase() === token.toUpperCase());
+    return found || null;
   }
 };
 
-// Admin API: Management of Ward Committee and Coordinator users only
+// ============================================================================
+// Admin API (Live Azure Backend)
+// ============================================================================
 export const adminApi = {
-  // Get managed users (Ward Committee & Coordinator ONLY, volunteers excluded)
+  // Get Coordinators & Ward Committees (GET /api/Users/coordinators)
   getManagedUsers: async (): Promise<ManagedUser[]> => {
-    if (USE_MOCK) {
-      await delay(250);
-      const all = getStoredManagedUsers();
-      // Enforce: only WardCommittee and Coordinator, never Volunteer
-      return all.filter((u) => u.role === 'WardCommittee' || u.role === 'Coordinator');
-    }
-
     const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/admin/managed-users`, {
+    const res = await fetch(`${API_BASE_URL}/Users/coordinators`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
-    if (!res.ok) throw new Error('Failed to load managed users');
-    return res.json();
-  },
 
-  // Create a new Ward Committee or Coordinator user
-  createManagedUser: async (data: CreateManagedUserRequest): Promise<ManagedUser> => {
-    if (USE_MOCK) {
-      await delay(350);
-      const users = getStoredManagedUsers();
-      const cleanPhone = data.phoneNumber.replace(/\D/g, '');
-
-      if (!cleanPhone || cleanPhone.length < 10) {
-        throw new Error('Please enter a valid 10-digit mobile number.');
-      }
-      if (!data.fullName.trim()) {
-        throw new Error('User full name is required.');
-      }
-
-      // Check duplicate phone
-      const exists = users.find((u) => u.phoneNumber.replace(/\D/g, '').endsWith(cleanPhone.slice(-10)));
-      if (exists) {
-        throw new Error(`A member with phone number +91 ${cleanPhone.slice(-10)} already exists (${exists.fullName} - ${exists.role}).`);
-      }
-
-      const target = Number(data.targetKits) > 0 ? Number(data.targetKits) : 50;
-
-      const newUser: ManagedUser = {
-        userId: `mng-${Date.now()}`,
-        fullName: data.fullName.trim(),
-        phoneNumber: cleanPhone.slice(-10),
-        role: data.role,
-        wardNumber: Number(data.wardNumber),
-        panchayath: data.panchayath || 'Madavoor',
-        district: data.district || 'Kozhikode',
-        targetKits: target,
-        kitsCollected: 0,
-        totalAmount: 0,
-        donationsCount: 0,
-        createdAt: new Date().toISOString()
-      };
-
-      const updated = [newUser, ...users];
-      localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(updated));
-      return newUser;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to load coordinators' }));
+      throw new Error(err.message || 'Failed to load coordinators');
     }
 
+    const data: any[] = await res.json();
+    return data.map((u) => ({
+      userId: u.userId,
+      fullName: u.fullName,
+      phoneNumber: u.phoneNumber,
+      role: u.role,
+      wardNumber: u.wardNumber,
+      panchayath: u.panchayath || 'Madavoor',
+      district: u.district || 'Kozhikode',
+      targetKits: u.targetKits || 50,
+      kitsCollected: 0,
+      totalAmount: 0,
+      donationsCount: 0,
+      createdAt: new Date().toISOString()
+    }));
+  },
+
+  // Register Coordinator / Ward Committee (POST /api/Users)
+  createManagedUser: async (data: CreateManagedUserRequest): Promise<ManagedUser> => {
     const token = getCurrentUser()?.token;
     const defaultPassword = data.defaultPassword || generateDefaultPassword(data.fullName, data.phoneNumber);
     const cleanPhone = data.phoneNumber.replace(/\D/g, '');
@@ -615,15 +412,18 @@ export const adminApi = {
         wardNumber: Number(data.wardNumber),
         panchayath: data.panchayath || 'Madavoor',
         district: data.district || 'Kozhikode',
-        targetKits: Number(data.targetKits),
+        targetKits: Number(data.targetKits) || 50,
         defaultPassword: defaultPassword
       })
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Failed to create user' }));
-      throw new Error(err.message || 'Failed to create user');
+      throw new Error(err.message || err.Message || 'Failed to create user');
     }
+
     const created = await res.json();
+
     return {
       userId: created.userId || `mng-${Date.now()}`,
       fullName: data.fullName.trim(),
@@ -632,7 +432,7 @@ export const adminApi = {
       wardNumber: Number(data.wardNumber),
       panchayath: data.panchayath || 'Madavoor',
       district: data.district || 'Kozhikode',
-      targetKits: Number(data.targetKits),
+      targetKits: Number(data.targetKits) || 50,
       kitsCollected: 0,
       totalAmount: 0,
       donationsCount: 0,
@@ -640,57 +440,37 @@ export const adminApi = {
     };
   },
 
-  // Set target for a user
+  // Update target (PUT /api/Users/{userId}/target)
   updateUserTarget: async (userId: string, targetKits: number): Promise<ManagedUser> => {
-    if (USE_MOCK) {
-      await delay(250);
-      const users = getStoredManagedUsers();
-      const idx = users.findIndex((u) => u.userId === userId);
-      if (idx === -1) {
-        throw new Error('User not found.');
-      }
-
-      const validTarget = Math.max(1, Math.round(Number(targetKits) || 1));
-      users[idx].targetKits = validTarget;
-      localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(users));
-      return users[idx];
-    }
-
     const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/admin/managed-users/${userId}/target`, {
+    const res = await fetch(`${API_BASE_URL}/Users/${userId}/target`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ targetKits })
+      body: JSON.stringify({ targetKits: Number(targetKits) })
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Failed to update target' }));
       throw new Error(err.message || 'Failed to update target');
     }
-    return res.json();
+
+    return {
+      userId,
+      targetKits: Number(targetKits)
+    } as ManagedUser;
   },
 
-  // Delete a managed user
+  // Deactivate or remove a user
   deleteManagedUser: async (userId: string): Promise<boolean> => {
-    if (USE_MOCK) {
-      await delay(250);
-      const users = getStoredManagedUsers();
-      const filtered = users.filter((u) => u.userId !== userId);
-      localStorage.setItem(STORAGE_MANAGED_USERS, JSON.stringify(filtered));
-      return true;
-    }
-
     const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/admin/managed-users/${userId}`, {
+    const res = await fetch(`${API_BASE_URL}/Users/${userId}`, {
       method: 'DELETE',
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to delete user' }));
-      throw new Error(err.message || 'Failed to delete user');
-    }
-    return true;
+
+    return res.ok;
   }
 };

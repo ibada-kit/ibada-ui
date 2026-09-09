@@ -10,7 +10,7 @@ This guide explains how to deploy the React Charity Portal to **Vercel** and con
 - **Backend API Path**: `ML.Charity.API.Client/`
 - **Key Files Configured**:
   - `charity-web/vercel.json` - Handles client-side SPA routing fallback on Vercel.
-  - `charity-web/src/services/api.ts` - Modular API layer supporting mock dummy data and seamless switching to the Azure API.
+  - `charity-web/src/services/api.ts` - Direct API communication layer with live Azure App Service endpoints.
   - `charity-web/src/types/index.ts` - TypeScript DTOs matching the C# backend models.
 
 ---
@@ -106,18 +106,18 @@ The frontend application uses environment variables to switch between offline du
 
 ### Environment Variables
 
-| Variable Name | Default (Mock) | Production (Azure) |
+### Environment Variables
+
+| Variable Name | Description | Default / Production Value |
 |---|---|---|
-| `VITE_USE_MOCK` | `true` | `false` |
-| `VITE_API_BASE_URL` | *(local mock)* | `https://<your-azure-app>.azurewebsites.net/api` |
+| `VITE_API_BASE_URL` | Hosted .NET 8 Web API endpoint | `https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api` |
 
 ### Adding Environment Variables on Vercel
 
 1. Open your project on the **Vercel Dashboard**.
 2. Go to **Settings** > **Environment Variables**.
 3. Add:
-   - **Key**: `VITE_USE_MOCK`, **Value**: `false`
-   - **Key**: `VITE_API_BASE_URL`, **Value**: `https://<your-azure-app-name>.azurewebsites.net/api`
+   - **Key**: `VITE_API_BASE_URL`, **Value**: `https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api`
 4. Trigger a **Redeploy** from the Deployments tab to apply the new variables.
 
 ---

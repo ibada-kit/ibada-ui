@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { Donation } from '../types';
-import { donationsApi } from '../services/api';
-import { KIT_UNIT_RATE } from '../services/mockData';
+import { donationsApi, KIT_UNIT_RATE } from '../services/api';
 import confetti from 'canvas-confetti';
 import { X, Heart, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
 

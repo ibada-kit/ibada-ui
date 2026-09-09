@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import type { User } from '../types';
-import { authApi, setCurrentUser } from '../services/api';
+import { authApi } from '../services/api';
 import { 
   Heart, 
   Lock, 
   ArrowRight, 
   CheckCircle2, 
   AlertCircle, 
-  RefreshCw, 
-  ShieldCheck,
-  Users,
-  MapPin,
-  Award
+  RefreshCw 
 } from 'lucide-react';
 
 interface AuthScreenProps {
@@ -51,13 +47,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = (demoUser: User) => {
-    setPhone(demoUser.phoneNumber);
-    setPassword('Demo@123');
-    setCurrentUser(demoUser);
-    onSuccess(demoUser);
   };
 
   return (
@@ -238,163 +227,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Test Presets */}
-          <div style={{
-            marginTop: 26,
-            paddingTop: 18,
-            borderTop: '1px solid var(--border-subtle)'
-          }}>
-            <p style={{
-              fontSize: '0.72rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontWeight: 800,
-              color: '#64748B',
-              marginBottom: 10,
-              textAlign: 'center'
-            }}>
-              1-Click Role Access (Instant Field Test)
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-              {/* Volunteer */}
-              <button
-                type="button"
-                onClick={() => handleQuickDemo({
-                  userId: 'vol-1',
-                  fullName: 'Abdul Rahman',
-                  phoneNumber: '+919847123456',
-                  role: 'Volunteer',
-                  panchayath: 'Madavoor',
-                  wardNumber: 4,
-                  district: 'Kozhikode',
-                  token: 'demo-token-volunteer'
-                })}
-                style={{
-                  background: '#F4F9FD',
-                  border: '1px solid #B8D4EE',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#EBF7EE', color: '#008A2E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Award size={15} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Volunteer</div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Ward 4 Field</div>
-                </div>
-              </button>
-
-              {/* Coordinator */}
-              <button
-                type="button"
-                onClick={() => handleQuickDemo({
-                  userId: 'coord-1',
-                  fullName: 'Jasim Kakkad',
-                  phoneNumber: '+919847234567',
-                  role: 'Coordinator',
-                  panchayath: 'Madavoor',
-                  wardNumber: 4,
-                  district: 'Kozhikode',
-                  token: 'demo-token-coordinator'
-                })}
-                style={{
-                  background: '#F4F9FD',
-                  border: '1px solid #B8D4EE',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#EDF4FA', color: '#2C82C9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Users size={15} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Coordinator</div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Team Supervisor</div>
-                </div>
-              </button>
-
-              {/* Ward Committee */}
-              <button
-                type="button"
-                onClick={() => handleQuickDemo({
-                  userId: 'ward-1',
-                  fullName: 'Kakkad Ward Lead',
-                  phoneNumber: '+919847345678',
-                  role: 'WardCommittee',
-                  panchayath: 'Madavoor',
-                  wardNumber: 4,
-                  district: 'Kozhikode',
-                  token: 'demo-token-ward'
-                })}
-                style={{
-                  background: '#F4F9FD',
-                  border: '1px solid #B8D4EE',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#EBF7EE', color: '#008A2E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MapPin size={15} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Ward Committee</div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Ward 4 Lead</div>
-                </div>
-              </button>
-
-              {/* Admin */}
-              <button
-                type="button"
-                onClick={() => handleQuickDemo({
-                  userId: 'admin-1',
-                  fullName: 'System Super Admin',
-                  phoneNumber: '+919999999999',
-                  role: 'Admin',
-                  panchayath: 'Madavoor',
-                  wardNumber: 4,
-                  district: 'Kozhikode',
-                  token: 'demo-token-admin'
-                })}
-                style={{
-                  background: '#F4F9FD',
-                  border: '1px solid #B8D4EE',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#FEF3C7', color: '#92400E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShieldCheck size={15} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Super Admin</div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Full Control</div>
-                </div>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer info */}
