@@ -124,4 +124,5 @@ export interface CreateManagedUserRequest {
   panchayath?: string;
   district?: string;
   targetKits: number;
+  defaultPassword?: string;
 }

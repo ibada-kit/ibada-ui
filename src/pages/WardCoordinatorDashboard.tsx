@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, API_BASE_URL } from '../services/api';
+import { donationsApi, API_BASE_URL, generateDefaultPassword } from '../services/api';
 import { 
   MapPin, 
   Users, 
@@ -99,6 +99,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
     try {
       setSubmitting(true);
+      const defaultPass = generateDefaultPassword(volName, cleanPhone);
       const res = await fetch(`${API_BASE_URL}/Users`, {
         method: 'POST',
         headers: {
@@ -111,7 +112,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           role: 'Volunteer',
           wardNumber: user.wardNumber || 4,
           targetKits: Number(volTarget),
-          defaultPassword: 'Welcome@123'
+          defaultPassword: defaultPass
         })
       });
 
@@ -120,7 +121,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         throw new Error(err.message || 'Failed to save volunteer to database.');
       }
 
-      setStatusMsg({ text: `Volunteer ${volName} registered for Ward ${user.wardNumber}!`, isError: false });
+      setStatusMsg({ text: `Volunteer ${volName} registered for Ward ${user.wardNumber}! Default password: ${defaultPass}`, isError: false });
       setWardVolunteers(prev => [{
         fullName: volName.trim(),
         phoneNumber: `+91${cleanPhone.slice(-10)}`,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, ManagedUser, LeaderboardEntry, WardLeaderboardEntry } from '../types';
-import { adminApi, donationsApi } from '../services/api';
+import { adminApi, donationsApi, generateDefaultPassword } from '../services/api';
 import { 
   ShieldCheck, 
   Users, 
@@ -84,16 +84,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     try {
       setLoading(true);
+      const generatedPass = generateDefaultPassword(newFullName, clean);
       const created = await adminApi.createManagedUser({
         fullName: newFullName.trim(),
         phoneNumber: `+91${clean.slice(-10)}`,
         role: newRole,
         wardNumber: Number(newWard),
-        targetKits: Number(newTarget)
+        targetKits: Number(newTarget),
+        defaultPassword: generatedPass
       });
 
       setCoordinators(prev => [created, ...prev]);
-      setFeedbackMsg({ text: `Successfully registered ${created.fullName} as ${created.role}!`, isError: false });
+      setFeedbackMsg({ 
+        text: `Registered ${created.fullName} as ${created.role}! Default password: ${generatedPass}`, 
+        isError: false 
+      });
       
       setNewFullName('');
       setNewPhone('');

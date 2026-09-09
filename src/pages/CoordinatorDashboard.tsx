@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, LeaderboardEntry } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, API_BASE_URL } from '../services/api';
+import { donationsApi, API_BASE_URL, generateDefaultPassword } from '../services/api';
 import { 
   Users, 
   TrendingUp, 
@@ -87,6 +87,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
     try {
       setCreatingVol(true);
+      const defaultPass = generateDefaultPassword(volFullName, cleanPhone);
       const res = await fetch(`${API_BASE_URL}/Users`, {
         method: 'POST',
         headers: {
@@ -99,7 +100,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           role: 'Volunteer',
           wardNumber: Number(volWard),
           targetKits: Number(volTarget),
-          defaultPassword: 'Welcome@123'
+          defaultPassword: defaultPass
         })
       });
 
@@ -108,7 +109,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         throw new Error(err.message || 'Failed to create volunteer on server.');
       }
 
-      setCreateMsg({ text: `Volunteer ${volFullName} created! Default password: Welcome@123`, isError: false });
+      setCreateMsg({ text: `Volunteer ${volFullName} created! Default password: ${defaultPass}`, isError: false });
       setTeamMembers(prev => [{
         fullName: volFullName.trim(),
         phoneNumber: `+91${cleanPhone.slice(-10)}`,

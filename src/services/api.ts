@@ -121,6 +121,31 @@ export const setCurrentUser = (user: User | null) => {
   }
 };
 
+// 6-character default password generator: Name + Phone number
+export function generateDefaultPassword(fullName: string, phoneNumber: string): string {
+  const cleanName = fullName.replace(/[^a-zA-Z]/g, '');
+  const cleanPhone = phoneNumber.replace(/\D/g, '');
+
+  let namePart: string;
+  let phonePart: string;
+
+  if (cleanName.length >= 3) {
+    namePart = cleanName.slice(0, 3).toLowerCase();
+    phonePart = cleanPhone.length >= 3 ? cleanPhone.slice(-3) : cleanPhone.padStart(3, '0');
+  } else if (cleanName.length === 2) {
+    namePart = cleanName.toLowerCase();
+    phonePart = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone.padStart(4, '0');
+  } else if (cleanName.length === 1) {
+    namePart = cleanName.toLowerCase();
+    phonePart = cleanPhone.length >= 5 ? cleanPhone.slice(-5) : cleanPhone.padStart(5, '0');
+  } else {
+    namePart = 'usr';
+    phonePart = cleanPhone.length >= 3 ? cleanPhone.slice(-3) : cleanPhone.padStart(3, '0');
+  }
+
+  return `${namePart}${phonePart}`;
+}
+
 // Simulated network delay
 const delay = (ms: number = 400) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -573,19 +598,46 @@ export const adminApi = {
     }
 
     const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/admin/managed-users`, {
+    const defaultPassword = data.defaultPassword || generateDefaultPassword(data.fullName, data.phoneNumber);
+    const cleanPhone = data.phoneNumber.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
+
+    const res = await fetch(`${API_BASE_URL}/Users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        fullName: data.fullName.trim(),
+        phoneNumber: formattedPhone,
+        role: data.role,
+        wardNumber: Number(data.wardNumber),
+        panchayath: data.panchayath || 'Madavoor',
+        district: data.district || 'Kozhikode',
+        targetKits: Number(data.targetKits),
+        defaultPassword: defaultPassword
+      })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Failed to create user' }));
       throw new Error(err.message || 'Failed to create user');
     }
-    return res.json();
+    const created = await res.json();
+    return {
+      userId: created.userId || `mng-${Date.now()}`,
+      fullName: data.fullName.trim(),
+      phoneNumber: formattedPhone,
+      role: data.role,
+      wardNumber: Number(data.wardNumber),
+      panchayath: data.panchayath || 'Madavoor',
+      district: data.district || 'Kozhikode',
+      targetKits: Number(data.targetKits),
+      kitsCollected: 0,
+      totalAmount: 0,
+      donationsCount: 0,
+      createdAt: new Date().toISOString()
+    };
   },
 
   // Set target for a user
