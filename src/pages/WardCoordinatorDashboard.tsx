@@ -152,7 +152,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
     <div style={{
       maxWidth: 960,
       margin: '0 auto',
-      padding: '16px 14px calc(90px + var(--safe-area-bottom)) 14px',
+      padding: '14px clamp(10px, 3vw, 16px) calc(90px + var(--safe-area-bottom)) clamp(10px, 3vw, 16px)',
       width: '100%'
     }}>
       {/* Header */}
@@ -201,7 +201,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         boxShadow: 'var(--shadow-sm)',
         marginBottom: 20
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 40,
@@ -229,11 +229,11 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           </span>
         </div>
 
-        {/* Brand Progress Bar */}
+        {/* Progress Bar */}
         <div style={{
           width: '100%',
           height: 12,
-          background: '#F1F5F9',
+          background: '#E2E8F0',
           borderRadius: 9999,
           overflow: 'hidden',
           marginBottom: 10
@@ -254,27 +254,13 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       </div>
 
       {/* Tabs */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(5, 1fr)',
-        gap: 6,
-        background: '#F4F9FD',
-        padding: 5,
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-subtle)',
-        marginBottom: 20
-      }}>
+      <div className="tab-strip" style={{ marginBottom: 20 }}>
         <button
           onClick={() => setActiveTab('overview')}
+          className="tab-strip-btn"
           style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'overview' ? '#008A2E' : 'transparent',
-            color: activeTab === 'overview' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
+            color: activeTab === 'overview' ? '#FFFFFF' : '#334155'
           }}
         >
           Ward Stats
@@ -282,15 +268,10 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
         <button
           onClick={() => setActiveTab('team')}
+          className="tab-strip-btn"
           style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'team' ? '#008A2E' : 'transparent',
-            color: activeTab === 'team' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
+            color: activeTab === 'team' ? '#FFFFFF' : '#334155'
           }}
         >
           Volunteers ({wardVolunteers.length})
@@ -298,15 +279,10 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
         <button
           onClick={() => setActiveTab('record')}
+          className="tab-strip-btn"
           style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'record' ? '#008A2E' : 'transparent',
-            color: activeTab === 'record' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
+            color: activeTab === 'record' ? '#FFFFFF' : '#334155'
           }}
         >
           Record
@@ -314,15 +290,10 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
         <button
           onClick={() => setActiveTab('transactions')}
+          className="tab-strip-btn"
           style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'transactions' ? '#008A2E' : 'transparent',
-            color: activeTab === 'transactions' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
+            color: activeTab === 'transactions' ? '#FFFFFF' : '#334155'
           }}
         >
           Receipts
@@ -330,15 +301,10 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
         <button
           onClick={() => setActiveTab('ranks')}
+          className="tab-strip-btn"
           style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'ranks' ? '#008A2E' : 'transparent',
-            color: activeTab === 'ranks' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
+            color: activeTab === 'ranks' ? '#FFFFFF' : '#334155'
           }}
         >
           Rankings

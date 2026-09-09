@@ -65,7 +65,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
     <div style={{
       background: '#FFFFFF',
       borderRadius: 'var(--radius-xl)',
-      padding: '24px 20px',
+      padding: '24px clamp(14px, 4vw, 22px)',
       border: '1px solid var(--border-subtle)',
       boxShadow: 'var(--shadow-sm)',
       maxWidth: 580,
@@ -234,20 +234,21 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           }}>
             Number of Relief Kits
           </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 10 }}>
             {[1, 2, 5, 10].map((count) => (
               <button
                 type="button"
                 key={count}
                 onClick={() => setKitCount(count)}
                 style={{
-                  padding: '10px 4px',
+                  padding: '10px 2px',
+                  minHeight: 44,
                   borderRadius: 'var(--radius-md)',
                   border: kitCount === count ? '2px solid #008A2E' : '1px solid var(--border-subtle)',
                   background: kitCount === count ? '#EBF7EE' : '#F4F9FD',
                   color: kitCount === count ? '#008A2E' : '#334155',
                   fontWeight: 800,
-                  fontSize: '0.88rem',
+                  fontSize: 'clamp(0.78rem, 2.8vw, 0.88rem)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -278,6 +279,8 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 10,
           marginBottom: 22
         }}>
           <div>

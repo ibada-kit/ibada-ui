@@ -143,7 +143,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     <main style={{
       maxWidth: 1200,
       margin: '0 auto',
-      padding: '16px 14px calc(90px + var(--safe-area-bottom)) 14px',
+      padding: '14px clamp(10px, 3vw, 16px) calc(90px + var(--safe-area-bottom)) clamp(10px, 3vw, 16px)',
       width: '100%'
     }}>
       
@@ -191,7 +191,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* Hero Banner with Big Stats */}
         <div className="glass-card" style={{
-          padding: '30px 26px',
+          padding: '24px clamp(14px, 4vw, 26px)',
           background: '#FFFFFF',
           border: '1px solid var(--border-subtle)',
           position: 'relative',
@@ -425,29 +425,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
 
           {/* Tab Switcher */}
-          <div style={{
-            display: 'flex',
-            background: '#FFFFFF',
-            padding: 4,
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)'
-          }}>
+          <div className="tab-strip" style={{ maxWidth: '100%', background: '#FFFFFF' }}>
             <button
               id="tab-btn-volunteers"
               onClick={() => setActiveTab('volunteers')}
+              className="tab-strip-btn"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: activeTab === 'volunteers' ? '#42B06F' : 'transparent',
+                background: activeTab === 'volunteers' ? '#008A2E' : 'transparent',
                 color: activeTab === 'volunteers' ? '#ffffff' : 'var(--text-secondary)',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                fontWeight: 700
               }}
             >
               <Award size={15} />
@@ -459,19 +445,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               id="tab-btn-wards"
               onClick={() => setActiveTab('wards')}
+              className="tab-strip-btn"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: activeTab === 'wards' ? '#256CAA' : 'transparent',
+                background: activeTab === 'wards' ? '#2C82C9' : 'transparent',
                 color: activeTab === 'wards' ? '#ffffff' : 'var(--text-secondary)',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                fontWeight: 700
               }}
             >
               <MapPin size={15} />
@@ -481,19 +459,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               id="tab-btn-recent"
               onClick={() => setActiveTab('recent')}
+              className="tab-strip-btn"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: activeTab === 'recent' ? '#256CAA' : 'transparent',
+                background: activeTab === 'recent' ? '#2C82C9' : 'transparent',
                 color: activeTab === 'recent' ? '#ffffff' : 'var(--text-secondary)',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                fontWeight: 700
               }}
             >
               <CheckCircle size={15} />
@@ -599,13 +569,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div>
             {/* Top 3 Podium Visual */}
             {top3.length >= 3 && (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 16,
-                marginBottom: 28,
-                alignItems: 'end'
-              }}>
+              <div className="podium-grid">
                 {/* 2nd Place */}
                 <div className="glass-card" style={{
                   padding: '24px 16px',
@@ -632,16 +596,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
                     Ward {top3[1]?.wardNumber} • {top3[1]?.role}
                   </p>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#42B06F' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#008A2E' }}>
                     {top3[1]?.kitsCollected} Kits
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#256CAA', fontWeight: 700 }}>
+                  <div style={{ fontSize: '0.82rem', color: '#2C82C9', fontWeight: 700 }}>
                     ₹{top3[1]?.totalAmount.toLocaleString('en-IN')}
                   </div>
                 </div>
 
                 {/* 1st Place - Champion */}
-                <div className="glass-card" style={{
+                <div className="glass-card podium-champion" style={{
                   padding: '28px 18px',
                   textAlign: 'center',
                   background: '#FFFFFF',
@@ -672,10 +636,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
                     Ward {top3[0]?.wardNumber} • {top3[0]?.role}
                   </p>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#42B06F' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#008A2E' }}>
                     {top3[0]?.kitsCollected} Kits
                   </div>
-                  <div style={{ fontSize: '0.9rem', color: '#256CAA', fontWeight: 800 }}>
+                  <div style={{ fontSize: '0.9rem', color: '#2C82C9', fontWeight: 800 }}>
                     ₹{top3[0]?.totalAmount.toLocaleString('en-IN')}
                   </div>
                 </div>
@@ -706,10 +670,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
                     Ward {top3[2]?.wardNumber} • {top3[2]?.role}
                   </p>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#42B06F' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#008A2E' }}>
                     {top3[2]?.kitsCollected} Kits
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#256CAA', fontWeight: 700 }}>
+                  <div style={{ fontSize: '0.82rem', color: '#2C82C9', fontWeight: 700 }}>
                     ₹{top3[2]?.totalAmount.toLocaleString('en-IN')}
                   </div>
                 </div>

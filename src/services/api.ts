@@ -23,7 +23,7 @@ import {
 
 // Configurable via Vite environment variables
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api';
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'; // Default to mock until Azure backend is connected
+const USE_MOCK = 'false' //import.meta.env.VITE_USE_MOCK !== 'false'; // Default to mock until Azure backend is connected
 
 // Local Storage Keys
 const STORAGE_USER = 'charity_user';

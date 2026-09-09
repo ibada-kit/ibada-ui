@@ -143,7 +143,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
     <div style={{
       maxWidth: 960,
       margin: '0 auto',
-      padding: '16px 14px calc(90px + var(--safe-area-bottom)) 14px',
+      padding: '14px clamp(10px, 3vw, 16px) calc(90px + var(--safe-area-bottom)) clamp(10px, 3vw, 16px)',
       width: '100%'
     }}>
       {/* Header */}
@@ -153,22 +153,22 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: 12,
-        marginBottom: 20
+        marginBottom: 16
       }}>
         <div>
           <span style={{
             background: '#F4F9FD',
             color: '#2C82C9',
             border: '1px solid #B8D4EE',
-            padding: '4px 10px',
+            padding: '3px 8px',
             borderRadius: 'var(--radius-full)',
-            fontSize: '0.74rem',
+            fontSize: '0.72rem',
             fontWeight: 800,
             textTransform: 'uppercase'
           }}>
             Drive Coordinator
           </span>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0F172A', marginTop: 4 }}>
+          <h1 style={{ fontSize: 'clamp(1.3rem, 4vw, 1.65rem)', fontWeight: 900, color: '#0F172A', marginTop: 4 }}>
             {user.fullName}
           </h1>
         </div>
@@ -187,12 +187,12 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
       <div style={{
         background: '#FFFFFF',
         borderRadius: 'var(--radius-xl)',
-        padding: '22px 20px',
+        padding: 'clamp(16px, 3vw, 22px) clamp(14px, 3vw, 20px)',
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-sm)',
-        marginBottom: 20
+        marginBottom: 18
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 40,
@@ -202,20 +202,21 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#008A2E'
+              color: '#008A2E',
+              flexShrink: 0
             }}>
               <TrendingUp size={22} />
             </div>
             <div>
-              <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
                 Coordinator Team Campaign Target
               </span>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A' }}>
+              <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.3rem)', fontWeight: 900, color: '#0F172A' }}>
                 {progress.collectedKits} / {progress.targetKits} Kits ({progress.achievementPercentage}%)
               </div>
             </div>
           </div>
-          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#2C82C9' }}>
+          <span style={{ fontSize: 'clamp(1.15rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#2C82C9' }}>
             ₹{progress.collectedAmount.toLocaleString('en-IN')}
           </span>
         </div>
@@ -238,101 +239,51 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           }} />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
           <span>Covers volunteers assigned under this coordinator</span>
-          <span>{Math.max(0, progress.targetKits - progress.collectedKits)} kits to 100% goal</span>
+          <span>{Math.max(0, progress.targetKits - progress.collectedKits)} kits to goal</span>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(5, 1fr)',
-        gap: 6,
-        background: '#F4F9FD',
-        padding: 5,
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-subtle)',
-        marginBottom: 20
-      }}>
+      {/* Tabs Navigation - Responsive tab-strip */}
+      <div className="tab-strip" style={{ marginBottom: 18 }}>
         <button
           onClick={() => setActiveTab('progress')}
-          style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'progress' ? '#008A2E' : 'transparent',
-            color: activeTab === 'progress' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
-          }}
+          className={`tab-strip-btn ${activeTab === 'progress' ? 'active' : ''}`}
         >
-          Overview
+          <span>Overview</span>
         </button>
 
         <button
           onClick={() => setActiveTab('team')}
-          style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'team' ? '#008A2E' : 'transparent',
-            color: activeTab === 'team' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
-          }}
+          className={`tab-strip-btn ${activeTab === 'team' ? 'active' : ''}`}
         >
-          My Team ({teamMembers.length})
+          <Users size={15} />
+          <span>My Team ({teamMembers.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('record')}
-          style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'record' ? '#008A2E' : 'transparent',
-            color: activeTab === 'record' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
-          }}
+          className={`tab-strip-btn ${activeTab === 'record' ? 'active' : ''}`}
         >
-          Record
+          <PlusCircle size={15} />
+          <span>Record Donation</span>
         </button>
 
         <button
           onClick={() => setActiveTab('transactions')}
-          style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'transactions' ? '#008A2E' : 'transparent',
-            color: activeTab === 'transactions' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
-          }}
+          className={`tab-strip-btn ${activeTab === 'transactions' ? 'active' : ''}`}
         >
-          Receipts
+          <History size={15} />
+          <span>Receipts ({recentTransactions.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('leaderboard')}
-          style={{
-            padding: '9px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'leaderboard' ? '#008A2E' : 'transparent',
-            color: activeTab === 'leaderboard' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.76rem',
-            cursor: 'pointer'
-          }}
+          className={`tab-strip-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
         >
-          Leaderboard
+          <Trophy size={15} />
+          <span>Leaderboard</span>
         </button>
       </div>
 

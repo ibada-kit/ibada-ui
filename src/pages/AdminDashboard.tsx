@@ -155,7 +155,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div style={{
       maxWidth: 1040,
       margin: '0 auto',
-      padding: '16px 14px calc(90px + var(--safe-area-bottom)) 14px',
+      padding: '14px clamp(10px, 3vw, 16px) calc(90px + var(--safe-area-bottom)) clamp(10px, 3vw, 16px)',
       width: '100%'
     }}>
       {/* Header */}
@@ -228,27 +228,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {/* Tabs */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 6,
-        background: '#F4F9FD',
-        padding: 5,
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-subtle)',
-        marginBottom: 20
-      }}>
+      <div className="tab-strip" style={{ marginBottom: 20 }}>
         <button
           onClick={() => setActiveTab('users')}
+          className="tab-strip-btn"
           style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'users' ? '#008A2E' : 'transparent',
             color: activeTab === 'users' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -261,15 +247,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('targets')}
+          className="tab-strip-btn"
           style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'targets' ? '#008A2E' : 'transparent',
             color: activeTab === 'targets' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -282,15 +263,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('reports')}
+          className="tab-strip-btn"
           style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'reports' ? '#008A2E' : 'transparent',
             color: activeTab === 'reports' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -303,15 +279,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('settings')}
+          className="tab-strip-btn"
           style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
             background: activeTab === 'settings' ? '#008A2E' : 'transparent',
             color: activeTab === 'settings' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -341,9 +312,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div style={{
             background: '#FFFFFF',
             borderRadius: 'var(--radius-xl)',
-            padding: 24,
+            padding: '24px clamp(14px, 4vw, 24px)',
             maxWidth: 480,
             width: '100%',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
             boxShadow: 'var(--shadow-lg)'
           }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: 14 }}>

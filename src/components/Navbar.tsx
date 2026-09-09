@@ -103,20 +103,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       gap: 5,
-                      padding: '6px 10px',
+                      padding: '6px 8px',
                       borderRadius: 'var(--radius-sm)',
                       border: 'none',
-                      background: activeView === 'home' ? '#42B06F' : 'transparent',
+                      background: activeView === 'home' ? '#008A2E' : 'transparent',
                       color: activeView === 'home' ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
                     title="Live Drive Overview"
                   >
                     <Home size={14} />
-                    <span>Overview</span>
+                    <span className="hidden-mobile">Overview</span>
                   </button>
                   <button
                     id="nav-btn-admin"
@@ -125,84 +125,69 @@ export const Navbar: React.FC<NavbarProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       gap: 5,
-                      padding: '6px 10px',
+                      padding: '6px 8px',
                       borderRadius: 'var(--radius-sm)',
                       border: 'none',
-                      background: activeView === 'admin' ? '#256CAA' : 'transparent',
+                      background: activeView === 'admin' ? '#2C82C9' : 'transparent',
                       color: activeView === 'admin' ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: '0.78rem',
+                      fontSize: '0.76rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
-                    title="Admin Console (Ward Committee & Coordinators)"
+                    title="Admin Console"
                   >
                     <ShieldCheck size={14} />
-                    <span>Admin Panel</span>
+                    <span className="hidden-mobile">Admin</span>
                   </button>
                 </div>
               )}
-
-              {/* Quick Record Button (Desktop/Tablet) */}
-              <button
-                id="btn-quick-record-donation"
-                onClick={onOpenRecordModal}
-                className="btn-primary"
-                style={{
-                  padding: '8px 14px',
-                  fontSize: '0.85rem',
-                  minHeight: 38,
-                  display: 'none'
-                }}
-              >
-                <PlusCircle size={16} />
-                <span>Record</span>
-              </button>
 
               {/* User Profile Pill */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
+                gap: 6,
                 background: '#FFFFFF',
-                padding: '4px 10px',
+                padding: '4px 8px',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-subtle)'
+                border: '1px solid var(--border-subtle)',
+                minWidth: 0
               }}>
                 <div style={{
-                  width: 30,
-                  height: 30,
+                  width: 28,
+                  height: 28,
                   borderRadius: '50%',
-                  background: '#256CAA',
+                  background: '#2C82C9',
                   color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
                   flexShrink: 0
                 }}>
                   {user.fullName.charAt(0)}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
+                    <span className="hidden-mobile" style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
                       color: 'var(--text-primary)',
-                      maxWidth: 100,
+                      maxWidth: 80,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
                     }}>
                       {user.fullName.split(' ')[0]}
                     </span>
-                    <span className={`badge ${getRoleBadgeClass(user.role)}`} style={{ fontSize: '0.6rem', padding: '1px 5px' }}>
-                      {user.role}
+                    <span className={`badge ${getRoleBadgeClass(user.role)}`} style={{ fontSize: '0.62rem', padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                      {user.role === 'WardCommittee' ? 'Ward Lead' : user.role}
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
-                    W{user.wardNumber}
+                  <span className="hidden-mobile" style={{ fontSize: '0.66rem', color: 'var(--text-secondary)' }}>
+                    Ward {user.wardNumber}
                   </span>
                 </div>
               </div>
@@ -212,11 +197,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="btn-logout"
                 onClick={onLogout}
                 className="btn-icon"
-                style={{ width: 38, height: 38, minWidth: 38, minHeight: 38 }}
+                style={{ width: 34, height: 34, minWidth: 34, minHeight: 34 }}
                 title="Log Out"
                 aria-label="Log Out"
               >
-                <LogOut size={16} />
+                <LogOut size={15} />
               </button>
             </>
           ) : (

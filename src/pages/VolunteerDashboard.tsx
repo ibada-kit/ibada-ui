@@ -141,7 +141,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
     <div style={{
       maxWidth: 900,
       margin: '0 auto',
-      padding: '16px 14px calc(90px + var(--safe-area-bottom)) 14px',
+      padding: '14px clamp(10px, 3vw, 16px) calc(90px + var(--safe-area-bottom)) clamp(10px, 3vw, 16px)',
       width: '100%'
     }}>
       {/* Volunteer Header */}
@@ -151,32 +151,32 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: 12,
-        marginBottom: 20
+        marginBottom: 16
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span style={{
               background: '#F4F9FD',
               color: '#2C82C9',
               border: '1px solid #B8D4EE',
-              padding: '4px 10px',
+              padding: '3px 8px',
               borderRadius: 'var(--radius-full)',
-              fontSize: '0.74rem',
+              fontSize: '0.72rem',
               fontWeight: 800,
               textTransform: 'uppercase'
             }}>
               Ward {user.wardNumber} Volunteer
             </span>
-            <span style={{ fontSize: '0.8rem', color: '#64748B' }}>Panchayath: {user.panchayath}</span>
+            <span style={{ fontSize: '0.76rem', color: '#64748B' }}>Panchayath: {user.panchayath}</span>
           </div>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0F172A', marginTop: 4 }}>
+          <h1 style={{ fontSize: 'clamp(1.3rem, 4vw, 1.65rem)', fontWeight: 900, color: '#0F172A', marginTop: 4 }}>
             {user.fullName}
           </h1>
         </div>
 
         <div style={{
-          width: 44,
-          height: 44,
+          width: 42,
+          height: 42,
           borderRadius: 14,
           background: '#008A2E',
           color: '#ffffff',
@@ -185,7 +185,8 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           justifyContent: 'center',
           fontWeight: 800,
           fontSize: '1rem',
-          boxShadow: '0 3px 8px rgba(0, 138, 46, 0.25)'
+          boxShadow: '0 3px 8px rgba(0, 138, 46, 0.25)',
+          flexShrink: 0
         }}>
           {user.fullName.slice(0, 2).toUpperCase()}
         </div>
@@ -195,12 +196,12 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
       <div style={{
         background: '#FFFFFF',
         borderRadius: 'var(--radius-xl)',
-        padding: '22px 20px',
+        padding: 'clamp(16px, 3vw, 22px) clamp(14px, 3vw, 20px)',
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-sm)',
-        marginBottom: 20
+        marginBottom: 18
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 38,
@@ -210,20 +211,21 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#008A2E'
+              color: '#008A2E',
+              flexShrink: 0
             }}>
               <TrendingUp size={20} />
             </div>
             <div>
-              <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
                 My Campaign Target
               </span>
-              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A' }}>
+              <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.25rem)', fontWeight: 900, color: '#0F172A' }}>
                 {progress.collectedKits} / {progress.targetKits} Kits
               </div>
             </div>
           </div>
-          <span style={{ fontSize: '1.35rem', fontWeight: 900, color: '#2C82C9' }}>
+          <span style={{ fontSize: 'clamp(1.15rem, 3.5vw, 1.35rem)', fontWeight: 900, color: '#2C82C9' }}>
             {progress.achievementPercentage}%
           </span>
         </div>
@@ -246,106 +248,41 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           }} />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
           <span>₹{progress.collectedAmount.toLocaleString('en-IN')} Raised</span>
-          <span>{Math.max(0, progress.targetKits - progress.collectedKits)} kits needed to reach target</span>
+          <span>{Math.max(0, progress.targetKits - progress.collectedKits)} kits to goal</span>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 6,
-        background: '#F4F9FD',
-        padding: 5,
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-subtle)',
-        marginBottom: 20
-      }}>
+      {/* Tabs Navigation - Responsive tab-strip */}
+      <div className="tab-strip" style={{ marginBottom: 18 }}>
         <button
           onClick={() => setActiveTab('record')}
-          style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'record' ? '#008A2E' : 'transparent',
-            color: activeTab === 'record' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            transition: 'all 0.15s ease'
-          }}
+          className={`tab-strip-btn ${activeTab === 'record' ? 'active' : ''}`}
         >
           <PlusCircle size={15} />
-          <span>Record</span>
+          <span>Record Donation</span>
         </button>
 
         <button
           onClick={() => setActiveTab('history')}
-          style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'history' ? '#008A2E' : 'transparent',
-            color: activeTab === 'history' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            transition: 'all 0.15s ease'
-          }}
+          className={`tab-strip-btn ${activeTab === 'history' ? 'active' : ''}`}
         >
           <History size={15} />
-          <span>Receipts</span>
+          <span>Receipts ({history.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('leaderboard')}
-          style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'leaderboard' ? '#008A2E' : 'transparent',
-            color: activeTab === 'leaderboard' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            transition: 'all 0.15s ease'
-          }}
+          className={`tab-strip-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
         >
           <Trophy size={15} />
-          <span>Ranks</span>
+          <span>Leaderboard</span>
         </button>
 
         <button
           onClick={() => setActiveTab('profile')}
-          style={{
-            padding: '10px 4px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            background: activeTab === 'profile' ? '#008A2E' : 'transparent',
-            color: activeTab === 'profile' ? '#FFFFFF' : '#334155',
-            fontWeight: 800,
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            transition: 'all 0.15s ease'
-          }}
+          className={`tab-strip-btn ${activeTab === 'profile' ? 'active' : ''}`}
         >
           <UserIcon size={15} />
           <span>Profile</span>

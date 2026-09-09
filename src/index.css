@@ -275,7 +275,7 @@ body {
   border: 1px solid #CBD5E1;
   border-radius: var(--radius-md);
   padding: 11px 14px;
-  font-size: 0.95rem;
+  font-size: 1rem; /* 16px to prevent iOS Safari auto-zooming */
   color: var(--text-primary);
   font-family: inherit;
   transition: all var(--transition-fast);
@@ -284,8 +284,8 @@ body {
 }
 
 .input-field:focus {
-  border-color: #42B06F;
-  box-shadow: 0 0 0 3px rgba(66, 176, 111, 0.15);
+  border-color: #008A2E;
+  box-shadow: 0 0 0 3px rgba(0, 138, 46, 0.15);
   background: #FFFFFF;
 }
 
@@ -376,6 +376,85 @@ body {
   }
 }
 
+/* Responsive Horizontal Tab Strip - No horizontal squeeze on mobile */
+.tab-strip {
+  display: flex;
+  gap: 6px;
+  background: var(--secondary-light);
+  padding: 5px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  width: 100%;
+}
+
+.tab-strip::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+.tab-strip-btn {
+  flex: 1 0 auto;
+  white-space: nowrap;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  min-height: 40px;
+  touch-action: manipulation;
+}
+
+.tab-strip-btn.active {
+  background: var(--primary);
+  color: #FFFFFF;
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 640px) {
+  .tab-strip-btn {
+    flex: 1 1 0px;
+    font-size: 0.86rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+/* Responsive Podium Layout */
+.podium-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .podium-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .podium-champion {
+    order: -1;
+    transform: none !important;
+  }
+}
+
 /* App Header & Navbar Responsive */
 .pwa-navbar {
   position: sticky;
@@ -383,8 +462,9 @@ body {
   z-index: 50;
   background: #FFFFFF;
   border-bottom: 1px solid #E2E8F0;
-  padding: calc(10px + var(--safe-area-top)) 16px 10px 16px;
+  padding: calc(8px + var(--safe-area-top)) clamp(10px, 3vw, 16px) 8px clamp(10px, 3vw, 16px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  width: 100%;
 }
 
 .pwa-navbar-inner {
@@ -393,7 +473,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+  width: 100%;
 }
 
 /* Floating PWA Action Button */

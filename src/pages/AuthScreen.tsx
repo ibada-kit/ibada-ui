@@ -100,7 +100,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
         <div style={{
           background: '#FFFFFF',
           borderRadius: 'var(--radius-xl)',
-          padding: '28px 22px',
+          padding: '28px clamp(14px, 4vw, 22px)',
           border: '1px solid var(--border-subtle)',
           boxShadow: 'var(--shadow-sm)'
         }}>
@@ -257,7 +257,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
               1-Click Role Access (Instant Field Test)
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
               {/* Volunteer */}
               <button
                 type="button"
