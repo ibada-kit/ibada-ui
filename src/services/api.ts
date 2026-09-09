@@ -11,8 +11,8 @@ import type {
   UpdateManagedUserRequest
 } from '../types';
 
-// Live Azure API Base URL
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api';
+// Live Azure API Base URL (uses Vite proxy in DEV to eliminate local CORS restrictions)
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api');
 export const KIT_UNIT_RATE = 1000;
 
 // Local Storage Keys
@@ -620,16 +620,24 @@ export const coordinatorApi = {
   // Get team volunteers (GET /api/Users/volunteers)
   getMyVolunteers: async (tokenOverride?: string): Promise<any[]> => {
     const token = tokenOverride || getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/Users/volunteers`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
+    try {
+      console.log('[coordinatorApi.getMyVolunteers] Calling GET /Users/volunteers. Token present:', !!token);
+      const res = await fetch(`${API_BASE_URL}/Users/volunteers`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
 
-    if (!res.ok) {
-      console.warn('[coordinatorApi.getMyVolunteers] Status:', res.status);
+      console.log('[coordinatorApi.getMyVolunteers] Status:', res.status, res.statusText);
+
+      if (!res.ok) {
+        console.warn('[coordinatorApi.getMyVolunteers] Request rejected with status:', res.status);
+        return [];
+      }
+
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.warn('[coordinatorApi.getMyVolunteers] Fetch failed (network or server error):', err);
       return [];
     }
-
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
   }
 };
