@@ -1,163 +1,63 @@
-import React, { useState, useRef, useEffect } from 'react';
-import type { User, UserRole } from '../types';
+import React, { useState } from 'react';
+import type { User } from '../types';
 import { authApi, setCurrentUser } from '../services/api';
-import { DEMO_USERS } from '../services/mockData';
-import { Heart, KeyRound, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Sparkles, UserPlus, LogIn } from 'lucide-react';
+import { 
+  Heart, 
+  Lock, 
+  ArrowRight, 
+  CheckCircle2, 
+  AlertCircle, 
+  RefreshCw, 
+  ShieldCheck,
+  Users,
+  MapPin,
+  Award
+} from 'lucide-react';
 
 interface AuthScreenProps {
   onSuccess: (user: User) => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  
-  // Phone step state
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<UserRole>('Volunteer');
-  const [wardNumber, setWardNumber] = useState<number>(4);
-  const [panchayath] = useState('Madavoor');
-
-  // OTP step state
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
-  
-  // UX state
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
-  const [timerSeconds, setTimerSeconds] = useState(60);
-  const [isTimerActive, setIsTimerActive] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Timer countdown
-  useEffect(() => {
-    let interval: number;
-    if (isTimerActive && timerSeconds > 0) {
-      interval = window.setInterval(() => {
-        setTimerSeconds((prev) => prev - 1);
-      }, 1000);
-    } else if (timerSeconds === 0) {
-      setIsTimerActive(false);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerActive, timerSeconds]);
-
-  // Handle Send OTP
-  const handleSendOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMessage(null);
-    setInfoMessage(null);
+    setSuccessMessage(null);
 
-    const clean = phoneNumber.replace(/\D/g, '');
+    const clean = phone.replace(/\D/g, '');
     if (clean.length < 10) {
       setErrorMessage('Please enter a valid 10-digit mobile number.');
       return;
     }
 
-    if (mode === 'signup' && !fullName.trim()) {
-      setErrorMessage('Please enter your full name for registration.');
+    if (!password) {
+      setErrorMessage('Please enter your password.');
       return;
     }
 
     try {
       setLoading(true);
-      const res = await authApi.sendOtp(clean);
-      setInfoMessage(res.message);
-      setStep('otp');
-      setTimerSeconds(60);
-      setIsTimerActive(true);
-      setTimeout(() => {
-        otpInputsRef.current[0]?.focus();
-      }, 100);
+      const user = await authApi.loginWithPassword(clean, password);
+      setSuccessMessage(`Welcome back, ${user.fullName}!`);
+      setTimeout(() => onSuccess(user), 300);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to dispatch OTP.');
+      setErrorMessage(err.message || 'Authentication failed. Please verify phone number and password.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle OTP digit changes
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpInputsRef.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpInputsRef.current[index - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pastedData) return;
-
-    const newOtp = [...otp];
-    for (let i = 0; i < pastedData.length; i++) {
-      newOtp[i] = pastedData[i];
-    }
-    setOtp(newOtp);
-    const nextIndex = Math.min(pastedData.length, 5);
-    otpInputsRef.current[nextIndex]?.focus();
-  };
-
-  // Handle Verify OTP
-  const handleVerifyOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setErrorMessage(null);
-    const otpCode = otp.join('');
-    if (otpCode.length !== 6) {
-      setErrorMessage('Please enter all 6 digits of the OTP.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const clean = phoneNumber.replace(/\D/g, '');
-      const loginRes = await authApi.verifyOtp(clean, otpCode);
-
-      const storedUser: User = {
-        userId: `usr-${Date.now()}`,
-        fullName: mode === 'signup' && fullName ? fullName : loginRes.fullName,
-        phoneNumber: clean,
-        role: mode === 'signup' ? role : loginRes.role,
-        panchayath: mode === 'signup' ? panchayath : loginRes.panchayath,
-        wardNumber: mode === 'signup' ? wardNumber : loginRes.wardNumber,
-        token: loginRes.token,
-        expiresAt: loginRes.expiresAt
-      };
-      setCurrentUser(storedUser);
-      onSuccess(storedUser);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'OTP verification failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Quick Demo Login Helper
   const handleQuickDemo = (demoUser: User) => {
-    setPhoneNumber(demoUser.phoneNumber);
-    setFullName(demoUser.fullName);
-    setRole(demoUser.role);
-    setWardNumber(demoUser.wardNumber);
-    setStep('otp');
-    setOtp(['1', '2', '3', '4', '5', '6']);
-    setInfoMessage(`Preloaded ${demoUser.fullName} (${demoUser.role}). Ready to verify!`);
-  };
-
-  const handleAutofillDemoOtp = () => {
-    setOtp(['1', '2', '3', '4', '5', '6']);
+    setPhone(demoUser.phoneNumber);
+    setPassword('Demo@123');
+    setCurrentUser(demoUser);
+    onSuccess(demoUser);
   };
 
   return (
@@ -168,100 +68,42 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 'max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)) 16px',
-      backgroundColor: '#F8FAFC',
+      backgroundColor: '#F4F9FD',
       position: 'relative'
     }}>
-      {/* Main Container */}
-      <div style={{ width: '100%', maxWidth: 460, position: 'relative', zIndex: 2 }}>
+      <div style={{ width: '100%', maxWidth: 440, position: 'relative', zIndex: 2 }}>
         
         {/* Logo & Headline */}
-        <div style={{ textAlign: 'center', marginBottom: 22 }}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
-            background: '#42B06F',
+            width: 56,
+            height: 56,
+            borderRadius: 16,
+            background: '#008A2E',
             margin: '0 auto 12px auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(66, 176, 111, 0.25)'
+            boxShadow: '0 4px 14px rgba(0, 138, 46, 0.28)'
           }}>
-            <Heart size={26} color="#ffffff" fill="#ffffff" />
+            <Heart size={28} color="#ffffff" fill="#ffffff" />
           </div>
-          <h1 style={{ fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4, color: '#0F172A' }}>
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: 4, color: '#0F172A' }}>
             Madavoor Relief Drive
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            Volunteer & Coordinator Portal
+          <p style={{ color: '#2C82C9', fontSize: '0.88rem', fontWeight: 700 }}>
+            Volunteer & Community Coordinator Portal
           </p>
         </div>
 
         {/* Card */}
-        <div className="glass-card" style={{ padding: '24px 20px', background: '#FFFFFF' }}>
-          
-          {/* Tabs: Sign In vs Sign Up */}
-          {step === 'phone' && (
-            <div style={{
-              display: 'flex',
-              background: '#F1F5F9',
-              borderRadius: 'var(--radius-md)',
-              padding: 4,
-              marginBottom: 24,
-              border: '1px solid var(--border-subtle)'
-            }}>
-              <button
-                type="button"
-                id="tab-login"
-                onClick={() => setMode('login')}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '9px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: mode === 'login' ? '#42B06F' : 'transparent',
-                  color: mode === 'login' ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: 600,
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <LogIn size={16} />
-                <span>Log In</span>
-              </button>
-              <button
-                type="button"
-                id="tab-signup"
-                onClick={() => setMode('signup')}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '9px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: mode === 'signup' ? '#256CAA' : 'transparent',
-                  color: mode === 'signup' ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: 600,
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <UserPlus size={16} />
-                <span>Sign Up</span>
-              </button>
-            </div>
-          )}
-
-          {/* Error Message */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 'var(--radius-xl)',
+          padding: '28px 22px',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)'
+        }}>
           {errorMessage && (
             <div style={{
               display: 'flex',
@@ -272,286 +114,130 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
               background: '#FEF2F2',
               border: '1px solid #FECACA',
               color: '#B91C1C',
-              fontSize: '0.85rem',
+              fontSize: '0.84rem',
               fontWeight: 600,
-              marginBottom: 20
+              marginBottom: 18
             }}>
               <AlertCircle size={18} style={{ flexShrink: 0 }} />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* Info/Success Message */}
-          {infoMessage && (
+          {successMessage && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: 10,
               padding: '12px 14px',
               borderRadius: 'var(--radius-md)',
-              background: '#EBF7F0',
+              background: '#EBF7EE',
               border: '1px solid #A5D6B8',
-              color: '#1E6B3E',
-              fontSize: '0.85rem',
+              color: '#008A2E',
+              fontSize: '0.84rem',
               fontWeight: 600,
-              marginBottom: 20
+              marginBottom: 18
             }}>
               <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
-              <span>{infoMessage}</span>
+              <span>{successMessage}</span>
             </div>
           )}
 
-          {/* STEP 1: Phone Number & Details */}
-          {step === 'phone' ? (
-            <form onSubmit={handleSendOtp}>
-              {mode === 'signup' && (
-                <>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                      Full Name
-                    </label>
-                    <input
-                      id="input-fullname"
-                      type="text"
-                      className="input-field"
-                      placeholder="e.g. Muhammed Shabeer"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                        Volunteer Role
-                      </label>
-                      <select
-                        id="select-role"
-                        className="input-field"
-                        value={role}
-                        onChange={(e) => setRole(e.target.value as UserRole)}
-                      >
-                        <option value="Volunteer">Volunteer</option>
-                        <option value="Coordinator">Ward Coordinator</option>
-                        <option value="WardCommittee">Ward Committee</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                        Ward Number
-                      </label>
-                      <select
-                        id="select-ward"
-                        className="input-field"
-                        value={wardNumber}
-                        onChange={(e) => setWardNumber(Number(e.target.value))}
-                      >
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                          <option key={num} value={num}>Ward {num}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div style={{ marginBottom: 22 }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                  WhatsApp Mobile Number
-                </label>
-                <div style={{ position: 'relative', display: 'flex' }}>
-                  <span style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '0 14px',
-                    background: '#F8FAFC',
-                    border: '1px solid #CBD5E1',
-                    borderRight: 'none',
-                    borderRadius: 'var(--radius-md) 0 0 var(--radius-md)',
-                    color: 'var(--text-secondary)',
-                    fontSize: '0.95rem',
-                    fontWeight: 600
-                  }}>
-                    🇮🇳 +91
-                  </span>
-                  <input
-                    id="input-phone"
-                    type="tel"
-                    className="input-field"
-                    style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }}
-                    placeholder="98471 23456"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    maxLength={13}
-                    required
-                  />
-                </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
-                  A 6-digit verification code will be sent via WhatsApp OTP.
-                </p>
-              </div>
-
-              <button
-                id="btn-send-otp"
-                type="submit"
-                className="btn-primary"
-                style={{ width: '100%', padding: '13px' }}
-                disabled={loading}
-              >
-                {loading ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <>
-                    <span>Continue with OTP</span>
-                    <ArrowRight size={17} />
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            /* STEP 2: 6-Digit OTP Entry */
-            <form onSubmit={handleVerifyOtp}>
-              <div style={{ textAlign: 'center', marginBottom: 22 }}>
-                <div style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  background: '#EBF7F0',
-                  border: '1px solid #A5D6B8',
+          <form onSubmit={handleLogin}>
+            {/* Phone input */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: '#334155',
+                marginBottom: 6
+              }}>
+                Registered Mobile Number
+              </label>
+              <div style={{ display: 'flex' }}>
+                <span style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 10px auto',
-                  color: '#1E6B3E'
+                  gap: 4,
+                  padding: '0 12px',
+                  background: '#F4F9FD',
+                  border: '1px solid #CBD5E1',
+                  borderRight: 'none',
+                  borderRadius: 'var(--radius-md) 0 0 var(--radius-md)',
+                  color: '#334155',
+                  fontSize: '0.88rem',
+                  fontWeight: 700
                 }}>
-                  <KeyRound size={22} />
-                </div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>Enter Verification Code</h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-                  Sent to +91 {phoneNumber.replace(/\D/g, '').slice(-10)}
-                  <button
-                    type="button"
-                    onClick={() => { setStep('phone'); setErrorMessage(null); }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#256CAA',
-                      marginLeft: 8,
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    Change
-                  </button>
-                </p>
+                  🇮🇳 +91
+                </span>
+                <input
+                  type="tel"
+                  required
+                  className="input-field"
+                  style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }}
+                  placeholder="98471 23456"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={13}
+                />
               </div>
+            </div>
 
-              {/* 6-box segmented OTP inputs */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: 'min(10px, 2vw)',
-                  marginBottom: 20,
-                  width: '100%'
-                }}
-                onPaste={handlePaste}
-              >
-                {otp.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => { otpInputsRef.current[idx] = el; }}
-                    id={`otp-input-${idx}`}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleOtpChange(idx, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(idx, e)}
-                    style={{
-                      width: 'clamp(40px, 12vw, 48px)',
-                      height: 'clamp(46px, 14vw, 54px)',
-                      textAlign: 'center',
-                      fontSize: 'clamp(1.15rem, 4vw, 1.4rem)',
-                      fontWeight: 800,
-                      background: '#FFFFFF',
-                      border: digit ? '2px solid #42B06F' : '1px solid #CBD5E1',
-                      borderRadius: 'var(--radius-md)',
-                      color: '#0F172A',
-                      outline: 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  />
-                ))}
+            {/* Password input */}
+            <div style={{ marginBottom: 22 }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: '#334155',
+                marginBottom: 6
+              }}>
+                Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={17} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                <input
+                  type="password"
+                  required
+                  className="input-field"
+                  style={{ paddingLeft: 40 }}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
+            </div>
 
-              {/* Autofill test helper */}
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <button
-                  type="button"
-                  id="btn-autofill-otp"
-                  onClick={handleAutofillDemoOtp}
-                  style={{
-                    background: '#EDF4FA',
-                    border: '1px dashed #256CAA',
-                    color: '#256CAA',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    padding: '5px 12px',
-                    borderRadius: 'var(--radius-full)',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}
-                >
-                  <Sparkles size={14} />
-                  <span>Autofill Demo OTP (123456)</span>
-                </button>
-              </div>
-
-              <button
-                id="btn-verify-otp"
-                type="submit"
-                className="btn-primary"
-                style={{ width: '100%', padding: '13px', marginBottom: 14 }}
-                disabled={loading}
-              >
-                {loading ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <span>Verify & Enter Portal</span>
-                )}
-              </button>
-
-              {/* Resend OTP */}
-              <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                {isTimerActive ? (
-                  <span>Resend code in {timerSeconds}s</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#256CAA',
-                      cursor: 'pointer',
-                      fontWeight: 600
-                    }}
-                  >
-                    Resend OTP via WhatsApp
-                  </button>
-                )}
-              </div>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+              style={{
+                width: '100%',
+                padding: '13px',
+                fontSize: '0.96rem',
+                fontWeight: 800,
+                background: '#008A2E',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8
+              }}
+            >
+              {loading ? (
+                <RefreshCw size={18} className="animate-spin" />
+              ) : (
+                <>
+                  <span>Sign In to Portal</span>
+                  <ArrowRight size={17} />
+                </>
+              )}
+            </button>
+          </form>
 
           {/* Quick Demo Test Presets */}
           <div style={{
@@ -560,55 +246,165 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
             borderTop: '1px solid var(--border-subtle)'
           }}>
             <p style={{
-              fontSize: '0.74rem',
+              fontSize: '0.72rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              fontWeight: 700,
-              color: 'var(--text-muted)',
+              fontWeight: 800,
+              color: '#64748B',
               marginBottom: 10,
               textAlign: 'center'
             }}>
-              Quick 1-Click Demo Profiles
+              1-Click Role Access (Instant Field Test)
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {DEMO_USERS.map((u) => (
-                <button
-                  key={u.userId}
-                  id={`btn-demo-${u.role.toLowerCase()}`}
-                  type="button"
-                  onClick={() => handleQuickDemo(u)}
-                  style={{
-                    background: '#F8FAFC',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '8px 4px',
-                    color: '#0F172A',
-                    fontSize: '0.74rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 3,
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span style={{ fontWeight: 700 }}>{u.fullName.split(' ')[0]}</span>
-                  <span style={{ fontSize: '0.66rem', color: 'var(--text-secondary)' }}>{u.role}</span>
-                </button>
-              ))}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+              {/* Volunteer */}
+              <button
+                type="button"
+                onClick={() => handleQuickDemo({
+                  userId: 'vol-1',
+                  fullName: 'Abdul Rahman',
+                  phoneNumber: '+919847123456',
+                  role: 'Volunteer',
+                  panchayath: 'Madavoor',
+                  wardNumber: 4,
+                  district: 'Kozhikode',
+                  token: 'demo-token-volunteer'
+                })}
+                style={{
+                  background: '#F4F9FD',
+                  border: '1px solid #B8D4EE',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#EBF7EE', color: '#008A2E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Award size={15} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Volunteer</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Ward 4 Field</div>
+                </div>
+              </button>
+
+              {/* Coordinator */}
+              <button
+                type="button"
+                onClick={() => handleQuickDemo({
+                  userId: 'coord-1',
+                  fullName: 'Jasim Kakkad',
+                  phoneNumber: '+919847234567',
+                  role: 'Coordinator',
+                  panchayath: 'Madavoor',
+                  wardNumber: 4,
+                  district: 'Kozhikode',
+                  token: 'demo-token-coordinator'
+                })}
+                style={{
+                  background: '#F4F9FD',
+                  border: '1px solid #B8D4EE',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#EDF4FA', color: '#2C82C9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={15} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Coordinator</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Team Supervisor</div>
+                </div>
+              </button>
+
+              {/* Ward Committee */}
+              <button
+                type="button"
+                onClick={() => handleQuickDemo({
+                  userId: 'ward-1',
+                  fullName: 'Kakkad Ward Lead',
+                  phoneNumber: '+919847345678',
+                  role: 'WardCommittee',
+                  panchayath: 'Madavoor',
+                  wardNumber: 4,
+                  district: 'Kozhikode',
+                  token: 'demo-token-ward'
+                })}
+                style={{
+                  background: '#F4F9FD',
+                  border: '1px solid #B8D4EE',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#EBF7EE', color: '#008A2E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={15} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Ward Committee</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Ward 4 Lead</div>
+                </div>
+              </button>
+
+              {/* Admin */}
+              <button
+                type="button"
+                onClick={() => handleQuickDemo({
+                  userId: 'admin-1',
+                  fullName: 'System Super Admin',
+                  phoneNumber: '+919999999999',
+                  role: 'Admin',
+                  panchayath: 'Madavoor',
+                  wardNumber: 4,
+                  district: 'Kozhikode',
+                  token: 'demo-token-admin'
+                })}
+                style={{
+                  background: '#F4F9FD',
+                  border: '1px solid #B8D4EE',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#FEF3C7', color: '#92400E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={15} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.78rem', color: '#0F172A' }}>Super Admin</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748B' }}>Full Control</div>
+                </div>
+              </button>
             </div>
           </div>
-
         </div>
 
         {/* Footer info */}
         <p style={{
           textAlign: 'center',
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)',
+          fontSize: '0.74rem',
+          color: '#64748B',
           marginTop: 20
         }}>
-          Protected by Azure Table Storage & WhatsApp OTP Service
+          Connected to Hosted Azure API • Madavoor Relief Campaign
         </p>
       </div>
     </div>

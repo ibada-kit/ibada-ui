@@ -3,16 +3,20 @@ import type { User, Donation } from './types';
 import { getCurrentUser, setCurrentUser } from './services/api';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './pages/AuthScreen';
+import { VolunteerDashboard } from './pages/VolunteerDashboard';
+import { CoordinatorDashboard } from './pages/CoordinatorDashboard';
+import { WardCoordinatorDashboard } from './pages/WardCoordinatorDashboard';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { HomeScreen } from './pages/HomeScreen';
-import { AdminPanel } from './pages/AdminPanel';
 import { RecordDonationModal } from './components/RecordDonationModal';
 import { ReceiptModal } from './components/ReceiptModal';
 
 export const App: React.FC = () => {
   const [currentUser, setCurUser] = useState<User | null>(null);
-  const [activeView, setActiveView] = useState<'home' | 'admin'>('home');
+  const [activeAdminView, setActiveAdminView] = useState<'home' | 'admin'>('home');
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<Donation | null>(null);
+  const [globalKitPrice, setGlobalKitPrice] = useState<number>(1000);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -24,48 +28,79 @@ export const App: React.FC = () => {
 
   const handleAuthSuccess = (user: User) => {
     setCurUser(user);
-    setActiveView('home');
+    setActiveAdminView(user.role === 'Admin' ? 'admin' : 'home');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setCurUser(null);
-    setActiveView('home');
+    setActiveAdminView('home');
   };
 
   const handleDonationRecorded = (donation: Donation) => {
     setIsRecordModalOpen(false);
     setActiveReceipt(donation);
-    setRefreshKey((prev) => prev + 1); // Trigger refresh in HomeScreen
+    setRefreshKey((prev) => prev + 1);
   };
 
   return (
-    <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#F4F9FD' }}>
       {currentUser ? (
         <>
+          {/* Top Navbar */}
           <Navbar
             user={currentUser}
-            activeView={activeView}
-            onNavigateView={(view) => setActiveView(view)}
+            activeView={activeAdminView}
+            onNavigateView={(view) => setActiveAdminView(view)}
             onOpenRecordModal={() => setIsRecordModalOpen(true)}
             onLogout={handleLogout}
           />
 
-          {activeView === 'admin' && currentUser.role === 'Admin' ? (
-            <AdminPanel
-              currentUser={currentUser}
-              onNavigateHome={() => setActiveView('home')}
-            />
-          ) : (
-            <HomeScreen
-              key={refreshKey}
-              user={currentUser}
-              onOpenRecordModal={() => setIsRecordModalOpen(true)}
-              onViewReceipt={(don) => setActiveReceipt(don)}
-            />
-          )}
+          {/* Role-Based Routing / Dashboards */}
+          <main style={{ flex: 1 }}>
+            {currentUser.role === 'Volunteer' && (
+              <VolunteerDashboard
+                key={refreshKey}
+                user={currentUser}
+                onViewReceipt={(don) => setActiveReceipt(don)}
+              />
+            )}
 
-          {/* Record Donation Modal */}
+            {currentUser.role === 'Coordinator' && (
+              <CoordinatorDashboard
+                key={refreshKey}
+                user={currentUser}
+                onViewReceipt={(don) => setActiveReceipt(don)}
+              />
+            )}
+
+            {currentUser.role === 'WardCommittee' && (
+              <WardCoordinatorDashboard
+                key={refreshKey}
+                user={currentUser}
+                onViewReceipt={(don) => setActiveReceipt(don)}
+              />
+            )}
+
+            {currentUser.role === 'Admin' && (
+              activeAdminView === 'admin' ? (
+                <AdminDashboard
+                  currentUser={currentUser}
+                  kitPrice={globalKitPrice}
+                  onUpdateKitPrice={(newPrice) => setGlobalKitPrice(newPrice)}
+                />
+              ) : (
+                <HomeScreen
+                  key={refreshKey}
+                  user={currentUser}
+                  onOpenRecordModal={() => setIsRecordModalOpen(true)}
+                  onViewReceipt={(don) => setActiveReceipt(don)}
+                />
+              )
+            )}
+          </main>
+
+          {/* Record Donation Quick Modal (Global) */}
           {isRecordModalOpen && (
             <RecordDonationModal
               onClose={() => setIsRecordModalOpen(false)}
@@ -73,7 +108,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {/* Receipt / Badge Modal */}
+          {/* Receipt Modal */}
           {activeReceipt && (
             <ReceiptModal
               donation={activeReceipt}

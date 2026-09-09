@@ -42,11 +42,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             width: 38,
             height: 38,
             borderRadius: 10,
-            background: '#42B06F',
+            background: '#008A2E',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexShrink: 0
+            flexShrink: 0,
+            boxShadow: '0 2px 8px rgba(0, 138, 46, 0.25)'
           }}>
             <Heart size={20} color="#ffffff" fill="#ffffff" />
           </div>
@@ -63,18 +64,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}>
                 Madavoor Relief
               </h1>
-              <span className="badge badge-emerald" style={{ fontSize: '0.6rem', padding: '2px 6px' }}>
+              <span className="badge badge-emerald" style={{ fontSize: '0.6rem', padding: '2px 6px', background: '#EBF7EE', color: '#008A2E', border: '1px solid #A5D6B8' }}>
                 Live
               </span>
             </div>
             <p style={{
               fontSize: '0.72rem',
-              color: 'var(--text-secondary)',
+              color: '#2C82C9',
+              fontWeight: 700,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
-              ₹500 / Kit Drive
+              Relief Campaign
             </p>
           </div>
         </div>

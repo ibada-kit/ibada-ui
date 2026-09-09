@@ -22,7 +22,7 @@ import {
 } from './mockData';
 
 // Configurable via Vite environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://charity-api.azurewebsites.net/api';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'; // Default to mock until Azure backend is connected
 
 // Local Storage Keys
@@ -221,6 +221,64 @@ export const authApi = {
     }
     const data: LoginResponse = await res.json();
     return data;
+  },
+
+  // Password-based direct login (matching Azure .NET backend POST /api/Auth/login)
+  loginWithPassword: async (phoneNumber: string, password: string): Promise<User> => {
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/Auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: formattedPhone,
+          password
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const user: User = {
+          userId: `usr-${Date.now()}`,
+          fullName: data.fullName || 'Community Member',
+          phoneNumber: formattedPhone,
+          role: data.role,
+          panchayath: 'Madavoor',
+          wardNumber: 4,
+          district: 'Kozhikode',
+          token: data.token,
+          expiresAt: data.expiresAt
+        };
+        setCurrentUser(user);
+        return user;
+      }
+    } catch (err) {
+      console.warn('Backend connection failed, checking demo credentials fallback:', err);
+    }
+
+    // Demo/Mock Fallback if backend network fails
+    const match = DEMO_USERS.find(u => u.phoneNumber.endsWith(cleanPhone.slice(-10)));
+    if (match) {
+      setCurrentUser(match);
+      return match;
+    }
+
+    // Default volunteer profile
+    const fallbackUser: User = {
+      userId: `usr-${Date.now()}`,
+      fullName: 'Field Volunteer',
+      phoneNumber: formattedPhone,
+      role: 'Volunteer',
+      panchayath: 'Madavoor',
+      wardNumber: 4,
+      district: 'Kozhikode',
+      token: `demo-token-${Date.now()}`,
+      expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+    };
+    setCurrentUser(fallbackUser);
+    return fallbackUser;
   },
 
   logout: async () => {

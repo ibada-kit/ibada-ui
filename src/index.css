@@ -3,24 +3,29 @@
 :root {
   --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   
-  /* Theme Colors - Clean Light Theme */
-  --bg-main: #F8FAFC;
+  /* Theme Colors - Community Flag Theme */
+  --bg-main: #F4F9FD;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F1F5F9;
+  --bg-card-hover: #F8FAFC;
   --bg-surface: #FFFFFF;
   --border-subtle: #E2E8F0;
-  --border-focus: #42B06F;
+  --border-focus: #008A2E;
   
-  /* Primary Green & Secondary Blue */
-  --primary: #42B06F;
-  --primary-hover: #369b60;
-  --primary-glow: rgba(66, 176, 111, 0.2);
-  --primary-light: #EBF7F0;
-  --primary-dark: #1E6B3E;
+  /* Primary Rich Flag Green & Secondary Light Grass Green */
+  --primary: #008A2E;
+  --primary-hover: #007326;
+  --primary-glow: rgba(0, 138, 46, 0.2);
+  --primary-light: #EBF7EE;
+  --primary-dark: #005C1F;
   
-  --secondary: #256CAA;
-  --secondary-hover: #1D588D;
-  --secondary-light: #EDF4FA;
+  /* Secondary Brand: Light Grass Green */
+  --grass-green: #7BCC53;
+  --grass-green-light: #F2FAEE;
+  
+  /* Accent / Sky Blue */
+  --secondary: #2C82C9;
+  --secondary-hover: #236EA9;
+  --secondary-light: #F4F9FD;
   
   --accent-gold: #D97706;
   --accent-gold-light: #FEF3C7;
@@ -29,7 +34,7 @@
   
   /* Text in Light Theme */
   --text-primary: #0F172A;
-  --text-secondary: #475569;
+  --text-secondary: #334155;
   --text-muted: #64748B;
   
   /* Clean subtle shadows without heavy glowing */
