@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, WeeklyMetrics, LeaderboardEntry, WardLeaderboardEntry, Donation } from '../types';
-import { donationsApi } from '../services/api';
+import { donationsApi, KIT_UNIT_RATE } from '../services/api';
 import {
   Trophy,
   TrendingUp,
@@ -247,7 +247,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <span>{metrics?.totalKits || 0} Relief Kits</span>
                 </div>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Fixed rate of ₹500/Kit
+                  Fixed rate of {KIT_UNIT_RATE}/Kit
                 </span>
               </div>
             </div>

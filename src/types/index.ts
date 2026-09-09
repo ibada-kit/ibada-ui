@@ -126,3 +126,15 @@ export interface CreateManagedUserRequest {
   targetKits: number;
   defaultPassword?: string;
 }
+
+export interface UpdateManagedUserRequest {
+  fullName?: string;
+  phoneNumber?: string;
+  role?: ManagedUserRole;
+  wardNumber?: number;
+  panchayath?: string;
+  district?: string;
+  targetKits?: number;
+  newPassword?: string;
+  isActive?: boolean;
+}

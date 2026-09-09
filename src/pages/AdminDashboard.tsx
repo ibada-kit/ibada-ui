@@ -11,7 +11,13 @@ import {
   Download, 
   Edit3, 
   RefreshCw,
-  Trophy
+  Trophy,
+  Trash2,
+  Key,
+  Copy,
+  Check,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -37,6 +43,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newRole, setNewRole] = useState<'Coordinator' | 'WardCommittee'>('Coordinator');
   const [newWard, setNewWard] = useState<number>(4);
   const [newTarget, setNewTarget] = useState<number>(100);
+
+  // Edit User Modal / Form State
+  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editRole, setEditRole] = useState<'Coordinator' | 'WardCommittee'>('Coordinator');
+  const [editWard, setEditWard] = useState<number>(4);
+  const [editTarget, setEditTarget] = useState<number>(50);
+  const [editPassword, setEditPassword] = useState('');
+  const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+
+  // Delete User Confirmation State
+  const [deletingUser, setDeletingUser] = useState<ManagedUser | null>(null);
 
   // Target Editing state
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -105,6 +125,90 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setShowAddModal(false);
     } catch (err: any) {
       setFeedbackMsg({ text: err.message || 'Failed to register user.', isError: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open Edit User Modal
+  const handleOpenEdit = (user: ManagedUser) => {
+    setEditingUser(user);
+    setEditFullName(user.fullName);
+    setEditPhone(user.phoneNumber.replace('+91', ''));
+    setEditRole(user.role);
+    setEditWard(user.wardNumber);
+    setEditTarget(user.targetKits || 50);
+    setEditPassword('');
+    setPasswordFeedback(null);
+    setCopiedPassword(false);
+  };
+
+  // Regenerate Default 6-Character Password (first 3 letters of name + last 3 digits of phone)
+  const handleRegeneratePassword = () => {
+    const cleanPhone = editPhone.replace(/\D/g, '');
+    const gen = generateDefaultPassword(editFullName || 'User', cleanPhone);
+    setEditPassword(gen);
+    setPasswordFeedback(`New 6-character password generated: "${gen}". Save to apply.`);
+  };
+
+  // Copy Password to Clipboard
+  const handleCopyPassword = () => {
+    if (editPassword) {
+      navigator.clipboard.writeText(editPassword);
+      setCopiedPassword(true);
+      setTimeout(() => setCopiedPassword(false), 2000);
+    }
+  };
+
+  // Handle Save Edit User
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setFeedbackMsg(null);
+
+    const clean = editPhone.replace(/\D/g, '');
+    if (clean.length < 10) {
+      setFeedbackMsg({ text: 'Please enter a valid 10-digit mobile number.', isError: true });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await adminApi.updateManagedUser(editingUser.userId, {
+        fullName: editFullName.trim(),
+        phoneNumber: `+91${clean.slice(-10)}`,
+        role: editRole,
+        wardNumber: Number(editWard),
+        targetKits: Number(editTarget),
+        newPassword: editPassword.trim() ? editPassword.trim() : undefined
+      });
+
+      setCoordinators(prev => prev.map(u => u.userId === editingUser.userId ? res.user : u));
+      setFeedbackMsg({
+        text: `Updated ${res.user.fullName} successfully!${editPassword.trim() ? ` New password: ${editPassword.trim()}` : ''}`,
+        isError: false
+      });
+      setEditingUser(null);
+    } catch (err: any) {
+      setFeedbackMsg({ text: err.message || 'Failed to update user.', isError: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Delete User
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+    setFeedbackMsg(null);
+
+    try {
+      setLoading(true);
+      await adminApi.deleteManagedUser(deletingUser.userId);
+      setCoordinators(prev => prev.filter(u => u.userId !== deletingUser.userId));
+      setFeedbackMsg({ text: `User "${deletingUser.fullName}" deleted successfully.`, isError: false });
+      setDeletingUser(null);
+    } catch (err: any) {
+      setFeedbackMsg({ text: err.message || 'Failed to delete user.', isError: true });
     } finally {
       setLoading(false);
     }
@@ -419,6 +523,315 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+      {/* MODAL: EDIT USER & REGENERATE PASSWORD */}
+      {editingUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          zIndex: 999
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-xl)',
+            padding: '24px clamp(16px, 4vw, 24px)',
+            maxWidth: 500,
+            width: '100%',
+            maxHeight: '90dvh',
+            overflowY: 'auto',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  Edit User Details
+                </h3>
+                <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '2px 0 0 0' }}>
+                  Update profile, role, targets, or regenerate login password.
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingUser(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748B',
+                  padding: 4
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="input-field"
+                  placeholder="e.g. Shafeeq Rahiman"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Mobile Number (WhatsApp)
+                </label>
+                <input
+                  type="tel"
+                  required
+                  className="input-field"
+                  placeholder="98471 23456"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Role Assignment
+                  </label>
+                  <select
+                    className="input-field"
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value as any)}
+                  >
+                    <option value="Coordinator">Coordinator</option>
+                    <option value="WardCommittee">Ward Committee Lead</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Ward Number
+                  </label>
+                  <select
+                    className="input-field"
+                    value={editWard}
+                    onChange={(e) => setEditWard(Number(e.target.value))}
+                  >
+                    {Array.from({ length: 20 }, (_, i) => i + 1).map((w) => (
+                      <option key={w} value={w}>Ward {w}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Target Relief Kits
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  required
+                  className="input-field"
+                  value={editTarget}
+                  onChange={(e) => setEditTarget(Number(e.target.value))}
+                />
+              </div>
+
+              {/* Password & Credentials Box */}
+              <div style={{
+                background: '#F0FDF4',
+                border: '1px solid #BBF7D0',
+                borderRadius: 'var(--radius-lg)',
+                padding: '14px 16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Key size={16} color="#008A2E" />
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#0F172A' }}>
+                      Password & Credentials
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRegeneratePassword}
+                    className="btn-secondary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      background: '#FFFFFF',
+                      color: '#008A2E',
+                      borderColor: '#86EFAC'
+                    }}
+                  >
+                    <RefreshCw size={12} />
+                    <span>Regenerate Default</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    style={{ background: '#FFFFFF', fontFamily: editPassword ? 'monospace' : 'inherit' }}
+                    placeholder="Leave blank to keep existing password"
+                    value={editPassword}
+                    onChange={(e) => {
+                      setEditPassword(e.target.value);
+                      setPasswordFeedback(null);
+                    }}
+                  />
+
+                  {editPassword && (
+                    <button
+                      type="button"
+                      onClick={handleCopyPassword}
+                      className="btn-secondary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '10px 12px',
+                        background: '#FFFFFF',
+                        borderColor: copiedPassword ? '#008A2E' : '#CBD5E1',
+                        color: copiedPassword ? '#008A2E' : '#334155'
+                      }}
+                      title="Copy Password"
+                    >
+                      {copiedPassword ? <Check size={16} color="#008A2E" /> : <Copy size={16} />}
+                    </button>
+                  )}
+                </div>
+
+                {passwordFeedback && (
+                  <span style={{ display: 'block', fontSize: '0.74rem', color: '#008A2E', fontWeight: 600, marginTop: 6 }}>
+                    {passwordFeedback}
+                  </span>
+                )}
+                {!passwordFeedback && (
+                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748B', marginTop: 6 }}>
+                    Default formula: first 3 letters of name + last 3 digits of phone (e.g. <code>jas458</code>).
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="btn-secondary"
+                  style={{ flex: 1, padding: '12px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '12px', background: '#008A2E' }}
+                >
+                  {loading ? <RefreshCw size={16} className="animate-spin" /> : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE USER CONFIRMATION */}
+      {deletingUser && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          zIndex: 999
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-xl)',
+            padding: '24px clamp(16px, 4vw, 24px)',
+            maxWidth: 420,
+            width: '100%',
+            boxShadow: 'var(--shadow-lg)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              width: 52,
+              height: 52,
+              borderRadius: 'var(--radius-full)',
+              background: '#FEF2F2',
+              color: '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px auto'
+            }}>
+              <AlertTriangle size={28} />
+            </div>
+
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: 8 }}>
+              Delete User?
+            </h3>
+
+            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.5, marginBottom: 20 }}>
+              Are you sure you want to delete <strong>{deletingUser.fullName}</strong> ({deletingUser.role})? This will revoke their access to the portal immediately.
+            </p>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setDeletingUser(null)}
+                className="btn-secondary"
+                style={{ flex: 1, padding: '11px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleDeleteUser}
+                className="btn-primary"
+                style={{
+                  flex: 1,
+                  padding: '11px',
+                  background: '#DC2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6
+                }}
+              >
+                {loading ? <RefreshCw size={16} className="animate-spin" /> : (
+                  <>
+                    <Trash2 size={16} />
+                    <span>Delete User</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 1: USER MANAGEMENT */}
       {activeTab === 'users' && (
         <div style={{
@@ -450,7 +863,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   background: '#F8FAFC',
                   border: '1px solid var(--border-subtle)',
                   flexWrap: 'wrap',
-                  gap: 8
+                  gap: 12
                 }}
               >
                 <div>
@@ -474,14 +887,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.92rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'right', minWidth: 90 }}>
+                    <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.92rem', display: 'block' }}>
                       {u.kitsCollected || 0} / {u.targetKits || 50} Kits
                     </span>
                     <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>
                       ₹{(u.totalAmount || 0).toLocaleString('en-IN')} Raised
                     </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                      onClick={() => handleOpenEdit(u)}
+                      className="btn-secondary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer'
+                      }}
+                      title="Edit User & Regenerate Password"
+                    >
+                      <Edit3 size={13} color="#008A2E" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      onClick={() => setDeletingUser(u)}
+                      className="btn-secondary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '6px 10px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#DC2626',
+                        background: '#FEF2F2',
+                        border: '1px solid #FECACA',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer'
+                      }}
+                      title="Delete User"
+                    >
+                      <Trash2 size={13} />
+                      <span>Delete</span>
+                    </button>
                   </div>
                 </div>
               </div>

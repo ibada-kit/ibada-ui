@@ -7,7 +7,8 @@ import type {
   LeaderboardEntry,
   WardLeaderboardEntry,
   ManagedUser,
-  CreateManagedUserRequest
+  CreateManagedUserRequest,
+  UpdateManagedUserRequest
 } from '../types';
 
 // Live Azure API Base URL
@@ -463,7 +464,80 @@ export const adminApi = {
     } as ManagedUser;
   },
 
-  // Deactivate or remove a user
+  // Update user details (PUT /api/Users/{userId})
+  updateManagedUser: async (
+    userId: string,
+    data: UpdateManagedUserRequest
+  ): Promise<{ user: ManagedUser; newPassword?: string }> => {
+    const token = getCurrentUser()?.token;
+    let formattedPhone = data.phoneNumber;
+    if (formattedPhone) {
+      const cleanPhone = formattedPhone.replace(/\D/g, '');
+      formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
+    }
+
+    const payload: any = { ...data };
+    if (formattedPhone) payload.phoneNumber = formattedPhone;
+    if (data.wardNumber !== undefined) payload.wardNumber = Number(data.wardNumber);
+    if (data.targetKits !== undefined) payload.targetKits = Number(data.targetKits);
+
+    const res = await fetch(`${API_BASE_URL}/Users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to update user' }));
+      throw new Error(err.message || err.Message || 'Failed to update user');
+    }
+
+    const resData = await res.json();
+    const u = resData.user || {};
+    return {
+      user: {
+        userId: u.userId || userId,
+        fullName: u.fullName || data.fullName || '',
+        phoneNumber: u.phoneNumber || formattedPhone || '',
+        role: u.role || data.role || 'Coordinator',
+        wardNumber: u.wardNumber ?? data.wardNumber ?? 4,
+        panchayath: u.panchayath || data.panchayath || 'Madavoor',
+        district: u.district || data.district || 'Kozhikode',
+        targetKits: u.targetKits ?? data.targetKits ?? 50,
+        kitsCollected: 0,
+        totalAmount: 0,
+        donationsCount: 0,
+        createdAt: new Date().toISOString()
+      },
+      newPassword: resData.newPassword
+    };
+  },
+
+  // Regenerate / Reset Password (POST /api/Users/{userId}/reset-password)
+  resetUserPassword: async (userId: string, newPassword?: string): Promise<string> => {
+    const token = getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/Users/${userId}/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ newPassword: newPassword || null })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to reset password' }));
+      throw new Error(err.message || err.Message || 'Failed to reset password');
+    }
+
+    const resData = await res.json();
+    return resData.newPassword || '';
+  },
+
+  // Deactivate or remove a user (DELETE /api/Users/{userId})
   deleteManagedUser: async (userId: string): Promise<boolean> => {
     const token = getCurrentUser()?.token;
     const res = await fetch(`${API_BASE_URL}/Users/${userId}`, {
@@ -471,6 +545,11 @@ export const adminApi = {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
 
-    return res.ok;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Failed to delete user' }));
+      throw new Error(err.message || err.Message || 'Failed to delete user');
+    }
+
+    return true;
   }
 };
