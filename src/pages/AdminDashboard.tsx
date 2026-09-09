@@ -42,7 +42,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newPhone, setNewPhone] = useState('');
   const [newRole, setNewRole] = useState<'Coordinator' | 'WardCommittee'>('Coordinator');
   const [newWard, setNewWard] = useState<number>(4);
-  const [newTarget, setNewTarget] = useState<number>(100);
+  const [newTarget, _setNewTarget] = useState<number>(100);
+  void _setNewTarget;
 
   // Edit User Modal / Form State
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -487,7 +488,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                   Target Relief Kits
                 </label>
@@ -498,7 +499,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   value={newTarget}
                   onChange={(e) => setNewTarget(Number(e.target.value))}
                 />
-              </div>
+              </div> */}
 
               <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                 <button
@@ -631,7 +632,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                   Target Relief Kits
                 </label>
@@ -643,7 +644,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   value={editTarget}
                   onChange={(e) => setEditTarget(Number(e.target.value))}
                 />
-              </div>
+              </div> */}
 
               {/* Password & Credentials Box */}
               <div style={{

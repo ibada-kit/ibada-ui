@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, LeaderboardEntry } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, API_BASE_URL, generateDefaultPassword } from '../services/api';
+import { donationsApi, analyticsApi, coordinatorApi, API_BASE_URL, generateDefaultPassword } from '../services/api';
+import type { UserProgress } from '../services/api';
 import { 
   Users, 
   TrendingUp, 
@@ -24,12 +25,14 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'progress' | 'record' | 'team' | 'transactions' | 'leaderboard'>('progress');
   
-  const [progress, setProgress] = useState({
-    targetKits: 200,
-    collectedKits: 114,
-    achievementPercentage: 57,
-    collectedAmount: 114000
+  const [progress, setProgress] = useState<UserProgress>({
+    targetKits: 0,
+    collectedKits: 0,
+    achievementPercentage: 0,
+    collectedAmount: 0,
+    targetAmount: 0
   });
+  const [loadingProgress, setLoadingProgress] = useState(true);
 
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Donation[]>([]);
@@ -45,36 +48,43 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   const [createMsg, setCreateMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
   useEffect(() => {
-    // 1. Fetch team donations and volunteers
+    let isMounted = true;
+
+    // 1. Fetch live metrics from API
+    analyticsApi.getMyProgress(user.token)
+      .then((data) => {
+        if (isMounted) {
+          setProgress(data);
+          setLoadingProgress(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('[CoordinatorDashboard] Could not load progress from API:', err);
+        if (isMounted) {
+          setLoadingProgress(false);
+        }
+      });
+
+    // 2. Fetch coordinator's team volunteers from API
+    coordinatorApi.getMyVolunteers(user.token)
+      .then((vols) => {
+        if (isMounted) setTeamMembers(vols);
+      })
+      .catch((err) => console.warn('[CoordinatorDashboard] Could not load team volunteers:', err));
+
+    // 3. Fetch recent receipts and leaderboard
     donationsApi.getRecentDonations('Coordinator')
-      .then(setRecentTransactions)
+      .then((dons) => { if (isMounted) setRecentTransactions(dons); })
       .catch(() => {});
 
     donationsApi.getVolunteerLeaderboard('Coordinator')
-      .then(setVolunteersBoard)
+      .then((board) => { if (isMounted) setVolunteersBoard(board); })
       .catch(() => {});
 
-    // 2. Fetch volunteers from backend if available
-    if (user.token) {
-      fetch(`${API_BASE_URL}/Users/volunteers`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (Array.isArray(data)) setTeamMembers(data);
-        })
-        .catch(() => {});
-
-      fetch(`${API_BASE_URL}/Analytics/my-progress`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data && data.targetKits) setProgress(data);
-        })
-        .catch(() => {});
-    }
-  }, [user.token]);
+    return () => {
+      isMounted = false;
+    };
+  }, [user.token, user.userId]);
 
   const handleCreateVolunteer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,13 +221,19 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
               <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
                 Coordinator Team Campaign Target
               </span>
-              <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.3rem)', fontWeight: 900, color: '#0F172A' }}>
-                {progress.collectedKits} / {progress.targetKits} Kits ({progress.achievementPercentage}%)
+              <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.3rem)', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {loadingProgress ? (
+                  <span style={{ fontSize: '0.86rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <RefreshCw size={14} className="animate-spin" /> Loading live data...
+                  </span>
+                ) : (
+                  <span>{progress.collectedKits} / {progress.targetKits} Kits ({progress.achievementPercentage}%)</span>
+                )}
               </div>
             </div>
           </div>
           <span style={{ fontSize: 'clamp(1.15rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#2C82C9' }}>
-            ₹{progress.collectedAmount.toLocaleString('en-IN')}
+            {loadingProgress ? '...' : `₹${progress.collectedAmount.toLocaleString('en-IN')}`}
           </span>
         </div>
 

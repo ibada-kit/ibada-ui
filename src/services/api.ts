@@ -366,17 +366,25 @@ export const donationsApi = {
 export const adminApi = {
   // Get Coordinators & Ward Committees (GET /api/Users/coordinators)
   getManagedUsers: async (): Promise<ManagedUser[]> => {
-    const token = getCurrentUser()?.token;
+    const user = getCurrentUser();
+    const token = user?.token;
+    console.log('[adminApi.getManagedUsers] Initiating call. User:', user?.fullName, '| Role:', user?.role, '| Token:', token ? `${token.substring(0, 15)}...` : 'NONE');
+
     const res = await fetch(`${API_BASE_URL}/Users/coordinators`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
 
+    console.log('[adminApi.getManagedUsers] HTTP Status:', res.status, res.statusText);
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to load coordinators' }));
-      throw new Error(err.message || 'Failed to load coordinators');
+      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}: Failed to load coordinators` }));
+      console.error('[adminApi.getManagedUsers] Request failed:', err);
+      throw new Error(err.message || err.Message || `HTTP ${res.status}: Failed to load coordinators`);
     }
 
     const data: any[] = await res.json();
+    console.log('[adminApi.getManagedUsers] Successfully loaded coordinators count:', data?.length, data);
+
     return data.map((u) => ({
       userId: u.userId,
       fullName: u.fullName,
@@ -551,5 +559,77 @@ export const adminApi = {
     }
 
     return true;
+  }
+};
+
+// ============================================================================
+// Analytics API (Live Azure Backend)
+// ============================================================================
+export interface UserProgress {
+  targetKits: number;
+  targetAmount: number;
+  collectedKits: number;
+  collectedAmount: number;
+  achievementPercentage: number;
+}
+
+export const analyticsApi = {
+  // Get personal / team progress (GET /api/Analytics/my-progress)
+  getMyProgress: async (tokenOverride?: string): Promise<UserProgress> => {
+    const token = tokenOverride || getCurrentUser()?.token;
+    console.log('[analyticsApi.getMyProgress] Calling GET /Analytics/my-progress. Token present:', !!token);
+
+    const res = await fetch(`${API_BASE_URL}/Analytics/my-progress`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+
+    console.log('[analyticsApi.getMyProgress] HTTP Status:', res.status, res.statusText);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}: Failed to load progress` }));
+      console.error('[analyticsApi.getMyProgress] Error:', err);
+      throw new Error(err.message || err.Message || `HTTP ${res.status}: Failed to load progress`);
+    }
+
+    const data = await res.json();
+    console.log('[analyticsApi.getMyProgress] Received data:', data);
+
+    const targetKits = Number(data.targetKits ?? data.TargetKits ?? 0);
+    const collectedKits = Number(data.collectedKits ?? data.CollectedKits ?? 0);
+    const collectedAmount = Number(data.collectedAmount ?? data.CollectedAmount ?? 0);
+    const targetAmount = Number(data.targetAmount ?? data.TargetAmount ?? (targetKits * 1000));
+    const rawPct = data.achievementPercentage ?? data.AchievementPercentage;
+    const achievementPercentage = rawPct !== undefined 
+      ? Number(rawPct) 
+      : (targetKits > 0 ? Math.round((collectedKits / targetKits) * 100) : 0);
+
+    return {
+      targetKits,
+      targetAmount,
+      collectedKits,
+      collectedAmount,
+      achievementPercentage
+    };
+  }
+};
+
+// ============================================================================
+// Coordinator API (Live Azure Backend)
+// ============================================================================
+export const coordinatorApi = {
+  // Get team volunteers (GET /api/Users/volunteers)
+  getMyVolunteers: async (tokenOverride?: string): Promise<any[]> => {
+    const token = tokenOverride || getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/Users/volunteers`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+
+    if (!res.ok) {
+      console.warn('[coordinatorApi.getMyVolunteers] Status:', res.status);
+      return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   }
 };

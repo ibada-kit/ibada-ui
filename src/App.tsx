@@ -12,8 +12,11 @@ import { RecordDonationModal } from './components/RecordDonationModal';
 import { ReceiptModal } from './components/ReceiptModal';
 
 export const App: React.FC = () => {
-  const [currentUser, setCurUser] = useState<User | null>(null);
-  const [activeAdminView, setActiveAdminView] = useState<'home' | 'admin'>('home');
+  const [currentUser, setCurUser] = useState<User | null>(() => getCurrentUser());
+  const [activeAdminView, setActiveAdminView] = useState<'home' | 'admin'>(() => {
+    const user = getCurrentUser();
+    return user?.role === 'Admin' ? 'admin' : 'home';
+  });
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<Donation | null>(null);
   const [globalKitPrice, setGlobalKitPrice] = useState<number>(1000);
@@ -23,6 +26,9 @@ export const App: React.FC = () => {
     const user = getCurrentUser();
     if (user) {
       setCurUser(user);
+      if (user.role === 'Admin') {
+        setActiveAdminView('admin');
+      }
     }
   }, []);
 
