@@ -1,12 +1,12 @@
 import React from 'react';
 import type { User } from '../types';
-import { Heart, PlusCircle, LogOut, ShieldCheck, Home } from 'lucide-react';
+import { Heart, LogOut, ShieldCheck, Home } from 'lucide-react';
 
 interface NavbarProps {
   user: User | null;
   activeView?: 'home' | 'admin';
   onNavigateView?: (view: 'home' | 'admin') => void;
-  onOpenRecordModal: () => void;
+  onOpenRecordModal?: () => void;
   onLogout: () => void;
 }
 
@@ -14,7 +14,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   activeView = 'home',
   onNavigateView,
-  onOpenRecordModal,
   onLogout
 }) => {
   const getRoleBadgeClass = (role?: string) => {
