@@ -14,7 +14,6 @@ import {
   Trophy,
   Trash2,
   Key,
-  KeyRound,
   Copy,
   Check,
   AlertTriangle,
