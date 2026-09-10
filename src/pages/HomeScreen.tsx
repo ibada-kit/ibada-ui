@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Eye
 } from 'lucide-react';
+import { DailyCollectionsChart } from '../components/DailyCollectionsChart';
 
 interface HomeScreenProps {
   user: User | null;
@@ -298,36 +299,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
                 </div>
 
-                {/* Daily Velocity Mini-Graph */}
-                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 700 }}>
-                    Daily Kit Collections (Mon - Sun)
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 44 }}>
-                    {metrics?.dailyBreakdown.map((d, i) => {
-                      const allKits = metrics?.dailyBreakdown.map(x => x.kits) || [];
-                      const maxKits = Math.max(10, ...allKits);
-                      const heightPercent = maxKits > 0 && d.kits > 0 ? Math.min(100, Math.max(15, (d.kits / maxKits) * 100)) : 8;
-                      return (
-                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <div
-                            title={`${d.day}: ${d.kits} kits (₹${d.amount.toLocaleString('en-IN')})`}
-                            style={{
-                              width: '100%',
-                              height: `${heightPercent}%`,
-                              background: d.kits > 0 ? '#42B06F' : '#CBD5E1',
-                              borderRadius: 3,
-                              transition: 'all 0.3s ease'
-                            }}
-                          />
-                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                            {d.day}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Interactive Daily Kit Collections (Mon - Sun) */}
+                <DailyCollectionsChart
+                  metrics={metrics}
+                  donations={recentDonations}
+                  onViewReceipt={onViewReceipt}
+                />
               </div>
             ) : (metrics?.targetKits ?? 0) > 0 ? (
               <div style={{
@@ -360,36 +337,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <span style={{ color: 'var(--primary-light)', fontWeight: 600 }}>{progressPercentage}% Achieved</span>
                 </div>
 
-                {/* Daily Velocity Mini-Graph */}
-                <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 700 }}>
-                    Daily Kit Collections (Mon - Sun)
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 44 }}>
-                    {metrics?.dailyBreakdown.map((d, i) => {
-                      const allKits = metrics?.dailyBreakdown.map(x => x.kits) || [];
-                      const maxKits = Math.max(10, ...allKits);
-                      const heightPercent = maxKits > 0 && d.kits > 0 ? Math.min(100, Math.max(15, (d.kits / maxKits) * 100)) : 8;
-                      return (
-                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <div
-                            title={`${d.day}: ${d.kits} kits (₹${d.amount.toLocaleString('en-IN')})`}
-                            style={{
-                              width: '100%',
-                              height: `${heightPercent}%`,
-                              background: d.kits > 0 ? '#42B06F' : '#CBD5E1',
-                              borderRadius: 3,
-                              transition: 'all 0.3s ease'
-                            }}
-                          />
-                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                            {d.day}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Interactive Daily Kit Collections (Mon - Sun) */}
+                <DailyCollectionsChart
+                  metrics={metrics}
+                  donations={recentDonations}
+                  onViewReceipt={onViewReceipt}
+                />
               </div>
             ) : (
               <div style={{
