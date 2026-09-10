@@ -38,8 +38,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWard, setSelectedWard] = useState<string>('all');
   
-  // Admin-specific view filter (Admin can switch between All, Volunteers Only, or Coordinators Only)
-  const [adminRoleFilter, setAdminRoleFilter] = useState<'all' | 'Volunteer' | 'Coordinator'>('all');
+  // Admin-specific view filter (Admin can switch between All, Ward Committee, Coordinators, or Volunteers)
+  const [adminRoleFilter, setAdminRoleFilter] = useState<'all' | 'Volunteer' | 'Coordinator' | 'WardCommittee'>('all');
 
   const loadData = async () => {
     try {
@@ -68,18 +68,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   // Role-based scoping logic:
   // 1. Volunteer: Can see ONLY other volunteers
   // 2. Coordinator: Can see volunteers data
-  // 3. Admin: Can see coordinators and volunteers data
+  // 3. WardCommittee: Can see volunteers and ward committee data
+  // 4. Admin: Can see all roles (Ward Committee, Coordinator, Volunteer) with full filtering
   const scopedVolunteers = useMemo(() => {
     const role = user?.role || 'Volunteer';
 
-    if (role === 'Volunteer') {
+    if (role === 'Volunteer' || role === 'Coordinator') {
       return volunteers.filter((v) => v.role === 'Volunteer');
-    } else if (role === 'Coordinator') {
-      return volunteers.filter((v) => v.role === 'Volunteer');
+    } else if (role === 'WardCommittee') {
+      return volunteers.filter((v) => v.role === 'Volunteer' || v.role === 'WardCommittee');
     } else {
       // Admin
       if (adminRoleFilter === 'all') {
-        return volunteers.filter((v) => v.role === 'Volunteer' || v.role === 'Coordinator');
+        return volunteers;
       }
       return volunteers.filter((v) => v.role === adminRoleFilter);
     }
@@ -104,17 +105,33 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const top3 = rankedVolunteers.slice(0, 3);
 
   // Scoped Recent Donations:
-  // Volunteers see only donations logged by Volunteers
-  // Coordinators see donations logged by Volunteers
-  // Admin sees donations logged by both Coordinators and Volunteers
+  // Volunteers and Coordinators see donations logged by Volunteers
+  // Ward Committees see donations logged by Volunteers & Ward Committees
+  // Admin sees all donations with role-based filtering, ward filtering, and search
   const scopedRecentDonations = useMemo(() => {
     const role = user?.role || 'Volunteer';
-    if (role === 'Admin') {
-      return recentDonations;
+    let list = recentDonations;
+
+    if (role === 'Volunteer' || role === 'Coordinator') {
+      list = recentDonations.filter((d) => d.collectedByRole === 'Volunteer' || !d.collectedByRole);
+    } else if (role === 'WardCommittee') {
+      list = recentDonations.filter((d) => d.collectedByRole === 'Volunteer' || d.collectedByRole === 'WardCommittee' || !d.collectedByRole);
+    } else if (role === 'Admin') {
+      if (adminRoleFilter !== 'all') {
+        list = recentDonations.filter((d) => d.collectedByRole === adminRoleFilter);
+      }
     }
-    // Volunteers and Coordinators see volunteers data
-    return recentDonations.filter((d) => d.collectedByRole === 'Volunteer' || !d.collectedByRole);
-  }, [recentDonations, user?.role]);
+
+    return list.filter((don) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch = !q ||
+        don.donorName.toLowerCase().includes(q) ||
+        (don.collectedByName && don.collectedByName.toLowerCase().includes(q)) ||
+        (don.receiptToken && don.receiptToken.toLowerCase().includes(q));
+      const matchesWard = selectedWard === 'all' || don.wardNumber.toString() === selectedWard;
+      return matchesSearch && matchesWard;
+    });
+  }, [recentDonations, user?.role, adminRoleFilter, searchQuery, selectedWard]);
 
   // Calculate Progress %
   const progressPercentage = metrics
@@ -526,7 +543,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             >
               <Award size={15} />
               <span>
-                {user?.role === 'Admin' ? 'Fundraisers (Coordinators & Volunteers)' : 'Volunteers'}
+                {user?.role === 'Admin' ? 'Fundraisers (All Roles)' : 'Volunteers'}
               </span>
             </button>
 
@@ -591,14 +608,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <>Coordinator Access Mode: You have visibility into all field volunteers' data.</>
               )}
               {user?.role === 'Admin' && (
-                <>Administrator Access Mode: Full visibility across both coordinators and field volunteers.</>
+                <>Administrator Access Mode: Full visibility across Ward Committee leads, coordinators, and field volunteers.</>
               )}
             </span>
           </div>
 
           {/* Admin-only quick role filter buttons */}
-          {user?.role === 'Admin' && activeTab === 'volunteers' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {user?.role === 'Admin' && (activeTab === 'volunteers' || activeTab === 'recent') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: 4, fontWeight: 600 }}>Filter View:</span>
               <button
                 id="filter-admin-all"
@@ -614,23 +631,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   cursor: 'pointer'
                 }}
               >
-                All (Coordinators & Volunteers)
+                All Roles
               </button>
               <button
-                id="filter-admin-volunteers"
-                onClick={() => setAdminRoleFilter('Volunteer')}
+                id="filter-admin-wardcommittee"
+                onClick={() => setAdminRoleFilter('WardCommittee')}
                 style={{
                   padding: '4px 10px',
                   borderRadius: 'var(--radius-sm)',
-                  border: adminRoleFilter === 'Volunteer' ? '1px solid #42B06F' : '1px solid var(--border-subtle)',
-                  background: adminRoleFilter === 'Volunteer' ? '#EBF7F0' : '#FFFFFF',
-                  color: adminRoleFilter === 'Volunteer' ? '#1E6B3E' : 'var(--text-secondary)',
+                  border: adminRoleFilter === 'WardCommittee' ? '1px solid #7C3AED' : '1px solid var(--border-subtle)',
+                  background: adminRoleFilter === 'WardCommittee' ? '#F5F3FF' : '#FFFFFF',
+                  color: adminRoleFilter === 'WardCommittee' ? '#6D28D9' : 'var(--text-secondary)',
                   fontSize: '0.74rem',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                Volunteers Only
+                Ward Committee
               </button>
               <button
                 id="filter-admin-coordinators"
@@ -647,6 +664,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 }}
               >
                 Coordinators Only
+              </button>
+              <button
+                id="filter-admin-volunteers"
+                onClick={() => setAdminRoleFilter('Volunteer')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: adminRoleFilter === 'Volunteer' ? '1px solid #42B06F' : '1px solid var(--border-subtle)',
+                  background: adminRoleFilter === 'Volunteer' ? '#EBF7F0' : '#FFFFFF',
+                  color: adminRoleFilter === 'Volunteer' ? '#1E6B3E' : 'var(--text-secondary)',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Volunteers Only
               </button>
             </div>
           )}
@@ -682,7 +715,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
                   <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A' }}>{top3[1]?.name}</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                    Ward {top3[1]?.wardNumber} • {top3[1]?.role}
+                    Ward {top3[1]?.wardNumber} • {top3[1]?.role === 'WardCommittee' ? 'Ward Committee' : top3[1]?.role}
                   </p>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#008A2E' }}>
                     {top3[1]?.kitsCollected} Kits
@@ -722,7 +755,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </span>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: 4, color: '#0F172A' }}>{top3[0]?.name}</h3>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                    Ward {top3[0]?.wardNumber} • {top3[0]?.role}
+                    Ward {top3[0]?.wardNumber} • {top3[0]?.role === 'WardCommittee' ? 'Ward Committee' : top3[0]?.role}
                   </p>
                   <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#008A2E' }}>
                     {top3[0]?.kitsCollected} Kits
@@ -756,7 +789,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
                   <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A' }}>{top3[2]?.name}</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                    Ward {top3[2]?.wardNumber} • {top3[2]?.role}
+                    Ward {top3[2]?.wardNumber} • {top3[2]?.role === 'WardCommittee' ? 'Ward Committee' : top3[2]?.role}
                   </p>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#008A2E' }}>
                     {top3[2]?.kitsCollected} Kits
@@ -863,8 +896,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 3 }}>
-                        <span className={`badge ${vol.role === 'Coordinator' ? 'badge-blue' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', padding: '1px 5px' }}>
-                          {vol.role}
+                        <span className={`badge ${vol.role === 'Coordinator' ? 'badge-blue' : vol.role === 'WardCommittee' ? 'badge-purple' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', padding: '1px 5px' }}>
+                          {vol.role === 'WardCommittee' ? 'Ward Comm.' : vol.role}
                         </span>
                         <span style={{
                           fontSize: '0.68rem',
@@ -977,46 +1010,82 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* TAB 3: RECENT DONATIONS FEED */}
         {activeTab === 'recent' && (
-          <div style={{ display: 'grid', gap: 12 }}>
-            {scopedRecentDonations.map((don) => (
-              <div
-                key={don.donationId}
-                className="glass-card glass-card-interactive"
-                style={{
-                  padding: '18px 22px',
-                  background: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 14
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: '#EBF7F0',
-                    border: '1px solid #A5D6B8',
+          <div>
+            {/* Filter & Search Bar for Recent Donors */}
+            <div style={{
+              display: 'flex',
+              gap: 12,
+              marginBottom: 16,
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+                <Search size={17} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  id="search-recent"
+                  className="input-field"
+                  style={{ paddingLeft: 40 }}
+                  placeholder="Search donor name, receipt token, or collector..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div style={{ minWidth: 160 }}>
+                <select
+                  id="filter-ward-recent"
+                  className="input-field"
+                  value={selectedWard}
+                  onChange={(e) => setSelectedWard(e.target.value)}
+                >
+                  <option value="all">All Wards</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((w) => (
+                    <option key={w} value={w.toString()}>Ward {w}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: 12 }}>
+              {scopedRecentDonations.map((don) => (
+                <div
+                  key={don.donationId}
+                  className="glass-card glass-card-interactive"
+                  style={{
+                    padding: '18px 22px',
+                    background: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#1E6B3E'
-                  }}>
-                    <Package size={22} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>{don.donorName}</h4>
-                    <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                      Ward {don.wardNumber}, {don.panchayath} • Logged by{' '}
-                      <strong>{don.collectedByName || 'Volunteer'}</strong>
-                      {don.collectedByRole && (
-                        <span className={`badge ${don.collectedByRole === 'Coordinator' ? 'badge-blue' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', marginLeft: 6, padding: '1px 6px' }}>
-                          {don.collectedByRole}
-                        </span>
-                      )}
-                    </p>
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 14
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#EBF7F0',
+                      border: '1px solid #A5D6B8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#1E6B3E'
+                    }}>
+                      <Package size={22} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>{don.donorName}</h4>
+                      <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                        Ward {don.wardNumber}, {don.panchayath} • Logged by{' '}
+                        <strong>{don.collectedByName || 'Volunteer'}</strong>
+                        {don.collectedByRole && (
+                          <span className={`badge ${don.collectedByRole === 'Coordinator' ? 'badge-blue' : don.collectedByRole === 'WardCommittee' ? 'badge-purple' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', marginLeft: 6, padding: '1px 6px' }}>
+                            {don.collectedByRole === 'WardCommittee' ? 'Ward Comm.' : don.collectedByRole}
+                          </span>
+                        )}
+                      </p>
                     <span style={{
                       fontSize: '0.72rem',
                       color: 'var(--text-muted)',
@@ -1055,6 +1124,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 No donations found in your view scope.
               </div>
             )}
+            </div>
           </div>
         )}
       </section>
