@@ -178,7 +178,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
             Ward {user.wardNumber} Coordinator
           </span>
           <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0F172A', marginTop: 4 }}>
-            Ward Committee Hub
+            Ward Committee
           </h1>
         </div>
 
@@ -338,7 +338,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Users size={18} color="#2C82C9" />
-              <span>Ward {user.wardNumber} Volunteer Base</span>
+              <span>Ward {user.wardNumber} Volunteers</span>
             </h3>
             <p style={{ fontSize: '0.82rem', color: '#64748B', marginBottom: 16 }}>
               Register new volunteers explicitly attached to Ward {user.wardNumber} to expand field coverage.
@@ -362,7 +362,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Trophy size={18} color="#008A2E" />
-              <span>Panchayath Ward Ranking</span>
+              <span>Ward Ranking</span>
             </h3>
             <p style={{ fontSize: '0.82rem', color: '#64748B', marginBottom: 16 }}>
               Check how Ward {user.wardNumber} compares to other wards across Madavoor Panchayath.

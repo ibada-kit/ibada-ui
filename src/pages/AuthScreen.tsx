@@ -236,7 +236,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
           color: '#64748B',
           marginTop: 20
         }}>
-          Connected to Hosted Azure API • Madavoor Relief Campaign
+          Muslim League | Madavoor Relief Campaign
         </p>
       </div>
     </div>
