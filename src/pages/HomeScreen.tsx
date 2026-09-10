@@ -644,111 +644,78 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Top 3 Podium Visual */}
             {top3.length >= 3 && (
               <div className="podium-grid">
-                {/* 2nd Place */}
-                <div className="glass-card" style={{
-                  padding: '24px 16px',
-                  textAlign: 'center',
-                  background: '#FFFFFF',
-                  border: '1px solid #CBD5E1'
-                }}>
-                  <div style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '50%',
-                    background: '#E2E8F0',
-                    margin: '0 auto 10px auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.2rem',
-                    fontWeight: 800,
-                    color: '#475569'
-                  }}>
-                    🥈 2
+                {/* 2nd Place (Silver) */}
+                <div className="podium-card podium-silver">
+                  <div>
+                    <div className="podium-medal">
+                      🥈 2
+                    </div>
+                    <div className="podium-title-area">
+                      <h4 className="podium-name">{top3[1]?.name}</h4>
+                      <div className="podium-role">
+                        Ward {top3[1]?.wardNumber} • {top3[1]?.role === 'WardCommittee' ? 'Ward Committee' : top3[1]?.role}
+                      </div>
+                    </div>
                   </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A' }}>{top3[1]?.name}</h4>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                    Ward {top3[1]?.wardNumber} • {top3[1]?.role === 'WardCommittee' ? 'Ward Committee' : top3[1]?.role}
-                  </p>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#008A2E' }}>
-                    {top3[1]?.kitsCollected} Kits
-                  </div>
-                  <div style={{ fontSize: '0.82rem', color: '#2C82C9', fontWeight: 700 }}>
-                    ₹{top3[1]?.totalAmount.toLocaleString('en-IN')}
+
+                  <div className="podium-metrics-area">
+                    <div className="podium-kits">
+                      {top3[1]?.kitsCollected} Kits
+                    </div>
+                    <div className="podium-amount">
+                      ₹{top3[1]?.totalAmount.toLocaleString('en-IN')}
+                    </div>
                   </div>
                 </div>
 
-                {/* 1st Place - Champion */}
-                <div className="glass-card podium-champion" style={{
-                  padding: '28px 18px',
-                  textAlign: 'center',
-                  background: '#FFFFFF',
-                  border: '2px solid #F59E0B',
-                  transform: 'translateY(-6px)',
-                  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.06)'
-                }}>
-                  <div style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: '50%',
-                    background: '#FEF3C7',
-                    border: '1px solid #FCD34D',
-                    margin: '0 auto 12px auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.4rem',
-                    fontWeight: 800,
-                    color: '#92400E'
-                  }}>
-                    👑 1
+                {/* 1st Place - Champion (Gold) */}
+                <div className="podium-card podium-gold">
+                  <div>
+                    <div className="podium-medal">
+                      👑 1
+                    </div>
+                    <span className="badge badge-gold" style={{ display: 'inline-block', marginBottom: 6, fontSize: '0.7rem' }}>
+                      Champion
+                    </span>
+                    <div className="podium-title-area">
+                      <h3 className="podium-name">{top3[0]?.name}</h3>
+                      <div className="podium-role">
+                        Ward {top3[0]?.wardNumber} • {top3[0]?.role === 'WardCommittee' ? 'Ward Committee' : top3[0]?.role}
+                      </div>
+                    </div>
                   </div>
-                  <span className="badge badge-gold" style={{ marginBottom: 6 }}>
-                   Champion
-                  </span>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: 4, color: '#0F172A' }}>{top3[0]?.name}</h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                    Ward {top3[0]?.wardNumber} • {top3[0]?.role === 'WardCommittee' ? 'Ward Committee' : top3[0]?.role}
-                  </p>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#008A2E' }}>
-                    {top3[0]?.kitsCollected} Kits
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: '#2C82C9', fontWeight: 800 }}>
-                    ₹{top3[0]?.totalAmount.toLocaleString('en-IN')}
+
+                  <div className="podium-metrics-area">
+                    <div className="podium-kits">
+                      {top3[0]?.kitsCollected} Kits
+                    </div>
+                    <div className="podium-amount">
+                      ₹{top3[0]?.totalAmount.toLocaleString('en-IN')}
+                    </div>
                   </div>
                 </div>
 
-                {/* 3rd Place */}
-                <div className="glass-card" style={{
-                  padding: '22px 16px',
-                  textAlign: 'center',
-                  background: '#FFFFFF',
-                  border: '1px solid #CBD5E1'
-                }}>
-                  <div style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '50%',
-                    background: '#FEF3C7',
-                    margin: '0 auto 10px auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.2rem',
-                    fontWeight: 800,
-                    color: '#92400E'
-                  }}>
-                    🥉 3
+                {/* 3rd Place (Bronze) */}
+                <div className="podium-card podium-bronze">
+                  <div>
+                    <div className="podium-medal">
+                      🥉 3
+                    </div>
+                    <div className="podium-title-area">
+                      <h4 className="podium-name">{top3[2]?.name}</h4>
+                      <div className="podium-role">
+                        Ward {top3[2]?.wardNumber} • {top3[2]?.role === 'WardCommittee' ? 'Ward Committee' : top3[2]?.role}
+                      </div>
+                    </div>
                   </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A' }}>{top3[2]?.name}</h4>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                    Ward {top3[2]?.wardNumber} • {top3[2]?.role === 'WardCommittee' ? 'Ward Committee' : top3[2]?.role}
-                  </p>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#008A2E' }}>
-                    {top3[2]?.kitsCollected} Kits
-                  </div>
-                  <div style={{ fontSize: '0.82rem', color: '#2C82C9', fontWeight: 700 }}>
-                    ₹{top3[2]?.totalAmount.toLocaleString('en-IN')}
+
+                  <div className="podium-metrics-area">
+                    <div className="podium-kits">
+                      {top3[2]?.kitsCollected} Kits
+                    </div>
+                    <div className="podium-amount">
+                      ₹{top3[2]?.totalAmount.toLocaleString('en-IN')}
+                    </div>
                   </div>
                 </div>
               </div>
