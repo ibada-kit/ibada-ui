@@ -1173,7 +1173,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     padding: '12px 14px',
                     borderRadius: 'var(--radius-md)',
                     background: '#F8FAFC',
-                    border: '1px solid var(--border-subtle)'
+                    border: '1px solid var(--border-subtle)',
+                    flexWrap: 'wrap',
+                    gap: 8
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

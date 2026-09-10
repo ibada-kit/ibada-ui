@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { WeeklyMetrics, Donation } from '../types';
-import { Calendar, Eye, X } from 'lucide-react';
+import { Calendar, X } from 'lucide-react';
 
 interface DailyCollectionsChartProps {
   metrics: WeeklyMetrics | null;
@@ -25,7 +25,7 @@ const daysList = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export const DailyCollectionsChart: React.FC<DailyCollectionsChartProps> = ({
   metrics,
   donations,
-  onViewReceipt,
+  onViewReceipt: _onViewReceipt,
   title = 'Daily Kit Collections (Mon - Sun)',
   subtitle = 'Click on any day below to inspect respective collections & receipts'
 }) => {
@@ -325,26 +325,7 @@ export const DailyCollectionsChart: React.FC<DailyCollectionsChartProps> = ({
           </div>
 
           {/* Receipts / Donors List for that day */}
-          <div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 8
-            }}>
-              <span style={{
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                color: '#334155',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em'
-              }}>
-                Receipts Collected on {activeDayData.fullName} ({activeDayData.donations.length})
-              </span>
-            </div>
-
-            
-          </div>
+         
         </div>
       )}
     </div>

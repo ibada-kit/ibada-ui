@@ -19,8 +19,8 @@ import { DailyCollectionsChart } from '../components/DailyCollectionsChart';
 
 interface HomeScreenProps {
   user: User | null;
-  onOpenRecordModal: () => void;
-  onViewReceipt: (donation: Donation) => void;
+  onOpenRecordModal?: () => void;
+  onViewReceipt?: (donation: Donation) => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -496,7 +496,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             >
               <Award size={15} />
               <span>
-                {user?.role === 'Admin' ? 'Fundraisers (All Roles)' : 'Volunteers'}
+                {user?.role === 'Admin' ? 'Fundraisers' : 'Volunteers'}
               </span>
             </button>
 
@@ -568,18 +568,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           {/* Admin-only quick role filter buttons */}
           {user?.role === 'Admin' && (activeTab === 'volunteers' || activeTab === 'recent') && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: 4, fontWeight: 600 }}>Filter View:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', width: '100%', marginTop: 4 }}>
+              <span style={{ fontSize: '0.74rem', color: '#78350F', marginRight: 2, fontWeight: 700 }}>Filter:</span>
               <button
                 id="filter-admin-all"
                 onClick={() => setAdminRoleFilter('all')}
                 style={{
-                  padding: '4px 10px',
+                  padding: '4px 9px',
                   borderRadius: 'var(--radius-sm)',
                   border: adminRoleFilter === 'all' ? '1px solid #B45309' : '1px solid var(--border-subtle)',
                   background: adminRoleFilter === 'all' ? '#FDE68A' : '#FFFFFF',
                   color: adminRoleFilter === 'all' ? '#78350F' : 'var(--text-secondary)',
-                  fontSize: '0.74rem',
+                  fontSize: '0.72rem',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
@@ -590,49 +590,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 id="filter-admin-wardcommittee"
                 onClick={() => setAdminRoleFilter('WardCommittee')}
                 style={{
-                  padding: '4px 10px',
+                  padding: '4px 9px',
                   borderRadius: 'var(--radius-sm)',
                   border: adminRoleFilter === 'WardCommittee' ? '1px solid #7C3AED' : '1px solid var(--border-subtle)',
                   background: adminRoleFilter === 'WardCommittee' ? '#F5F3FF' : '#FFFFFF',
                   color: adminRoleFilter === 'WardCommittee' ? '#6D28D9' : 'var(--text-secondary)',
-                  fontSize: '0.74rem',
+                  fontSize: '0.72rem',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                Ward Committee
+                Ward Comm.
               </button>
               <button
                 id="filter-admin-coordinators"
                 onClick={() => setAdminRoleFilter('Coordinator')}
                 style={{
-                  padding: '4px 10px',
+                  padding: '4px 9px',
                   borderRadius: 'var(--radius-sm)',
                   border: adminRoleFilter === 'Coordinator' ? '1px solid #256CAA' : '1px solid var(--border-subtle)',
                   background: adminRoleFilter === 'Coordinator' ? '#EDF4FA' : '#FFFFFF',
                   color: adminRoleFilter === 'Coordinator' ? '#256CAA' : 'var(--text-secondary)',
-                  fontSize: '0.74rem',
+                  fontSize: '0.72rem',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                Coordinators Only
+                Coordinators
               </button>
               <button
                 id="filter-admin-volunteers"
                 onClick={() => setAdminRoleFilter('Volunteer')}
                 style={{
-                  padding: '4px 10px',
+                  padding: '4px 9px',
                   borderRadius: 'var(--radius-sm)',
                   border: adminRoleFilter === 'Volunteer' ? '1px solid #42B06F' : '1px solid var(--border-subtle)',
                   background: adminRoleFilter === 'Volunteer' ? '#EBF7F0' : '#FFFFFF',
                   color: adminRoleFilter === 'Volunteer' ? '#1E6B3E' : 'var(--text-secondary)',
-                  fontSize: '0.74rem',
+                  fontSize: '0.72rem',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                Volunteers Only
+                Volunteers
               </button>
             </div>
           )}
@@ -757,27 +757,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Filter & Search Bar */}
             <div style={{
               display: 'flex',
-              gap: 12,
+              gap: 10,
               marginBottom: 16,
               flexWrap: 'wrap'
             }}>
-              <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+              <div style={{ flex: '1 1 180px', minWidth: 0, position: 'relative' }}>
                 <Search size={17} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                   type="text"
                   id="search-volunteer"
                   className="input-field"
-                  style={{ paddingLeft: 40 }}
+                  style={{ paddingLeft: 40, width: '100%', boxSizing: 'border-box' }}
                   placeholder="Search by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
 
-              <div style={{ minWidth: 160 }}>
+              <div style={{ flex: '0 1 140px', minWidth: 100 }}>
                 <select
                   id="filter-ward"
                   className="input-field"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
                   value={selectedWard}
                   onChange={(e) => setSelectedWard(e.target.value)}
                 >
@@ -790,13 +791,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
 
             {/* Detailed Rankings List */}
-            <div className="glass-card" style={{ overflow: 'hidden' }}>
+            <div className="glass-card leaderboard-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <div className="leaderboard-row leaderboard-header">
                 <span>#</span>
-                <span>Name</span>
-                <span>Ward</span>
-                <span style={{ textAlign: 'center' }}>Kits</span>
-                <span style={{ textAlign: 'right' }}>Raised</span>
+                <span>{user?.role === 'Admin' ? 'Fundraiser & Role' : 'Volunteer'}</span>
+                <span className="col-ward">Ward</span>
+                <span className="col-kits" style={{ textAlign: 'center' }}>Kits</span>
+                <span className="col-raised" style={{ textAlign: 'right' }}>Performance</span>
               </div>
 
               {rankedVolunteers.map((vol) => {
@@ -852,6 +853,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                         <span className={`badge ${vol.role === 'Coordinator' ? 'badge-blue' : vol.role === 'WardCommittee' ? 'badge-purple' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', padding: '1px 5px' }}>
                           {vol.role === 'WardCommittee' ? 'Ward Comm.' : vol.role}
                         </span>
+                        <span className="badge badge-blue mobile-only-inline" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>
+                          W{vol.wardNumber}
+                        </span>
                         <span style={{
                           fontSize: '0.68rem',
                           color: 'var(--text-secondary)'
@@ -861,15 +865,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       </div>
                     </div>
 
-                    {/* Ward & Role */}
-                    <div style={{ minWidth: 0 }}>
+                    {/* Ward & Role (Desktop column) */}
+                    <div className="col-ward" style={{ minWidth: 0 }}>
                       <span className="badge badge-blue" style={{ fontSize: '0.65rem', padding: '2px 5px' }}>
                         W{vol.wardNumber}
                       </span>
                     </div>
 
-                    {/* Kits */}
-                    <div style={{ textAlign: 'center' }}>
+                    {/* Kits (Desktop column) */}
+                    <div className="col-kits" style={{ textAlign: 'center' }}>
                       <span style={{ fontSize: '0.98rem', fontWeight: 800, color: '#42B06F' }}>
                         {vol.kitsCollected}
                       </span>
@@ -878,8 +882,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       </span>
                     </div>
 
-                    {/* Total Raised */}
-                    <div style={{ textAlign: 'right' }}>
+                    {/* Total Raised & Mobile Combined Metrics */}
+                    <div className="col-raised" style={{ textAlign: 'right' }}>
+                      <span className="mobile-kits-label" style={{ fontSize: '0.86rem', fontWeight: 800, color: '#008A2E' }}>
+                        {vol.kitsCollected} Kits
+                      </span>
                       <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#256CAA', whiteSpace: 'nowrap' }}>
                         ₹{vol.totalAmount.toLocaleString('en-IN')}
                       </span>
@@ -967,27 +974,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {/* Filter & Search Bar for Recent Donors */}
             <div style={{
               display: 'flex',
-              gap: 12,
+              gap: 10,
               marginBottom: 16,
               flexWrap: 'wrap'
             }}>
-              <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+              <div style={{ flex: '1 1 180px', minWidth: 0, position: 'relative' }}>
                 <Search size={17} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                   type="text"
                   id="search-recent"
                   className="input-field"
-                  style={{ paddingLeft: 40 }}
+                  style={{ paddingLeft: 40, width: '100%', boxSizing: 'border-box' }}
                   placeholder="Search donor name, receipt token, or collector..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
 
-              <div style={{ minWidth: 160 }}>
+              <div style={{ flex: '0 1 140px', minWidth: 100 }}>
                 <select
                   id="filter-ward-recent"
                   className="input-field"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
                   value={selectedWard}
                   onChange={(e) => setSelectedWard(e.target.value)}
                 >
@@ -1061,7 +1069,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
 
                   <button
-                    onClick={() => onViewReceipt(don)}
+                    onClick={() => onViewReceipt && onViewReceipt(don)}
                     className="btn-secondary"
                     style={{ padding: '8px 14px', fontSize: '0.82rem' }}
                   >
@@ -1082,22 +1090,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
       </section>
 
-      {/* Quick Floating Action on Mobile with PWA Safe Area */}
-      <div className="pwa-floating-btn">
-        <button
-          id="btn-floating-record"
-          onClick={onOpenRecordModal}
-          className="btn-primary"
-          style={{
-            padding: '13px 20px',
-            borderRadius: 'var(--radius-full)',
-            boxShadow: '0 8px 25px rgba(16, 185, 129, 0.5)'
-          }}
-        >
-          <Package size={19} />
-          <span>Record Donation</span>
-        </button>
-      </div>
+      {/* Quick Floating Action on Mobile with PWA Safe Area (Hidden for Admin) */}
+      {user?.role !== 'Admin' && onOpenRecordModal && (
+        <div className="pwa-floating-btn">
+          <button
+            id="btn-floating-record"
+            onClick={onOpenRecordModal}
+            className="btn-primary"
+            style={{
+              padding: '13px 20px',
+              borderRadius: 'var(--radius-full)',
+              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.5)'
+            }}
+          >
+            <Package size={19} />
+            <span>Record Donation</span>
+          </button>
+        </div>
+      )}
 
     </main>
   );

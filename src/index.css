@@ -499,6 +499,12 @@ body {
 }
 
 /* Leaderboard Responsive Table Styles */
+.leaderboard-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
 .leaderboard-row {
   display: grid;
   grid-template-columns: 32px minmax(130px, 2fr) 65px 55px minmax(80px, 1fr);
@@ -518,16 +524,47 @@ body {
   letter-spacing: 0.04em;
 }
 
+.mobile-only-inline {
+  display: none !important;
+}
+
+.mobile-kits-label {
+  display: none !important;
+}
+
 @media (max-width: 640px) {
   .leaderboard-row {
-    grid-template-columns: 26px minmax(110px, 1.8fr) 48px 46px minmax(68px, 1fr);
-    padding: 11px 8px;
-    gap: 4px;
+    grid-template-columns: 28px 1fr auto;
+    padding: 12px 10px;
+    gap: 8px;
   }
   
   .leaderboard-header {
-    padding: 9px 8px;
+    grid-template-columns: 28px 1fr auto;
+    padding: 9px 10px;
     font-size: 0.68rem;
+  }
+
+  .leaderboard-row .col-ward,
+  .leaderboard-header .col-ward,
+  .leaderboard-row .col-kits,
+  .leaderboard-header .col-kits {
+    display: none !important;
+  }
+
+  .mobile-only-inline {
+    display: inline-flex !important;
+  }
+
+  .mobile-kits-label {
+    display: block !important;
+  }
+
+  .leaderboard-row .col-raised {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
   }
 }
 

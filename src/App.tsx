@@ -99,7 +99,6 @@ export const App: React.FC = () => {
                 <HomeScreen
                   key={refreshKey}
                   user={currentUser}
-                  onOpenRecordModal={() => setIsRecordModalOpen(true)}
                   onViewReceipt={(don) => setActiveReceipt(don)}
                 />
               )
