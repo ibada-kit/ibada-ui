@@ -554,40 +554,46 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {recentTransactions.map((tx) => (
-              <div
-                key={tx.donationId}
-                onClick={() => onViewReceipt(tx)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '14px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F4F9FD',
-                  border: '1px solid #E2E8F0',
-                  cursor: 'pointer'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                    {tx.donorName}
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                    Collector: {tx.collectedByName || 'Volunteer'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
-                    ₹{tx.totalAmount.toLocaleString('en-IN')}
-                  </div>
-                  <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
-                    {tx.kitCount} Kits
-                  </span>
-                </div>
+            {recentTransactions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
+                No receipts recorded yet for your team. Click "Record Donation" to log contributions!
               </div>
-            ))}
+            ) : (
+              recentTransactions.map((tx) => (
+                <div
+                  key={tx.donationId}
+                  onClick={() => onViewReceipt(tx)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#F4F9FD',
+                    border: '1px solid #E2E8F0',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
+                      {tx.donorName}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                      Collector: {tx.collectedByName || 'Volunteer'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                      ₹{tx.totalAmount.toLocaleString('en-IN')}
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
+                      {tx.kitCount} Kits
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

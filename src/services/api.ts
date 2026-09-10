@@ -58,12 +58,38 @@ export function generateDefaultPassword(fullName: string, phoneNumber: string): 
   return `${namePart}${phonePart}`;
 }
 
+// Helper to extract clean error message from API responses
+async function extractErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const text = await res.text();
+    if (!text) return `${fallback} (HTTP ${res.status})`;
+    try {
+      const json = JSON.parse(text);
+      return json.message || json.Message || json.title || (json.errors ? Object.values(json.errors).flat().join(', ') : text);
+    } catch {
+      return text;
+    }
+  } catch {
+    return `${fallback} (HTTP ${res.status})`;
+  }
+}
+
 // Current User State helpers
 export const getCurrentUser = (): User | null => {
   const data = localStorage.getItem(STORAGE_USER);
   if (data) {
     try {
-      return JSON.parse(data);
+      const user = JSON.parse(data);
+      if (user?.token) {
+        const claims = parseJwt(user.token);
+        // If sub was serialized as an array from the old backend bug, or token expired, invalidate it so user can cleanly re-login
+        if (Array.isArray(claims.sub) || (claims.exp && claims.exp * 1000 < Date.now())) {
+          console.warn('[api.ts] Detected stale or malformed token in localStorage. Clearing session.');
+          localStorage.removeItem(STORAGE_USER);
+          return null;
+        }
+      }
+      return user;
     } catch {
       return null;
     }
@@ -111,18 +137,21 @@ export const authApi = {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Invalid phone or password' }));
-      throw new Error(err.message || err.Message || 'Authentication failed. Please check your credentials.');
+      const msg = await extractErrorMessage(res, 'Invalid phone or password');
+      throw new Error(msg);
     }
 
     const data = await res.json();
     const claims = parseJwt(data.token);
 
+    const rawSub = Array.isArray(claims.sub) ? claims.sub[0] : claims.sub;
+    const rawRole = data.role || (Array.isArray(claims.role) ? claims.role[0] : claims.role) || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 'Volunteer';
+
     const user: User = {
-      userId: claims.sub || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || `usr-${Date.now()}`,
+      userId: rawSub || claims.UserId || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || `usr-${Date.now()}`,
       fullName: data.fullName || claims.name || 'Community Member',
       phoneNumber: formattedPhone,
-      role: data.role || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 'Volunteer',
+      role: rawRole,
       panchayath: claims.Panchayath || 'Madavoor',
       wardNumber: claims.WardNumber ? parseInt(claims.WardNumber, 10) : 4,
       district: claims.District || 'Kozhikode',
@@ -167,6 +196,13 @@ export const donationsApi = {
   // Get Weekly Metrics derived from live Leaderboard aggregate
   getWeeklyMetrics: async (): Promise<WeeklyMetrics> => {
     const token = getCurrentUser()?.token;
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+    const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
     try {
       const res = await fetch(`${API_BASE_URL}/Leaderboards`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -182,41 +218,70 @@ export const donationsApi = {
         const totalAmount = topWards.reduce((acc, w) => acc + (w.totalAmount || 0), 0)
           || topVols.reduce((acc, v) => acc + (v.totalAmount || 0), 0);
 
-        const targetKits = 1200;
-        const targetAmount = 1200000;
-        const donorsCount = getStoredDonations().length || topVols.length;
+        const targetKits = topWards.reduce((acc, w) => acc + (w.targetKits || 0), 0);
+        const targetAmount = targetKits * 1000;
+        const donorsCount = topWards.reduce((acc, w) => acc + (w.donationsCount || 0), 0)
+          || topVols.reduce((acc, v) => acc + (v.donationsCount || 0), 0);
+
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayCounts: Record<string, { kits: number; amount: number }> = {
+          Mon: { kits: 0, amount: 0 },
+          Tue: { kits: 0, amount: 0 },
+          Wed: { kits: 0, amount: 0 },
+          Thu: { kits: 0, amount: 0 },
+          Fri: { kits: 0, amount: 0 },
+          Sat: { kits: 0, amount: 0 },
+          Sun: { kits: 0, amount: 0 }
+        };
+
+        const donations = getStoredDonations();
+        donations.forEach(d => {
+          if (d.timestamp) {
+            const day = days[new Date(d.timestamp).getDay()];
+            if (dayCounts[day]) {
+              dayCounts[day].kits += d.kitCount || 0;
+              dayCounts[day].amount += d.totalAmount || 0;
+            }
+          }
+        });
+
+        // Attribute remaining live kits to current day if no local session timestamps
+        const currentDayName = days[today.getDay()];
+        const sumRecordedKits = Object.values(dayCounts).reduce((s, x) => s + x.kits, 0);
+        if (totalKits > sumRecordedKits && dayCounts[currentDayName]) {
+          dayCounts[currentDayName].kits += (totalKits - sumRecordedKits);
+          dayCounts[currentDayName].amount += (totalAmount - Object.values(dayCounts).reduce((s, x) => s + x.amount, 0));
+        }
+
+        const dailyBreakdown = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => ({
+          day,
+          kits: dayCounts[day].kits,
+          amount: dayCounts[day].amount
+        }));
 
         return {
-          startDate: 'Sep 3',
-          endDate: 'Sep 10',
+          startDate: formatDate(startOfWeek),
+          endDate: formatDate(endOfWeek),
           totalAmount,
           totalKits,
           targetAmount,
           targetKits,
           donorsCount,
-          growthPercentage: 24.5,
-          dailyBreakdown: [
-            { day: 'Mon', kits: 0, amount: 0 },
-            { day: 'Tue', kits: 0, amount: 0 },
-            { day: 'Wed', kits: 0, amount: 0 },
-            { day: 'Thu', kits: 0, amount: 0 },
-            { day: 'Fri', kits: 0, amount: 0 },
-            { day: 'Sat', kits: 0, amount: 0 },
-            { day: 'Sun', kits: totalKits, amount: totalAmount }
-          ]
+          growthPercentage: 0,
+          dailyBreakdown
         };
       }
     } catch (err) {
-      console.warn('Leaderboard API fetch failed, returning default metrics template:', err);
+      console.warn('Leaderboard API fetch failed:', err);
     }
 
     return {
-      startDate: 'Sep 3',
-      endDate: 'Sep 10',
+      startDate: formatDate(startOfWeek),
+      endDate: formatDate(endOfWeek),
       totalAmount: 0,
       totalKits: 0,
-      targetAmount: 1200000,
-      targetKits: 1200,
+      targetAmount: 0,
+      targetKits: 0,
       donorsCount: 0,
       growthPercentage: 0,
       dailyBreakdown: []
@@ -236,15 +301,15 @@ export const donationsApi = {
         const topVols: any[] = data.topVolunteers || [];
 
         return topVols.map((v, idx) => ({
-          id: `vol-${idx + 1}`,
+          id: v.userId || `vol-${idx + 1}`,
           name: v.name,
-          role: 'Volunteer' as UserRole,
-          wardNumber: 4,
-          panchayath: 'Madavoor',
+          role: (v.role as UserRole) || 'Volunteer',
+          wardNumber: v.wardNumber || 0,
+          panchayath: v.panchayath || '',
           kitsCollected: v.totalKits || 0,
           totalAmount: v.totalAmount || 0,
-          donationsCount: Math.max(1, Math.round((v.totalKits || 1) / 2)),
-          targetKits: 50,
+          donationsCount: v.donationsCount || 0,
+          targetKits: v.targetKits || 0,
           rank: v.position || idx + 1
         }));
       }
@@ -268,9 +333,8 @@ export const donationsApi = {
         const topWards: any[] = data.topWards || [];
 
         return topWards.map((w, idx) => {
-          const match = (w.name || '').match(/\d+/);
-          const wardNum = match ? parseInt(match[0], 10) : idx + 1;
-          const target = 100;
+          const wardNum = w.wardNumber || parseInt((w.name || '').match(/\d+/)?.[0] || '0', 10) || idx + 1;
+          const target = w.targetKits || 0;
           const kits = w.totalKits || 0;
 
           return {
@@ -279,8 +343,8 @@ export const donationsApi = {
             kitsCollected: kits,
             targetKits: target,
             totalAmount: w.totalAmount || (kits * 1000),
-            progressPercentage: Math.min(100, Math.round((kits / target) * 100)),
-            volunteerCount: 5,
+            progressPercentage: target > 0 ? Math.min(100, Math.round((kits / target) * 100)) : 0,
+            volunteerCount: w.volunteerCount || 0,
             rank: w.position || idx + 1
           };
         });
@@ -292,11 +356,41 @@ export const donationsApi = {
     return [];
   },
 
-  // Get Recent Donations from current session/device stream
+  // Get Recent Donations from backend server stream
   getRecentDonations: async (userRole?: UserRole): Promise<Donation[]> => {
+    const token = getCurrentUser()?.token;
+    if (token) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/Donations`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data: any[] = await res.json();
+          if (Array.isArray(data)) {
+            return data.map((d) => ({
+              donationId: d.donationId,
+              receiptToken: d.receiptToken,
+              donorName: d.donorName,
+              whatsAppNumber: d.whatsAppNumber || '',
+              kitCount: d.kitCount,
+              kitUnitRate: 1000,
+              totalAmount: d.totalAmount,
+              panchayath: d.panchayath || 'Madavoor',
+              wardNumber: d.wardNumber,
+              collectedByUserId: d.collectedByUserId,
+              collectedByName: d.collectedByName || 'Volunteer',
+              collectedByRole: d.collectedByRole,
+              timestamp: d.timestamp
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch donations from server:', err);
+      }
+    }
+
     const all = getStoredDonations();
     const role = userRole || getCurrentUser()?.role || 'Volunteer';
-
     if (role === 'Admin') {
       return all;
     }
@@ -324,8 +418,8 @@ export const donationsApi = {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to record donation' }));
-      throw new Error(err.message || err.Message || 'Failed to record donation');
+      const msg = await extractErrorMessage(res, 'Failed to record donation');
+      throw new Error(msg);
     }
 
     const data = await res.json();
@@ -377,9 +471,9 @@ export const adminApi = {
     console.log('[adminApi.getManagedUsers] HTTP Status:', res.status, res.statusText);
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}: Failed to load coordinators` }));
-      console.error('[adminApi.getManagedUsers] Request failed:', err);
-      throw new Error(err.message || err.Message || `HTTP ${res.status}: Failed to load coordinators`);
+      const msg = await extractErrorMessage(res, 'Failed to load coordinators');
+      console.error('[adminApi.getManagedUsers] Request failed:', msg);
+      throw new Error(msg);
     }
 
     const data: any[] = await res.json();
@@ -394,8 +488,8 @@ export const adminApi = {
       panchayath: u.panchayath || 'Madavoor',
       district: u.district || 'Kozhikode',
       targetKits: u.targetKits || 50,
-      kitsCollected: 0,
-      totalAmount: 0,
+      kitsCollected: Number(u.kitsCollected ?? u.KitsCollected ?? 0),
+      totalAmount: Number(u.totalAmount ?? u.TotalAmount ?? u.collectedAmount ?? u.CollectedAmount ?? 0),
       donationsCount: 0,
       createdAt: new Date().toISOString()
     }));
@@ -427,14 +521,14 @@ export const adminApi = {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to create user' }));
-      throw new Error(err.message || err.Message || 'Failed to create user');
+      const msg = await extractErrorMessage(res, 'Failed to create user');
+      throw new Error(msg);
     }
 
     const created = await res.json();
 
     return {
-      userId: created.userId || `mng-${Date.now()}`,
+      userId: created.userId || created.UserId || `mng-${Date.now()}`,
       fullName: data.fullName.trim(),
       phoneNumber: formattedPhone,
       role: data.role,
@@ -462,8 +556,8 @@ export const adminApi = {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to update target' }));
-      throw new Error(err.message || 'Failed to update target');
+      const msg = await extractErrorMessage(res, 'Failed to update target');
+      throw new Error(msg);
     }
 
     return {
@@ -499,8 +593,8 @@ export const adminApi = {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to update user' }));
-      throw new Error(err.message || err.Message || 'Failed to update user');
+      const msg = await extractErrorMessage(res, 'Failed to update user');
+      throw new Error(msg);
     }
 
     const resData = await res.json();
@@ -537,8 +631,8 @@ export const adminApi = {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to reset password' }));
-      throw new Error(err.message || err.Message || 'Failed to reset password');
+      const msg = await extractErrorMessage(res, 'Failed to reset password');
+      throw new Error(msg);
     }
 
     const resData = await res.json();
@@ -554,8 +648,8 @@ export const adminApi = {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Failed to delete user' }));
-      throw new Error(err.message || err.Message || 'Failed to delete user');
+      const msg = await extractErrorMessage(res, 'Failed to delete user');
+      throw new Error(msg);
     }
 
     return true;
@@ -578,7 +672,7 @@ export const analyticsApi = {
   getMyProgress: async (tokenOverride?: string): Promise<UserProgress> => {
     const token = tokenOverride || getCurrentUser()?.token;
     console.log('[analyticsApi.getMyProgress] Calling GET /Analytics/my-progress. Token present:', !!token);
-
+    console.log(token);
     const res = await fetch(`${API_BASE_URL}/Analytics/my-progress`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });

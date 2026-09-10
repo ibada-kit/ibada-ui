@@ -27,10 +27,10 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   
   // Progress & collection state
   const [progress, setProgress] = useState({
-    targetKits: 50,
-    collectedKits: 18,
-    achievementPercentage: 36,
-    collectedAmount: 18000
+    targetKits: 0,
+    collectedKits: 0,
+    achievementPercentage: 0,
+    collectedAmount: 0
   });
 
   const [history, setHistory] = useState<Donation[]>([]);
@@ -66,7 +66,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
             ...prev,
             collectedKits: totalMyKits,
             collectedAmount: totalMyKits * 1000,
-            achievementPercentage: Math.min(100, Math.round((totalMyKits / prev.targetKits) * 100))
+            achievementPercentage: prev.targetKits > 0 ? Math.min(100, Math.round((totalMyKits / prev.targetKits) * 100)) : 0
           }));
         }
       })
@@ -79,12 +79,12 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
       })
         .then(res => res.ok ? res.json() : null)
         .then(data => {
-          if (data && data.targetKits) {
+          if (data) {
             setProgress({
-              targetKits: data.targetKits,
-              collectedKits: data.collectedKits,
-              achievementPercentage: data.achievementPercentage,
-              collectedAmount: data.collectedAmount
+              targetKits: data.targetKits || 0,
+              collectedKits: data.collectedKits || 0,
+              achievementPercentage: data.achievementPercentage || 0,
+              collectedAmount: data.collectedAmount || 0
             });
           }
         })

@@ -25,12 +25,12 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'record' | 'transactions' | 'ranks'>('overview');
   
   const [wardStats, setWardStats] = useState({
-    wardNumber: user.wardNumber || 4,
-    wardName: 'Kakkad',
-    targetKits: 150,
-    collectedKits: 84,
-    collectedAmount: 84000,
-    progressPercentage: 56
+    wardNumber: user.wardNumber || 0,
+    wardName: user.wardNumber ? `Ward ${user.wardNumber}` : 'My Ward',
+    targetKits: 0,
+    collectedKits: 0,
+    collectedAmount: 0,
+    progressPercentage: 0
   });
 
   const [wardVolunteers, setWardVolunteers] = useState<any[]>([]);
@@ -49,15 +49,15 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   useEffect(() => {
     // 1. Fetch live donations and leaderboards
     Promise.all([
-      donationsApi.getRecentDonations('Coordinator'),
+      donationsApi.getRecentDonations(user.role),
       donationsApi.getWardLeaderboard(),
-      donationsApi.getVolunteerLeaderboard('Coordinator')
+      donationsApi.getVolunteerLeaderboard(user.role)
     ])
       .then(([donations, wards, vols]) => {
         setAllWards(wards);
         setVolunteersBoard(vols);
 
-        const currentWard = wards.find(w => w.wardNumber === (user.wardNumber || 4));
+        const currentWard = wards.find(w => w.wardNumber === user.wardNumber);
         if (currentWard) {
           setWardStats({
             wardNumber: currentWard.wardNumber,
@@ -69,9 +69,9 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           });
         }
 
-        // Filter donations for this ward
-        const wardTx = donations.filter(d => d.wardNumber === (user.wardNumber || 4));
-        setWardDonations(wardTx.length ? wardTx : donations.slice(0, 10));
+        // Donations are scoped by backend for this ward/user
+        const wardTx = user.wardNumber ? donations.filter(d => Number(d.wardNumber) === Number(user.wardNumber)) : donations;
+        setWardDonations(wardTx.length > 0 ? wardTx : donations);
       })
       .catch(() => {});
 
@@ -543,40 +543,46 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {wardDonations.map((tx) => (
-              <div
-                key={tx.donationId}
-                onClick={() => onViewReceipt(tx)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '14px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F4F9FD',
-                  border: '1px solid #E2E8F0',
-                  cursor: 'pointer'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                    {tx.donorName}
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                    Collector: {tx.collectedByName || 'Ward Member'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
-                    ₹{tx.totalAmount.toLocaleString('en-IN')}
-                  </div>
-                  <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
-                    {tx.kitCount} Kits
-                  </span>
-                </div>
+            {wardDonations.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
+                No receipts recorded for Ward {user.wardNumber} yet.
               </div>
-            ))}
+            ) : (
+              wardDonations.map((tx) => (
+                <div
+                  key={tx.donationId}
+                  onClick={() => onViewReceipt(tx)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#F4F9FD',
+                    border: '1px solid #E2E8F0',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
+                      {tx.donorName}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                      Collector: {tx.collectedByName || 'Ward Member'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                      ₹{tx.totalAmount.toLocaleString('en-IN')}
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
+                      {tx.kitCount} Kits
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

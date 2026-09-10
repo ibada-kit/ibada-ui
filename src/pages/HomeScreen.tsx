@@ -161,7 +161,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="badge badge-emerald">Week 3 Current Drive</span>
+              <span className="badge badge-emerald">Madavoor Relief Drive</span>
               <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {metrics ? `${metrics.startDate} – ${metrics.endDate}` : 'Current Week'}
               </span>
@@ -171,22 +171,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </h2>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(16, 185, 129, 0.12)',
-              color: '#34d399',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.82rem',
-              fontWeight: 600
-            }}>
-              <TrendingUp size={15} />
-              +{metrics?.growthPercentage || 24.5}% vs last week
-            </span>
-          </div>
+          {metrics?.growthPercentage && metrics.growthPercentage > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(16, 185, 129, 0.12)',
+                color: '#34d399',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.82rem',
+                fontWeight: 600
+              }}>
+                <TrendingUp size={15} />
+                +{metrics.growthPercentage}% vs last week
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* Hero Banner with Big Stats */}
@@ -252,67 +254,153 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </div>
             </div>
 
-            {/* Target Progress Bar & Daily Breakdown */}
-            <div style={{
-              background: '#F8FAFC',
-              padding: '18px 20px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-subtle)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
-                <div>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
-                    Weekly Campaign Target
-                  </span>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
-                    {metrics?.totalKits} / {metrics?.targetKits} Kits ({progressPercentage}%)
+            {/* Target Progress Bar or Organization Overview */}
+            {user?.role === 'Admin' ? (
+              <div style={{
+                background: '#F8FAFC',
+                padding: '18px 20px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Live Organization Collections
+                    </span>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A', marginTop: 2 }}>
+                      {metrics?.totalKits || 0} Kits Distributed
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Total Donors
+                    </span>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#256CAA', marginTop: 2 }}>
+                      {metrics?.donorsCount || 0}
+                    </div>
                   </div>
                 </div>
-                <span style={{ fontSize: '0.82rem', color: '#256CAA', fontWeight: 700 }}>
-                  Target: ₹{metrics?.targetAmount.toLocaleString('en-IN')}
-                </span>
-              </div>
 
-              {/* Progress bar */}
-              <div className="progress-container" style={{ marginBottom: 12 }}>
-                <div className="progress-fill" style={{ width: `${progressPercentage}%` }} />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                <span>{metrics ? metrics.targetKits - metrics.totalKits : 0} kits needed to hit weekly goal</span>
-                <span style={{ color: 'var(--primary-light)', fontWeight: 600 }}>{progressPercentage}% Achieved</span>
-              </div>
-
-              {/* Daily Velocity Mini-Graph */}
-              <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 700 }}>
-                  Daily Kit Collections (Mon - Sun)
-                </span>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 44 }}>
-                  {metrics?.dailyBreakdown.map((d, i) => {
-                    const maxKits = 120;
-                    const heightPercent = Math.min(100, Math.max(15, (d.kits / maxKits) * 100));
-                    return (
-                      <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <div
-                          title={`${d.day}: ${d.kits} kits (₹${d.amount.toLocaleString('en-IN')})`}
-                          style={{
-                            width: '100%',
-                            height: `${heightPercent}%`,
-                            background: i === 4 ? '#42B06F' : '#CBD5E1',
-                            borderRadius: 3,
-                            transition: 'all 0.3s ease'
-                          }}
-                        />
-                        <span style={{ fontSize: '0.68rem', color: i === 4 ? '#1E6B3E' : 'var(--text-muted)', fontWeight: i === 4 ? 700 : 500 }}>
-                          {d.day}
-                        </span>
-                      </div>
-                    );
-                  })}
+                {/* Daily Velocity Mini-Graph */}
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 700 }}>
+                    Daily Kit Collections (Mon - Sun)
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 44 }}>
+                    {metrics?.dailyBreakdown.map((d, i) => {
+                      const allKits = metrics?.dailyBreakdown.map(x => x.kits) || [];
+                      const maxKits = Math.max(10, ...allKits);
+                      const heightPercent = maxKits > 0 && d.kits > 0 ? Math.min(100, Math.max(15, (d.kits / maxKits) * 100)) : 8;
+                      return (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                          <div
+                            title={`${d.day}: ${d.kits} kits (₹${d.amount.toLocaleString('en-IN')})`}
+                            style={{
+                              width: '100%',
+                              height: `${heightPercent}%`,
+                              background: d.kits > 0 ? '#42B06F' : '#CBD5E1',
+                              borderRadius: 3,
+                              transition: 'all 0.3s ease'
+                            }}
+                          />
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                            {d.day}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (metrics?.targetKits ?? 0) > 0 ? (
+              <div style={{
+                background: '#F8FAFC',
+                padding: '18px 20px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
+                  <div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Weekly Campaign Target
+                    </span>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
+                      {metrics?.totalKits} / {metrics?.targetKits} Kits ({progressPercentage}%)
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.82rem', color: '#256CAA', fontWeight: 700 }}>
+                    Target: ₹{metrics?.targetAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="progress-container" style={{ marginBottom: 12 }}>
+                  <div className="progress-fill" style={{ width: `${progressPercentage}%` }} />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  <span>{Math.max(0, (metrics?.targetKits || 0) - (metrics?.totalKits || 0))} kits needed to hit weekly goal</span>
+                  <span style={{ color: 'var(--primary-light)', fontWeight: 600 }}>{progressPercentage}% Achieved</span>
+                </div>
+
+                {/* Daily Velocity Mini-Graph */}
+                <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 700 }}>
+                    Daily Kit Collections (Mon - Sun)
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 44 }}>
+                    {metrics?.dailyBreakdown.map((d, i) => {
+                      const allKits = metrics?.dailyBreakdown.map(x => x.kits) || [];
+                      const maxKits = Math.max(10, ...allKits);
+                      const heightPercent = maxKits > 0 && d.kits > 0 ? Math.min(100, Math.max(15, (d.kits / maxKits) * 100)) : 8;
+                      return (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                          <div
+                            title={`${d.day}: ${d.kits} kits (₹${d.amount.toLocaleString('en-IN')})`}
+                            style={{
+                              width: '100%',
+                              height: `${heightPercent}%`,
+                              background: d.kits > 0 ? '#42B06F' : '#CBD5E1',
+                              borderRadius: 3,
+                              transition: 'all 0.3s ease'
+                            }}
+                          />
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                            {d.day}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                background: '#F8FAFC',
+                padding: '18px 20px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Current Collections
+                    </span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: 2 }}>
+                      {metrics?.totalKits || 0} Kits Collected
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Donors
+                    </span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#256CAA', marginTop: 2 }}>
+                      {metrics?.donorsCount || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

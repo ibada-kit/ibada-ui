@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, ManagedUser, LeaderboardEntry, WardLeaderboardEntry } from '../types';
-import { adminApi, donationsApi, generateDefaultPassword } from '../services/api';
+import { adminApi, donationsApi, analyticsApi, generateDefaultPassword, type UserProgress } from '../services/api';
 import { 
   ShieldCheck, 
   Users, 
@@ -27,6 +27,7 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  currentUser,
   kitPrice,
   onUpdateKitPrice
 }) => {
@@ -41,8 +42,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newFullName, setNewFullName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newRole, setNewRole] = useState<'Coordinator' | 'WardCommittee'>('Coordinator');
-  const [newWard, setNewWard] = useState<number>(4);
-  const [newTarget, _setNewTarget] = useState<number>(100);
+  const [newWard, setNewWard] = useState<number>(1);
+  const [newTarget, _setNewTarget] = useState<number>(50);
   void _setNewTarget;
 
   // Edit User Modal / Form State
@@ -50,8 +51,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editRole, setEditRole] = useState<'Coordinator' | 'WardCommittee'>('Coordinator');
-  const [editWard, setEditWard] = useState<number>(4);
-  const [editTarget, setEditTarget] = useState<number>(50);
+  const [editWard, setEditWard] = useState<number>(1);
+  const [editTarget, setEditTarget] = useState<number>(0);
   const [editPassword, setEditPassword] = useState('');
   const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
@@ -69,18 +70,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Leaderboards & Reports state
   const [volunteers, setVolunteers] = useState<LeaderboardEntry[]>([]);
   const [wards, setWards] = useState<WardLeaderboardEntry[]>([]);
+  const [adminProgress, setAdminProgress] = useState<UserProgress | null>(null);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [users, vList, wList] = await Promise.all([
+      const [users, vList, wList, prog] = await Promise.all([
         adminApi.getManagedUsers(),
         donationsApi.getVolunteerLeaderboard('Admin'),
-        donationsApi.getWardLeaderboard()
+        donationsApi.getWardLeaderboard(),
+        analyticsApi.getMyProgress(currentUser?.token).catch(() => null)
       ]);
       setCoordinators(users);
       setVolunteers(vList);
       setWards(wList);
+      if (prog) setAdminProgress(prog);
     } catch (err) {
       console.warn('Could not load admin management data', err);
     } finally {
@@ -90,7 +94,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [currentUser?.token]);
 
   // Handle Add User
   const handleAddUser = async (e: React.FormEvent) => {
@@ -329,6 +333,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           border: feedbackMsg.isError ? '1px solid #FECACA' : '1px solid #A5D6B8'
         }}>
           {feedbackMsg.text}
+        </div>
+      )}
+
+      {/* Campaign Progress Metric Card */}
+      {adminProgress && (
+        <div style={{
+          background: 'linear-gradient(135deg, #008A2E 0%, #005E1F 100%)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '20px 24px',
+          color: '#FFFFFF',
+          marginBottom: 20,
+          boxShadow: '0 8px 24px -4px rgba(0, 138, 46, 0.3)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <span style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.85 }}>
+                Overall Campaign Collections
+              </span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
+                <span style={{ fontSize: '2.2rem', fontWeight: 900, lineHeight: 1 }}>
+                  {adminProgress.collectedKits}
+                </span>
+                <span style={{ fontSize: '1rem', opacity: 0.85, fontWeight: 600 }}>
+                  Total Kits Collected
+                </span>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.78rem', opacity: 0.85, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Total Funds Raised
+              </span>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, marginTop: 2 }}>
+                ₹{adminProgress.collectedAmount.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1018,12 +1059,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ fontWeight: 900, color: '#2C82C9', fontSize: '1rem' }}>
-                        {u.targetKits || 50} Kits (₹{((u.targetKits || 50) * kitPrice).toLocaleString('en-IN')})
+                        {u.targetKits ? `${u.targetKits} Kits (₹${(u.targetKits * kitPrice).toLocaleString('en-IN')})` : 'No Target Set'}
                       </span>
                       <button
                         onClick={() => {
                           setEditingUserId(u.userId);
-                          setEditingTargetKits(u.targetKits || 50);
+                          setEditingTargetKits(u.targetKits || 0);
                         }}
                         className="btn-secondary"
                         style={{ padding: '6px 10px', fontSize: '0.76rem' }}
