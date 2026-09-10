@@ -968,33 +968,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span>Edit</span>
                     </button>
 
-                    <button
-                      onClick={() => setResetTargetUser({
-                        id: u.userId || u.phoneNumber,
-                        name: u.fullName,
-                        phone: u.phoneNumber,
-                        role: u.role,
-                        wardNumber: u.wardNumber
-                      })}
-                      className="btn-secondary"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        color: '#0F172A',
-                        background: '#FFFFFF',
-                        border: '1px solid #CBD5E1',
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer'
-                      }}
-                      title="Reset or regenerate user password"
-                    >
-                      <KeyRound size={13} color="#008A2E" />
-                      <span>Password</span>
-                    </button>
+                   
 
                     <button
                       onClick={() => setDeletingUser(u)}
