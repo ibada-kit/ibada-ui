@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, ManagedUser, LeaderboardEntry, WardLeaderboardEntry } from '../types';
-import { adminApi, donationsApi, analyticsApi, generateDefaultPassword, type UserProgress } from '../services/api';
+import { adminApi, donationsApi, analyticsApi, generateRandomPassword, type UserProgress } from '../services/api';
 import { 
   ShieldCheck, 
   Users, 
@@ -14,11 +14,13 @@ import {
   Trophy,
   Trash2,
   Key,
+  KeyRound,
   Copy,
   Check,
   AlertTriangle,
   X
 } from 'lucide-react';
+import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 
 interface AdminDashboardProps {
   currentUser: User;
@@ -56,6 +58,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editPassword, setEditPassword] = useState('');
   const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
+  const [resetTargetUser, setResetTargetUser] = useState<ResetTargetUser | null>(null);
 
   // Delete User Confirmation State
   const [deletingUser, setDeletingUser] = useState<ManagedUser | null>(null);
@@ -109,12 +112,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     try {
       setLoading(true);
-      const generatedPass = generateDefaultPassword(newFullName, clean);
+      const generatedPass = generateRandomPassword(6);
       const created = await adminApi.createManagedUser({
         fullName: newFullName.trim(),
         phoneNumber: `+91${clean.slice(-10)}`,
         role: newRole,
-        wardNumber: Number(newWard),
+        wardNumber: newRole === 'WardCommittee' ? Number(newWard) : 0,
         targetKits: Number(newTarget),
         defaultPassword: generatedPass
       });
@@ -148,12 +151,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setCopiedPassword(false);
   };
 
-  // Regenerate Default 6-Character Password (first 3 letters of name + last 3 digits of phone)
+  // Regenerate Default Random 6-Character Password
   const handleRegeneratePassword = () => {
-    const cleanPhone = editPhone.replace(/\D/g, '');
-    const gen = generateDefaultPassword(editFullName || 'User', cleanPhone);
+    const gen = generateRandomPassword(6);
     setEditPassword(gen);
-    setPasswordFeedback(`New 6-character password generated: "${gen}". Save to apply.`);
+    setPasswordFeedback(`New random password generated: "${gen}". Save to apply.`);
   };
 
   // Copy Password to Clipboard
@@ -183,7 +185,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         fullName: editFullName.trim(),
         phoneNumber: `+91${clean.slice(-10)}`,
         role: editRole,
-        wardNumber: Number(editWard),
+        wardNumber: editRole === 'WardCommittee' ? Number(editWard) : 0,
         targetKits: Number(editTarget),
         newPassword: editPassword.trim() ? editPassword.trim() : undefined
       });
@@ -498,7 +500,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: newRole === 'WardCommittee' ? '1fr 1fr' : '1fr', gap: 10 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     Role Assignment
@@ -513,20 +515,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </select>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                    Ward Number
-                  </label>
-                  <select
-                    className="input-field"
-                    value={newWard}
-                    onChange={(e) => setNewWard(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(w => (
-                      <option key={w} value={w}>Ward {w}</option>
-                    ))}
-                  </select>
-                </div>
+                {newRole === 'WardCommittee' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                      Ward Number
+                    </label>
+                    <select
+                      className="input-field"
+                      value={newWard}
+                      onChange={(e) => setNewWard(Number(e.target.value))}
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(w => (
+                        <option key={w} value={w}>Ward {w}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* <div>
@@ -642,7 +646,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: editRole === 'WardCommittee' ? '1fr 1fr' : '1fr', gap: 10 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     Role Assignment
@@ -657,20 +661,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </select>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                    Ward Number
-                  </label>
-                  <select
-                    className="input-field"
-                    value={editWard}
-                    onChange={(e) => setEditWard(Number(e.target.value))}
-                  >
-                    {Array.from({ length: 20 }, (_, i) => i + 1).map((w) => (
-                      <option key={w} value={w}>Ward {w}</option>
-                    ))}
-                  </select>
-                </div>
+                {editRole === 'WardCommittee' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                      Ward Number
+                    </label>
+                    <select
+                      className="input-field"
+                      value={editWard}
+                      onChange={(e) => setEditWard(Number(e.target.value))}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((w) => (
+                        <option key={w} value={w}>Ward {w}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* <div>
@@ -956,10 +962,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         borderRadius: 'var(--radius-md)',
                         cursor: 'pointer'
                       }}
-                      title="Edit User & Regenerate Password"
+                      title="Edit User Details"
                     >
                       <Edit3 size={13} color="#008A2E" />
                       <span>Edit</span>
+                    </button>
+
+                    <button
+                      onClick={() => setResetTargetUser({
+                        id: u.userId || u.phoneNumber,
+                        name: u.fullName,
+                        phone: u.phoneNumber,
+                        role: u.role,
+                        wardNumber: u.wardNumber
+                      })}
+                      className="btn-secondary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer'
+                      }}
+                      title="Reset or regenerate user password"
+                    >
+                      <KeyRound size={13} color="#008A2E" />
+                      <span>Password</span>
                     </button>
 
                     <button
@@ -1215,6 +1249,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </form>
         </div>
       )}
+
+      {/* RESET PASSWORD MODAL FOR COORDINATORS & WARD COMMITTEES */}
+      <ResetPasswordModal
+        isOpen={!!resetTargetUser}
+        onClose={() => setResetTargetUser(null)}
+        targetUser={resetTargetUser}
+        onSuccess={() => loadData()}
+      />
     </div>
   );
 };

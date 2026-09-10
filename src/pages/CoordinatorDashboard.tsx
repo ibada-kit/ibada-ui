@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, LeaderboardEntry } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, analyticsApi, coordinatorApi, API_BASE_URL, generateDefaultPassword } from '../services/api';
+import { donationsApi, analyticsApi, coordinatorApi, API_BASE_URL, generateRandomPassword } from '../services/api';
 import type { UserProgress } from '../services/api';
 import { 
   Users, 
@@ -11,8 +11,15 @@ import {
   Trophy, 
   UserPlus, 
   Package, 
-  RefreshCw
+  RefreshCw,
+  KeyRound,
+  Copy,
+  Check,
+  Share2,
+  CheckCircle2,
+  X
 } from 'lucide-react';
+import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 
 interface CoordinatorDashboardProps {
   user: User;
@@ -46,6 +53,16 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   const [volTarget, setVolTarget] = useState(50);
   const [creatingVol, setCreatingVol] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ text: string; isError: boolean } | null>(null);
+
+  // Credentials Highlight & Reset Password states
+  const [createdVolunteer, setCreatedVolunteer] = useState<{
+    fullName: string;
+    phone: string;
+    defaultPassword: string;
+    wardNumber: number;
+  } | null>(null);
+  const [copiedPass, setCopiedPass] = useState(false);
+  const [resetVolunteerUser, setResetVolunteerUser] = useState<ResetTargetUser | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,9 +112,10 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
       return;
     }
 
+    const defaultPass = generateRandomPassword(6);
+
     try {
       setCreatingVol(true);
-      const defaultPass = generateDefaultPassword(volFullName, cleanPhone);
       const res = await fetch(`${API_BASE_URL}/Users`, {
         method: 'POST',
         headers: {
@@ -128,6 +146,13 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         targetKits: volTarget
       }, ...prev]);
 
+      setCreatedVolunteer({
+        fullName: volFullName.trim(),
+        phone: `+91${cleanPhone.slice(-10)}`,
+        defaultPassword: defaultPass,
+        wardNumber: Number(volWard)
+      });
+
       setVolFullName('');
       setVolPhone('');
       setShowAddVolunteer(false);
@@ -140,13 +165,25 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         wardNumber: volWard,
         targetKits: volTarget
       }, ...prev]);
-      setCreateMsg({ text: `Volunteer ${volFullName} added to team roster.`, isError: false });
+      setCreatedVolunteer({
+        fullName: volFullName.trim(),
+        phone: `+91${cleanPhone.slice(-10)}`,
+        defaultPassword: defaultPass,
+        wardNumber: Number(volWard)
+      });
+      setCreateMsg({ text: `Volunteer ${volFullName} added to team roster. Default password: ${defaultPass}`, isError: false });
       setVolFullName('');
       setVolPhone('');
       setShowAddVolunteer(false);
     } finally {
       setCreatingVol(false);
     }
+  };
+
+  const handleCopyPassword = (pass: string) => {
+    navigator.clipboard.writeText(pass);
+    setCopiedPass(true);
+    setTimeout(() => setCopiedPass(false), 2000);
   };
 
   return (
@@ -395,6 +432,115 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
             </button>
           </div>
 
+          {/* Newly Created Volunteer Credentials Highlight Banner */}
+          {createdVolunteer && (
+            <div style={{
+              background: '#F0FDF4',
+              border: '2px solid #86EFAC',
+              borderRadius: 'var(--radius-lg)',
+              padding: '16px',
+              marginBottom: 20,
+              boxShadow: '0 4px 12px rgba(0, 138, 46, 0.08)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CheckCircle2 size={20} color="#008A2E" />
+                  <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#166534' }}>
+                    Volunteer Account Created & Credentials
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCreatedVolunteer(null)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748B', padding: 2 }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{
+                background: '#FFFFFF',
+                border: '1px solid #BBF7D0',
+                borderRadius: 'var(--radius-md)',
+                padding: '12px 14px',
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 10
+              }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0F172A' }}>
+                    {createdVolunteer.fullName}
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
+                    {createdVolunteer.phone} • Ward {createdVolunteer.wardNumber}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    background: '#FEF3C7',
+                    border: '1.5px solid #F59E0B',
+                    color: '#92400E',
+                    fontWeight: 900,
+                    fontFamily: 'monospace',
+                    fontSize: '1.1rem',
+                    letterSpacing: '0.1em',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-md)'
+                  }}>
+                    {createdVolunteer.defaultPassword}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyPassword(createdVolunteer.defaultPassword)}
+                    className="btn-secondary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '8px 12px',
+                      background: copiedPass ? '#008A2E' : '#FFFFFF',
+                      color: copiedPass ? '#FFFFFF' : '#008A2E',
+                      borderColor: '#86EFAC',
+                      fontWeight: 700,
+                      fontSize: '0.78rem'
+                    }}
+                  >
+                    {copiedPass ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{copiedPass ? 'Copied!' : 'Copy Password'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <a
+                  href={`https://wa.me/${createdVolunteer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Salam ${createdVolunteer.fullName},\n\nHere are your login credentials for the Madavoor Relief Campaign:\nMobile: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\n\nLogin: ${window.location.origin}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                  style={{
+                    flex: 1,
+                    minWidth: 160,
+                    padding: '9px 14px',
+                    background: '#25D366',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    fontSize: '0.8rem',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <Share2 size={15} />
+                  <span>Share on WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Add Volunteer Form */}
           {showAddVolunteer && (
             <form onSubmit={handleCreateVolunteer} style={{
@@ -493,7 +639,9 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                     padding: '12px 16px',
                     borderRadius: 'var(--radius-md)',
                     background: '#F8FAFC',
-                    border: '1px solid var(--border-subtle)'
+                    border: '1px solid var(--border-subtle)',
+                    flexWrap: 'wrap',
+                    gap: 10
                   }}
                 >
                   <div>
@@ -505,7 +653,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{
                       background: '#EBF7EE',
                       color: '#008A2E',
@@ -516,6 +664,35 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                     }}>
                       Target: {vol.targetKits || 50} Kits
                     </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setResetVolunteerUser({
+                        id: vol.userId || vol.phoneNumber,
+                        name: vol.fullName,
+                        phone: vol.phoneNumber,
+                        role: 'Volunteer',
+                        wardNumber: vol.wardNumber
+                      })}
+                      className="btn-secondary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer'
+                      }}
+                      title="Reset or change volunteer password"
+                    >
+                      <KeyRound size={13} color="#008A2E" />
+                      <span>Password</span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -649,6 +826,13 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* RESET VOLUNTEER PASSWORD MODAL */}
+      <ResetPasswordModal
+        isOpen={!!resetVolunteerUser}
+        onClose={() => setResetVolunteerUser(null)}
+        targetUser={resetVolunteerUser}
+      />
     </div>
   );
 };

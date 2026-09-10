@@ -751,7 +751,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     👑 1
                   </div>
                   <span className="badge badge-gold" style={{ marginBottom: 6 }}>
-                    Drive Champion
+                   Champion
                   </span>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: 4, color: '#0F172A' }}>{top3[0]?.name}</h3>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 10 }}>

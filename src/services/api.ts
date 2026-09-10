@@ -36,6 +36,24 @@ export function parseJwt(token: string): any {
   }
 }
 
+// Generates random 6-character alphanumeric password (letters & numbers)
+export function generateRandomPassword(length: number = 6): string {
+  const chars = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+  let result = '';
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < length; i++) {
+      result += chars[bytes[i] % chars.length];
+    }
+  } else {
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+  }
+  return result;
+}
+
 // Generates 6-character default password (first 3 letters of name + last 3 digits of phone)
 export function generateDefaultPassword(fullName: string, phoneNumber: string): string {
   const cleanName = (fullName || '').replace(/[^a-zA-Z]/g, '').toLowerCase();
@@ -455,6 +473,81 @@ export const donationsApi = {
 };
 
 // ============================================================================
+// Users API (Shared user management actions)
+// ============================================================================
+export const usersApi = {
+  resetPassword: async (userIdOrPhone: string, newPassword?: string): Promise<{ message: string; newPassword: string }> => {
+    const user = getCurrentUser();
+    const token = user?.token;
+    const finalPassword = newPassword ? newPassword.trim() : generateRandomPassword(6);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/Users/${encodeURIComponent(userIdOrPhone)}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ newPassword: finalPassword })
+      });
+
+      if (res.ok) {
+        const resData = await res.json().catch(() => ({}));
+        return {
+          message: resData.message || resData.Message || 'Password reset successfully.',
+          newPassword: resData.newPassword || resData.NewPassword || finalPassword
+        };
+      }
+
+      // If HTTP 403 / 404 and caller is Admin, attempt PUT /api/Users/{userId} fallback
+      if ((res.status === 403 || res.status === 404) && user?.role === 'Admin') {
+        const putRes = await fetch(`${API_BASE_URL}/Users/${encodeURIComponent(userIdOrPhone)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ newPassword: finalPassword })
+        });
+
+        if (putRes.ok) {
+          const putData = await putRes.json().catch(() => ({}));
+          return {
+            message: putData.message || putData.Message || 'Password updated successfully.',
+            newPassword: putData.newPassword || finalPassword
+          };
+        }
+      }
+
+      const msg = await extractErrorMessage(res, 'Failed to reset password');
+      throw new Error(msg);
+    } catch (err: any) {
+      if (err.message && err.message.includes('403') && user?.role === 'Admin') {
+        try {
+          const putRes = await fetch(`${API_BASE_URL}/Users/${encodeURIComponent(userIdOrPhone)}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ newPassword: finalPassword })
+          });
+
+          if (putRes.ok) {
+            const putData = await putRes.json().catch(() => ({}));
+            return {
+              message: putData.message || putData.Message || 'Password updated successfully.',
+              newPassword: putData.newPassword || finalPassword
+            };
+          }
+        } catch {}
+      }
+      throw err;
+    }
+  }
+};
+
+// ============================================================================
 // Admin API (Live Azure Backend)
 // ============================================================================
 export const adminApi = {
@@ -620,23 +713,8 @@ export const adminApi = {
 
   // Regenerate / Reset Password (POST /api/Users/{userId}/reset-password)
   resetUserPassword: async (userId: string, newPassword?: string): Promise<string> => {
-    const token = getCurrentUser()?.token;
-    const res = await fetch(`${API_BASE_URL}/Users/${userId}/reset-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({ newPassword: newPassword || null })
-    });
-
-    if (!res.ok) {
-      const msg = await extractErrorMessage(res, 'Failed to reset password');
-      throw new Error(msg);
-    }
-
-    const resData = await res.json();
-    return resData.newPassword || '';
+    const res = await usersApi.resetPassword(userId, newPassword);
+    return res.newPassword;
   },
 
   // Deactivate or remove a user (DELETE /api/Users/{userId})
