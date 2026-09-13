@@ -17,9 +17,12 @@ import {
   Check,
   Share2,
   CheckCircle2,
-  X
+  X,
+  Building2,
+  Award
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 
 interface CoordinatorDashboardProps {
   user: User;
@@ -31,6 +34,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   onViewReceipt
 }) => {
   const [activeTab, setActiveTab] = useState<'progress' | 'record' | 'team' | 'transactions' | 'leaderboard'>('progress');
+  const [leaderboardMode, setLeaderboardMode] = useState<'individual' | 'sponsorship'>('individual');
   
   const [progress, setProgress] = useState<UserProgress>({
     targetKits: 0,
@@ -777,53 +781,115 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
       {/* TAB 5: LEADERBOARD */}
       {activeTab === 'leaderboard' && (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: 'var(--radius-xl)',
-          padding: '20px',
-          border: '1px solid var(--border-subtle)',
-          boxShadow: 'var(--shadow-sm)'
-        }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Trophy size={18} color="#008A2E" />
-            <span>Drive Volunteer Rankings</span>
-          </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Sub-Switch: Field Volunteers vs Corporate Sponsorships */}
+          <div style={{
+            display: 'flex',
+            background: '#FFFFFF',
+            padding: 4,
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            gap: 6
+          }}>
+            <button
+              id="coord-switch-volunteers"
+              onClick={() => setLeaderboardMode('individual')}
+              style={{
+                flex: 1,
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: leaderboardMode === 'individual' ? '1px solid #A5D6B8' : 'none',
+                background: leaderboardMode === 'individual' ? '#EBF7EE' : 'transparent',
+                color: leaderboardMode === 'individual' ? '#008A2E' : '#64748B',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <Award size={15} />
+              <span>Volunteer Rankings</span>
+            </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {volunteersBoard.map((vol, i) => (
-              <div
-                key={vol.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F8FAFC',
-                  border: '1px solid var(--border-subtle)'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 22, fontWeight: 800, fontSize: '0.85rem', color: '#64748B' }}>
-                    #{i + 1}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0F172A' }}>{vol.name}</div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Ward {vol.wardNumber} • {vol.role}</div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.9rem' }}>
-                    {vol.kitsCollected} Kits
-                  </span>
-                  <div style={{ fontSize: '0.72rem', color: '#2C82C9', fontWeight: 700 }}>
-                    ₹{vol.totalAmount.toLocaleString('en-IN')}
-                  </div>
-                </div>
-              </div>
-            ))}
+            <button
+              id="coord-switch-sponsorships"
+              onClick={() => setLeaderboardMode('sponsorship')}
+              style={{
+                flex: 1,
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: leaderboardMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
+                background: leaderboardMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
+                color: leaderboardMode === 'sponsorship' ? '#2C82C9' : '#64748B',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <Building2 size={15} />
+              <span>Corporate Sponsorships</span>
+            </button>
           </div>
+
+          {leaderboardMode === 'sponsorship' ? (
+            <SponsorshipLeaderboardView onOpenSponsorshipModal={() => setActiveTab('record')} />
+          ) : (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-xl)',
+              padding: '20px',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Trophy size={18} color="#008A2E" />
+                <span>Drive Volunteer Rankings</span>
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {volunteersBoard.map((vol, i) => (
+                  <div
+                    key={vol.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#F8FAFC',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ width: 22, fontWeight: 800, fontSize: '0.85rem', color: '#64748B' }}>
+                        #{i + 1}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0F172A' }}>{vol.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Ward {vol.wardNumber} • {vol.role}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.9rem' }}>
+                        {vol.kitsCollected} Kits
+                      </span>
+                      <div style={{ fontSize: '0.72rem', color: '#2C82C9', fontWeight: 700 }}>
+                        ₹{vol.totalAmount.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

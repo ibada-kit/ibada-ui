@@ -17,9 +17,11 @@ import {
   Copy,
   Check,
   AlertTriangle,
-  X
+  X,
+  Building2
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 
 interface AdminDashboardProps {
   currentUser: User;
@@ -32,7 +34,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   kitPrice,
   onUpdateKitPrice
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'targets' | 'reports' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'targets' | 'reports' | 'sponsorships' | 'settings'>('users');
   
   const [coordinators, setCoordinators] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -422,6 +424,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <FileText size={16} />
           <span>Reports</span>
+        </button>
+
+        <button
+          id="admin-tab-sponsorships"
+          onClick={() => setActiveTab('sponsorships')}
+          className="tab-strip-btn"
+          style={{
+            background: activeTab === 'sponsorships' ? '#2C82C9' : 'transparent',
+            color: activeTab === 'sponsorships' ? '#FFFFFF' : '#334155',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6
+          }}
+        >
+          <Building2 size={16} />
+          <span>Sponsorships</span>
         </button>
 
         <button
@@ -1223,6 +1242,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </span>
           </form>
         </div>
+      )}
+
+      {/* TAB: SPONSORSHIPS */}
+      {activeTab === 'sponsorships' && (
+        <SponsorshipLeaderboardView />
       )}
 
       {/* RESET PASSWORD MODAL FOR COORDINATORS & WARD COMMITTEES */}

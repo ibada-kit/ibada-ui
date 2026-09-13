@@ -13,9 +13,11 @@ import {
   Sparkles,
   MapPin,
   RefreshCw,
-  Eye
+  Eye,
+  Building2
 } from 'lucide-react';
 import { DailyCollectionsChart } from '../components/DailyCollectionsChart';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 
 interface HomeScreenProps {
   user: User | null;
@@ -35,7 +37,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [loading, setLoading] = useState(true);
 
   // Leaderboard Tab & Filter
-  const [activeTab, setActiveTab] = useState<'volunteers' | 'wards' | 'recent'>('volunteers');
+  const [activeTab, setActiveTab] = useState<'volunteers' | 'wards' | 'recent' | 'sponsorships'>('volunteers');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWard, setSelectedWard] = useState<string>('all');
   
@@ -527,10 +529,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <CheckCircle size={15} />
               <span>Recent Donors</span>
             </button>
+
+            <button
+              id="tab-btn-sponsorships"
+              onClick={() => setActiveTab('sponsorships')}
+              className="tab-strip-btn"
+              style={{
+                background: activeTab === 'sponsorships' ? '#2C82C9' : 'transparent',
+                color: activeTab === 'sponsorships' ? '#ffffff' : 'var(--text-secondary)',
+                fontWeight: 700
+              }}
+            >
+              <Building2 size={15} />
+              <span>Sponsorships</span>
+            </button>
           </div>
         </div>
 
-        {/* Role-Based Data Scope Banner */}
+        {/* Role-Based Data Scope Banner (Hidden on Sponsorships Tab) */}
+        {activeTab !== 'sponsorships' && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -637,6 +654,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           )}
         </div>
+        )}
 
         {/* TAB 1: VOLUNTEERS / FUNDRAISERS LEADERBOARD */}
         {activeTab === 'volunteers' && (
@@ -1054,6 +1072,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             )}
             </div>
           </div>
+        )}
+
+        {/* TAB 4: CORPORATE & FIRM SPONSORSHIPS LEADERBOARD */}
+        {activeTab === 'sponsorships' && (
+          <SponsorshipLeaderboardView onOpenSponsorshipModal={onOpenRecordModal} />
         )}
       </section>
 

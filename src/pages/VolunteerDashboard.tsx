@@ -11,8 +11,10 @@ import {
   MapPin, 
   CheckCircle2, 
   User as UserIcon,
-  KeyRound
+  KeyRound,
+  Building2
 } from 'lucide-react';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 
 interface VolunteerDashboardProps {
   user: User;
@@ -24,6 +26,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   onViewReceipt
 }) => {
   const [activeTab, setActiveTab] = useState<'record' | 'history' | 'leaderboard' | 'profile'>('record');
+  const [leaderboardMode, setLeaderboardMode] = useState<'individual' | 'sponsorship'>('individual');
   
   // Progress & collection state
   const [progress, setProgress] = useState({
@@ -361,6 +364,66 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
       {/* TAB 3: LEADERBOARDS */}
       {activeTab === 'leaderboard' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Sub-Switch: Individual Volunteer Drive vs Corporate Sponsorships */}
+          <div style={{
+            display: 'flex',
+            background: '#FFFFFF',
+            padding: 4,
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            gap: 6
+          }}>
+            <button
+              id="sub-switch-volunteers"
+              onClick={() => setLeaderboardMode('individual')}
+              style={{
+                flex: 1,
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: leaderboardMode === 'individual' ? '1px solid #A5D6B8' : 'none',
+                background: leaderboardMode === 'individual' ? '#EBF7EE' : 'transparent',
+                color: leaderboardMode === 'individual' ? '#008A2E' : '#64748B',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <Award size={15} />
+              <span>Volunteer Standings</span>
+            </button>
+
+            <button
+              id="sub-switch-sponsorships"
+              onClick={() => setLeaderboardMode('sponsorship')}
+              style={{
+                flex: 1,
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: leaderboardMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
+                background: leaderboardMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
+                color: leaderboardMode === 'sponsorship' ? '#2C82C9' : '#64748B',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <Building2 size={15} />
+              <span>Corporate Sponsorships</span>
+            </button>
+          </div>
+
+          {leaderboardMode === 'sponsorship' ? (
+            <SponsorshipLeaderboardView onOpenSponsorshipModal={() => setActiveTab('record')} />
+          ) : (
+            <>
           {/* Top Volunteers */}
           <div style={{
             background: '#FFFFFF',
@@ -470,6 +533,8 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
               ))}
             </div>
           </div>
+          </>
+          )}
         </div>
       )}
 

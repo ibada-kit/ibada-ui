@@ -8,7 +8,12 @@ import type {
   WardLeaderboardEntry,
   ManagedUser,
   CreateManagedUserRequest,
-  UpdateManagedUserRequest
+  UpdateManagedUserRequest,
+  SponsorshipItem,
+  CreateSponsorshipPayload,
+  SponsorshipRecord,
+  UpdatePaymentPayload,
+  SponsorshipLeaderboardResponse
 } from '../types';
 
 // Live Azure API Base URL (uses Vite proxy in DEV to eliminate local CORS restrictions)
@@ -813,3 +818,241 @@ export const coordinatorApi = {
     }
   }
 };
+
+// ============================================================================
+// Sponsorships API (Live Azure Backend & Corporate Ledger)
+// ============================================================================
+
+const STORAGE_SPONSORSHIPS = 'charity_sponsorships';
+
+export const DEFAULT_SPONSORSHIP_ITEMS: SponsorshipItem[] = [
+  {
+    itemId: 'ITEM-001',
+    name: 'Family Food Relief Kit Pack',
+    itemPrice: 5000,
+    description: 'Essential 1-month comprehensive food & nutrition ration pack for a distressed family.',
+    isActive: true,
+    displayOrder: 1
+  },
+  {
+    itemId: 'ITEM-002',
+    name: 'Student Education Kit Support',
+    itemPrice: 2500,
+    description: 'Annual educational support kit with school bags, notebooks, and study essentials.',
+    isActive: true,
+    displayOrder: 2
+  },
+  {
+    itemId: 'ITEM-003',
+    name: 'Chronic Illness Medical Care Pack',
+    itemPrice: 10000,
+    description: 'Vital critical medicines, diabetic care, and emergency prescription support.',
+    isActive: true,
+    displayOrder: 3
+  },
+  {
+    itemId: 'ITEM-004',
+    name: 'Ramadan Family Relief Care',
+    itemPrice: 7500,
+    description: 'Special seasonal food hamper, clothing assistance, and festive provisions.',
+    isActive: true,
+    displayOrder: 4
+  }
+];
+
+function getStoredSponsorships(): SponsorshipRecord[] {
+  const data = localStorage.getItem(STORAGE_SPONSORSHIPS);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function saveStoredSponsorships(records: SponsorshipRecord[]) {
+  localStorage.setItem(STORAGE_SPONSORSHIPS, JSON.stringify(records));
+}
+
+export const sponsorshipsApi = {
+  // 1. Get Catalog Items (GET /api/Sponsorships/items)
+  getItems: async (panchayath = 'Madavoor'): Promise<SponsorshipItem[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/items?panchayath=${encodeURIComponent(panchayath)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch catalog items from server:', err);
+    }
+    return DEFAULT_SPONSORSHIP_ITEMS;
+  },
+
+  // 2. Accept New Corporate Sponsorship (POST /api/Sponsorships)
+  acceptSponsorship: async (payload: CreateSponsorshipPayload): Promise<SponsorshipRecord> => {
+    const user = getCurrentUser();
+    const token = user?.token;
+
+    const cleanPhone = payload.mobileNumber.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
+
+    const res = await fetch(`${API_BASE_URL}/Sponsorships`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        donorName: payload.donorName.trim(),
+        contactPerson: payload.contactPerson?.trim() || '',
+        mobileNumber: formattedPhone,
+        itemId: payload.itemId,
+        quantity: Math.max(1, Math.floor(Number(payload.quantity) || 1)),
+        paymentOption: payload.paymentOption,
+        initialAmountPaid: payload.initialAmountPaid !== undefined ? Number(payload.initialAmountPaid) : undefined,
+        paymentMode: payload.paymentMode || 'Cash',
+        transactionReference: payload.transactionReference?.trim() || '',
+        notes: payload.notes?.trim() || ''
+      })
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to record sponsorship');
+      throw new Error(msg);
+    }
+
+    const created: SponsorshipRecord = await res.json();
+
+    // Cache in local session stream
+    const stored = getStoredSponsorships();
+    saveStoredSponsorships([created, ...stored.filter(s => s.receiptToken !== created.receiptToken)]);
+
+    return created;
+  },
+
+  // 3. List Sponsorships by Status / Hierarchy (GET /api/Sponsorships)
+  getSponsorships: async (status?: string): Promise<SponsorshipRecord[]> => {
+    const token = getCurrentUser()?.token;
+    if (token) {
+      try {
+        const url = status 
+          ? `${API_BASE_URL}/Sponsorships?status=${encodeURIComponent(status)}`
+          : `${API_BASE_URL}/Sponsorships`;
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            // Save fresh copy
+            saveStoredSponsorships(data);
+            return data;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch sponsorships from server:', err);
+      }
+    }
+
+    // Fallback to local session storage
+    const all = getStoredSponsorships();
+    if (status) {
+      return all.filter(s => s.paymentStatus.toLowerCase() === status.toLowerCase());
+    }
+    return all;
+  },
+
+  // 4. Update Payment for Outstanding Balance (POST /api/Sponsorships/{receiptToken}/payments)
+  updatePayment: async (
+    receiptToken: string,
+    payload: UpdatePaymentPayload,
+    panchayath = 'Madavoor'
+  ): Promise<SponsorshipRecord> => {
+    const token = getCurrentUser()?.token;
+
+    const res = await fetch(`${API_BASE_URL}/Sponsorships/${encodeURIComponent(receiptToken)}/payments?panchayath=${encodeURIComponent(panchayath)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        amountToPay: Number(payload.amountToPay),
+        paymentMode: payload.paymentMode || 'Cash',
+        transactionReference: payload.transactionReference?.trim() || '',
+        notes: payload.notes?.trim() || ''
+      })
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to update payment');
+      throw new Error(msg);
+    }
+
+    const updated: SponsorshipRecord = await res.json();
+
+    // Update local store
+    const stored = getStoredSponsorships();
+    saveStoredSponsorships(stored.map(s => s.receiptToken === receiptToken ? updated : s));
+
+    return updated;
+  },
+
+  // 5. Dedicated Sponsorship Leaderboard (GET /api/Sponsorships/leaderboard)
+  getLeaderboard: async (): Promise<SponsorshipLeaderboardResponse> => {
+    const token = getCurrentUser()?.token;
+    try {
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/leaderboard`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return data;
+      }
+    } catch (err) {
+      console.warn('Failed to load corporate leaderboard:', err);
+    }
+
+    // Fallback empty leaderboard response
+    const stored = getStoredSponsorships();
+    const totalCommitted = stored.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
+    const totalPaid = stored.reduce((acc, s) => acc + (s.amountPaid || 0), 0);
+    const totalBalance = stored.reduce((acc, s) => acc + (s.balanceAmount || 0), 0);
+
+    return {
+      topCollectors: [],
+      topWards: [],
+      topSponsoringFirms: stored.map((s, idx) => ({
+        position: idx + 1,
+        firmName: s.donorName,
+        contactPerson: s.contactPerson || '',
+        mobileNumber: s.mobileNumber,
+        itemName: s.itemName,
+        quantity: s.quantity,
+        totalAmount: s.totalAmount,
+        amountPaid: s.amountPaid,
+        balanceAmount: s.balanceAmount,
+        paymentStatus: s.paymentStatus,
+        collectedByName: s.collectedByName,
+        date: s.createdDate
+      })),
+      summary: {
+        totalSponsorships: stored.length,
+        totalCommittedAmount: totalCommitted,
+        totalPaidAmount: totalPaid,
+        totalPendingBalance: totalBalance,
+        completedCount: stored.filter(s => s.paymentStatus === 'Completed').length,
+        partialCount: stored.filter(s => s.paymentStatus === 'Partial').length,
+        bookedCount: stored.filter(s => s.paymentStatus === 'Booked').length
+      },
+      generatedAt: new Date().toISOString()
+    };
+  }
+};
+

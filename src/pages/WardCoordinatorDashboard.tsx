@@ -20,9 +20,12 @@ import {
   X,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Building2,
+  Award
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 
 interface WardCoordinatorDashboardProps {
   user: User;
@@ -34,6 +37,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   onViewReceipt
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'record' | 'transactions' | 'ranks' | 'profile'>('overview');
+  const [ranksMode, setRanksMode] = useState<'individual' | 'sponsorship'>('individual');
   
   const [wardStats, setWardStats] = useState({
     wardNumber: user.wardNumber || 0,
@@ -869,6 +873,66 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       {/* TAB 5: WARD & VOLUNTEER RANKINGS */}
       {activeTab === 'ranks' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Sub-Switch: Ward & Volunteers vs Corporate Sponsorships */}
+          <div style={{
+            display: 'flex',
+            background: '#FFFFFF',
+            padding: 4,
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            gap: 6
+          }}>
+            <button
+              id="ward-switch-standings"
+              onClick={() => setRanksMode('individual')}
+              style={{
+                flex: 1,
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: ranksMode === 'individual' ? '1px solid #7C3AED' : 'none',
+                background: ranksMode === 'individual' ? '#F5F3FF' : 'transparent',
+                color: ranksMode === 'individual' ? '#6D28D9' : '#64748B',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <Award size={15} />
+              <span>Ward & Volunteers</span>
+            </button>
+
+            <button
+              id="ward-switch-sponsorships"
+              onClick={() => setRanksMode('sponsorship')}
+              style={{
+                flex: 1,
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: ranksMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
+                background: ranksMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
+                color: ranksMode === 'sponsorship' ? '#2C82C9' : '#64748B',
+                fontWeight: 800,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <Building2 size={15} />
+              <span>Corporate Sponsorships</span>
+            </button>
+          </div>
+
+          {ranksMode === 'sponsorship' ? (
+            <SponsorshipLeaderboardView onOpenSponsorshipModal={() => setActiveTab('record')} />
+          ) : (
+            <>
           {/* Top Wards */}
           <div style={{
             background: '#FFFFFF',
@@ -966,6 +1030,8 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
               ))}
             </div>
           </div>
+          </>
+          )}
         </div>
       )}
 
