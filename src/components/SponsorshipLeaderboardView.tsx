@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Building2, Award, MapPin, RefreshCw, PlusCircle, ShieldCheck } from 'lucide-react';
 import { sponsorshipsApi, getCurrentUser } from '../services/api';
 import type { SponsorshipLeaderboardResponse, User } from '../types';
+import { ScrollableTabStrip } from './ScrollableTabStrip';
 
 interface SponsorshipLeaderboardViewProps {
   user?: User | null;
@@ -241,47 +242,49 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
         <div>
           {/* Sub-tabs strip */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-            <div className="tab-strip" style={{ background: '#FFFFFF', margin: 0 }}>
-              <button
-                onClick={() => setActiveSubTab('collectors')}
-                className={`tab-strip-btn ${activeSubTab === 'collectors' ? 'active' : ''}`}
-                style={{
-                  background: activeSubTab === 'collectors' ? '#2C82C9' : 'transparent',
-                  color: activeSubTab === 'collectors' ? '#FFFFFF' : '#64748B',
-                  fontWeight: 700
-                }}
-              >
-                <Award size={15} />
-                <span>Top Collectors ({data?.topCollectors?.length || 0})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveSubTab('wards')}
-                className={`tab-strip-btn ${activeSubTab === 'wards' ? 'active' : ''}`}
-                style={{
-                  background: activeSubTab === 'wards' ? '#2C82C9' : 'transparent',
-                  color: activeSubTab === 'wards' ? '#FFFFFF' : '#64748B',
-                  fontWeight: 700
-                }}
-              >
-                <MapPin size={15} />
-                <span>Top Wards ({data?.topWards?.length || 0})</span>
-              </button>
-
-              {isAuthenticated && (
+            <div style={{ flex: '1 1 auto', minWidth: 0, maxWidth: '100%' }}>
+              <ScrollableTabStrip activeKey={activeSubTab} style={{ background: '#FFFFFF', margin: 0 }}>
                 <button
-                  onClick={() => setActiveSubTab('firms')}
-                  className={`tab-strip-btn ${activeSubTab === 'firms' ? 'active' : ''}`}
+                  onClick={() => setActiveSubTab('collectors')}
+                  className={`tab-strip-btn ${activeSubTab === 'collectors' ? 'active' : ''}`}
                   style={{
-                    background: activeSubTab === 'firms' ? '#2C82C9' : 'transparent',
-                    color: activeSubTab === 'firms' ? '#FFFFFF' : '#64748B',
+                    background: activeSubTab === 'collectors' ? '#2C82C9' : 'transparent',
+                    color: activeSubTab === 'collectors' ? '#FFFFFF' : '#64748B',
                     fontWeight: 700
                   }}
                 >
-                  <Building2 size={15} />
-                  <span>{isAdmin ? 'All Sponsoring Firms' : `Ward ${effectiveUser?.wardNumber || ''} Sponsoring Firms`} ({data?.topSponsoringFirms?.length || 0})</span>
+                  <Award size={15} />
+                  <span>Top Collectors ({data?.topCollectors?.length || 0})</span>
                 </button>
-              )}
+
+                <button
+                  onClick={() => setActiveSubTab('wards')}
+                  className={`tab-strip-btn ${activeSubTab === 'wards' ? 'active' : ''}`}
+                  style={{
+                    background: activeSubTab === 'wards' ? '#2C82C9' : 'transparent',
+                    color: activeSubTab === 'wards' ? '#FFFFFF' : '#64748B',
+                    fontWeight: 700
+                  }}
+                >
+                  <MapPin size={15} />
+                  <span>Top Wards ({data?.topWards?.length || 0})</span>
+                </button>
+
+                {isAuthenticated && (
+                  <button
+                    onClick={() => setActiveSubTab('firms')}
+                    className={`tab-strip-btn ${activeSubTab === 'firms' ? 'active' : ''}`}
+                    style={{
+                      background: activeSubTab === 'firms' ? '#2C82C9' : 'transparent',
+                      color: activeSubTab === 'firms' ? '#FFFFFF' : '#64748B',
+                      fontWeight: 700
+                    }}
+                  >
+                    <Building2 size={15} />
+                    <span>{isAdmin ? 'All Sponsoring Firms' : `Ward ${effectiveUser?.wardNumber || ''} Sponsoring Firms`} ({data?.topSponsoringFirms?.length || 0})</span>
+                  </button>
+                )}
+              </ScrollableTabStrip>
             </div>
 
             <button

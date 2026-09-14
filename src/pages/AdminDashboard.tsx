@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface AdminDashboardProps {
@@ -390,11 +391,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="tab-strip" style={{ marginBottom: 20 }}>
+      {/* Tabs - Smooth horizontally scrollable with auto-centering and navigation chevrons */}
+      <ScrollableTabStrip activeKey={activeTab}>
         <button
           onClick={() => setActiveTab('users')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'users' ? 'active' : ''}`}
           style={{
             background: activeTab === 'users' ? '#008A2E' : 'transparent',
             color: activeTab === 'users' ? '#FFFFFF' : '#334155',
@@ -410,7 +411,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('targets')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'targets' ? 'active' : ''}`}
           style={{
             background: activeTab === 'targets' ? '#008A2E' : 'transparent',
             color: activeTab === 'targets' ? '#FFFFFF' : '#334155',
@@ -426,7 +427,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('reports')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'reports' ? 'active' : ''}`}
           style={{
             background: activeTab === 'reports' ? '#008A2E' : 'transparent',
             color: activeTab === 'reports' ? '#FFFFFF' : '#334155',
@@ -443,7 +444,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <button
           id="admin-tab-sponsorships"
           onClick={() => setActiveTab('sponsorships')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'sponsorships' ? 'active' : ''}`}
           style={{
             background: activeTab === 'sponsorships' ? '#2C82C9' : 'transparent',
             color: activeTab === 'sponsorships' ? '#FFFFFF' : '#334155',
@@ -459,7 +460,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('settings')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'settings' ? 'active' : ''}`}
           style={{
             background: activeTab === 'settings' ? '#008A2E' : 'transparent',
             color: activeTab === 'settings' ? '#FFFFFF' : '#334155',
@@ -472,7 +473,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <Settings size={16} />
           <span>Settings</span>
         </button>
-      </div>
+      </ScrollableTabStrip>
 
       {/* MODAL: ADD COORDINATOR */}
       {showAddModal && (

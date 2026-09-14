@@ -24,6 +24,7 @@ import {
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface CoordinatorDashboardProps {
@@ -400,8 +401,8 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         </div>
       </div>
 
-      {/* Tabs Navigation - Responsive tab-strip */}
-      <div className="tab-strip" style={{ marginBottom: 18 }}>
+      {/* Tabs Navigation - Responsive Scrollable tab-strip */}
+      <ScrollableTabStrip activeKey={`${activeTab}-${leaderboardMode}`}>
         <button
           onClick={() => setActiveTab('progress')}
           className={`tab-strip-btn ${activeTab === 'progress' ? 'active' : ''}`}
@@ -468,7 +469,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           <Building2 size={14} />
           <span>Sponsorships</span>
         </button>
-      </div>
+      </ScrollableTabStrip>
 
       {createMsg && (
         <div style={{

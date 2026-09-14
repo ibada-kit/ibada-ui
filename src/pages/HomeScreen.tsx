@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DailyCollectionsChart } from '../components/DailyCollectionsChart';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 
 interface HomeScreenProps {
   user: User | null;
@@ -269,7 +270,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <span>{metrics?.totalKits || 0} Relief Kits</span>
                 </div>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Fixed rate of {KIT_UNIT_RATE}/Kit
+                  Fixed rate of ₹{KIT_UNIT_RATE}/Kit
                 </span>
               </div>
             </div>
@@ -428,7 +429,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 Average Kits / Donor
               </span>
               <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A' }}>
-                {metrics ? (metrics.totalKits / (metrics.donorsCount || 1)).toFixed(1) : '3.0'} Kits
+                {metrics && metrics.donorsCount > 0 ? (metrics.totalKits / metrics.donorsCount).toFixed(1) : '0.0'} Kits
               </div>
             </div>
           </div>
@@ -453,7 +454,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 Leading Ward
               </span>
               <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A' }}>
-                Ward {wards[0]?.wardNumber || 4} - {wards[0]?.wardName.split(' ')[0] || 'Kakkad'}
+                {wards.length > 0 ? `Ward ${wards[0].wardNumber} - ${wards[0].wardName.split(' ')[0]}` : 'N/A'}
               </div>
             </div>
           </div>
@@ -485,64 +486,66 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
 
           {/* Tab Switcher */}
-          <div className="tab-strip" style={{ maxWidth: '100%', background: '#FFFFFF' }}>
-            <button
-              id="tab-btn-volunteers"
-              onClick={() => setActiveTab('volunteers')}
-              className="tab-strip-btn"
-              style={{
-                background: activeTab === 'volunteers' ? '#008A2E' : 'transparent',
-                color: activeTab === 'volunteers' ? '#ffffff' : 'var(--text-secondary)',
-                fontWeight: 700
-              }}
-            >
-              <Award size={15} />
-              <span>
-                {user?.role === 'Admin' ? 'Fundraisers' : 'Volunteers'}
-              </span>
-            </button>
+          <div style={{ minWidth: 0, maxWidth: '100%' }}>
+            <ScrollableTabStrip activeKey={activeTab} style={{ maxWidth: '100%', margin: 0, background: '#FFFFFF' }}>
+              <button
+                id="tab-btn-volunteers"
+                onClick={() => setActiveTab('volunteers')}
+                className={`tab-strip-btn ${activeTab === 'volunteers' ? 'active' : ''}`}
+                style={{
+                  background: activeTab === 'volunteers' ? '#008A2E' : 'transparent',
+                  color: activeTab === 'volunteers' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700
+                }}
+              >
+                <Award size={15} />
+                <span>
+                  {user?.role === 'Admin' ? 'Fundraisers' : 'Volunteers'}
+                </span>
+              </button>
 
-            <button
-              id="tab-btn-wards"
-              onClick={() => setActiveTab('wards')}
-              className="tab-strip-btn"
-              style={{
-                background: activeTab === 'wards' ? '#2C82C9' : 'transparent',
-                color: activeTab === 'wards' ? '#ffffff' : 'var(--text-secondary)',
-                fontWeight: 700
-              }}
-            >
-              <MapPin size={15} />
-              <span>Top Wards</span>
-            </button>
+              <button
+                id="tab-btn-wards"
+                onClick={() => setActiveTab('wards')}
+                className={`tab-strip-btn ${activeTab === 'wards' ? 'active' : ''}`}
+                style={{
+                  background: activeTab === 'wards' ? '#2C82C9' : 'transparent',
+                  color: activeTab === 'wards' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700
+                }}
+              >
+                <MapPin size={15} />
+                <span>Top Wards</span>
+              </button>
 
-            <button
-              id="tab-btn-recent"
-              onClick={() => setActiveTab('recent')}
-              className="tab-strip-btn"
-              style={{
-                background: activeTab === 'recent' ? '#2C82C9' : 'transparent',
-                color: activeTab === 'recent' ? '#ffffff' : 'var(--text-secondary)',
-                fontWeight: 700
-              }}
-            >
-              <CheckCircle size={15} />
-              <span>Recent Donors</span>
-            </button>
+              <button
+                id="tab-btn-recent"
+                onClick={() => setActiveTab('recent')}
+                className={`tab-strip-btn ${activeTab === 'recent' ? 'active' : ''}`}
+                style={{
+                  background: activeTab === 'recent' ? '#2C82C9' : 'transparent',
+                  color: activeTab === 'recent' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700
+                }}
+              >
+                <CheckCircle size={15} />
+                <span>Recent Donors</span>
+              </button>
 
-            <button
-              id="tab-btn-sponsorships"
-              onClick={() => setActiveTab('sponsorships')}
-              className="tab-strip-btn"
-              style={{
-                background: activeTab === 'sponsorships' ? '#2C82C9' : 'transparent',
-                color: activeTab === 'sponsorships' ? '#ffffff' : 'var(--text-secondary)',
-                fontWeight: 700
-              }}
-            >
-              <Building2 size={15} />
-              <span>Sponsorships</span>
-            </button>
+              <button
+                id="tab-btn-sponsorships"
+                onClick={() => setActiveTab('sponsorships')}
+                className={`tab-strip-btn ${activeTab === 'sponsorships' ? 'active' : ''}`}
+                style={{
+                  background: activeTab === 'sponsorships' ? '#2C82C9' : 'transparent',
+                  color: activeTab === 'sponsorships' ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700
+                }}
+              >
+                <Building2 size={15} />
+                <span>Sponsorships</span>
+              </button>
+            </ScrollableTabStrip>
           </div>
         </div>
 
@@ -576,6 +579,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               )}
               {user?.role === 'Coordinator' && (
                 <>Coordinator Access Mode: You have visibility into all field volunteers' data.</>
+              )}
+              {user?.role === 'WardCommittee' && (
+                <>Ward Committee Mode: You have visibility into ward volunteers and committee data.</>
               )}
               {user?.role === 'Admin' && (
                 <>Administrator Access Mode: Full visibility across Ward Committee leads, coordinators, and field volunteers.</>

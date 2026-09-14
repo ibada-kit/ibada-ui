@@ -15,6 +15,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 
 interface VolunteerDashboardProps {
   user: User;
@@ -275,8 +276,8 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
         </div>
       </div>
 
-      {/* Tabs Navigation - Responsive tab-strip */}
-      <div className="tab-strip" style={{ marginBottom: 18 }}>
+      {/* Tabs Navigation - Responsive Scrollable tab-strip */}
+      <ScrollableTabStrip activeKey={`${activeTab}-${leaderboardMode}`}>
         <button
           onClick={() => setActiveTab('record')}
           className={`tab-strip-btn ${activeTab === 'record' ? 'active' : ''}`}
@@ -322,7 +323,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           <UserIcon size={14} />
           <span>Profile</span>
         </button>
-      </div>
+      </ScrollableTabStrip>
 
       {/* TAB 1: RECORD DONATION */}
       {activeTab === 'record' && (

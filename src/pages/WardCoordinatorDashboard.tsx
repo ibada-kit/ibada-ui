@@ -29,6 +29,7 @@ import {
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface WardCoordinatorDashboardProps {
@@ -446,8 +447,8 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tab-strip" style={{ marginBottom: 20 }}>
+      {/* Tabs - Smooth horizontally scrollable with auto-centering and navigation chevrons */}
+      <ScrollableTabStrip activeKey={`${activeTab}-${ranksMode}`}>
         <button
           onClick={() => setActiveTab('overview')}
           className={`tab-strip-btn ${activeTab === 'overview' ? 'active' : ''}`}
@@ -541,7 +542,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         >
           <span>Profile</span>
         </button>
-      </div>
+      </ScrollableTabStrip>
 
       {/* Prominently Highlighted Newly Generated Volunteer Password Card with Copy Action */}
       {createdVolunteer && (
