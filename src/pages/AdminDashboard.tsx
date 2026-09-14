@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, ManagedUser, LeaderboardEntry, WardLeaderboardEntry } from '../types';
-import { adminApi, donationsApi, analyticsApi, generateRandomPassword, type UserProgress } from '../services/api';
+import { adminApi, donationsApi, analyticsApi, sponsorshipsApi, generateRandomPassword, type UserProgress } from '../services/api';
 import { 
   ShieldCheck, 
   Users, 
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
+import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface AdminDashboardProps {
   currentUser: User;
@@ -261,6 +262,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Export Detailed Sponsorships Report
+  const handleDownloadSponsorshipsReport = async () => {
+    try {
+      setLoading(true);
+      const allSpons = await sponsorshipsApi.getSponsorships();
+      exportSponsorshipsToCSV(allSpons, 'madavoor_campaign_sponsorships_detailed_report');
+    } catch {
+      alert('Failed to retrieve full campaign sponsorships list.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -1131,14 +1145,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </p>
             </div>
 
-            <button
-              onClick={handleDownloadReport}
-              className="btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#008A2E' }}
-            >
-              <Download size={16} />
-              <span>Export CSV Report</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={handleDownloadReport}
+                className="btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                title="Export kit donations report"
+              >
+                <Download size={16} />
+                <span>Kit Donations CSV</span>
+              </button>
+
+              <button
+                onClick={handleDownloadSponsorshipsReport}
+                className="btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2C82C9' }}
+                title="Export detailed sponsorships report across all wards"
+              >
+                <Download size={16} />
+                <span>Sponsorships Detailed CSV</span>
+              </button>
+            </div>
           </div>
 
           {/* Top Wards Table */}
@@ -1246,7 +1273,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* TAB: SPONSORSHIPS */}
       {activeTab === 'sponsorships' && (
-        <SponsorshipLeaderboardView />
+        <SponsorshipLeaderboardView user={currentUser} />
       )}
 
       {/* RESET PASSWORD MODAL FOR COORDINATORS & WARD COMMITTEES */}

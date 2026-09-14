@@ -72,13 +72,13 @@ export const DonationForm: React.FC<DonationFormProps> = ({
 
   return (
     <div style={{ maxWidth: 620, margin: '0 auto', width: '100%' }}>
-      {/* Top Toggle Switcher: Same Form Container, Switch between Kit Donation & Corporate Sponsorship */}
+      {/* Top Toggle Switcher: Same Form Container, Switch between Kit Donation & Sponsorship */}
       <div style={{
         display: 'flex',
         background: '#FFFFFF',
-        padding: '5px',
+        padding: '4px',
         borderRadius: 'var(--radius-xl)',
-        marginBottom: 18,
+        marginBottom: 16,
         border: '1px solid var(--border-subtle)',
         boxShadow: 'var(--shadow-sm)',
         gap: 6
@@ -89,22 +89,24 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           onClick={() => setFormMode('kit')}
           style={{
             flex: 1,
-            padding: '11px 14px',
+            minWidth: 0,
+            padding: '10px clamp(8px, 2.5vw, 14px)',
             borderRadius: 'var(--radius-lg)',
             border: formMode === 'kit' ? '1px solid #A5D6B8' : 'none',
             background: formMode === 'kit' ? '#EBF7EE' : 'transparent',
             color: formMode === 'kit' ? '#008A2E' : '#64748B',
             fontWeight: 800,
-            fontSize: '0.88rem',
+            fontSize: 'clamp(0.8rem, 2.8vw, 0.88rem)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 8,
-            transition: 'all 0.15s ease'
+            gap: 6,
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
           }}
         >
-          <Package size={17} />
+          <Package size={17} style={{ flexShrink: 0 }} />
           <span>Relief Kit Donation</span>
         </button>
 
@@ -114,23 +116,25 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           onClick={() => setFormMode('sponsorship')}
           style={{
             flex: 1,
-            padding: '11px 14px',
+            minWidth: 0,
+            padding: '10px clamp(8px, 2.5vw, 14px)',
             borderRadius: 'var(--radius-lg)',
             border: formMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
             background: formMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
             color: formMode === 'sponsorship' ? '#2C82C9' : '#64748B',
             fontWeight: 800,
-            fontSize: '0.88rem',
+            fontSize: 'clamp(0.8rem, 2.8vw, 0.88rem)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 8,
-            transition: 'all 0.15s ease'
+            gap: 6,
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
           }}
         >
-          <Building2 size={17} />
-          <span>Corporate Sponsorship</span>
+          <Building2 size={17} style={{ flexShrink: 0 }} />
+          <span>Sponsorship</span>
         </button>
       </div>
 

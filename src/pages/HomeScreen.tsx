@@ -1076,7 +1076,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* TAB 4: CORPORATE & FIRM SPONSORSHIPS LEADERBOARD */}
         {activeTab === 'sponsorships' && (
-          <SponsorshipLeaderboardView onOpenSponsorshipModal={onOpenRecordModal} />
+          <SponsorshipLeaderboardView user={user} onOpenSponsorshipModal={onOpenRecordModal} />
         )}
       </section>
 

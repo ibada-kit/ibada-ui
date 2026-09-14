@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, User, CheckCircle, AlertCircle, RefreshCw, DollarSign, Clock, Check } from 'lucide-react';
-import { sponsorshipsApi, DEFAULT_SPONSORSHIP_ITEMS } from '../services/api';
+import { Building2, User, CheckCircle, AlertCircle, RefreshCw, IndianRupee, Clock, Check } from 'lucide-react';
+import { sponsorshipsApi } from '../services/api';
 import type { SponsorshipItem, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
 import { SpinEditNumberInput } from './SpinEditNumberInput';
 
@@ -15,9 +15,9 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   onCancel,
   hideHeader = false
 }) => {
-  // Catalog Packages
-  const [packages, setPackages] = useState<SponsorshipItem[]>(DEFAULT_SPONSORSHIP_ITEMS);
-  const [selectedItemId, setSelectedItemId] = useState<string>(DEFAULT_SPONSORSHIP_ITEMS[0].itemId);
+  // Catalog Packages (Loaded live from server)
+  const [packages, setPackages] = useState<SponsorshipItem[]>([]);
+  const [selectedItemId, setSelectedItemId] = useState<string>('');
 
   // Form Fields
   const [donorName, setDonorName] = useState('');
@@ -25,7 +25,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   const [mobileNumber, setMobileNumber] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
   const [paymentOption, setPaymentOption] = useState<PaymentOption>('PayFull');
-  const [initialAmountPaid, setInitialAmountPaid] = useState<number>(DEFAULT_SPONSORSHIP_ITEMS[0].itemPrice);
+  const [initialAmountPaid, setInitialAmountPaid] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
   const [transactionReference, setTransactionReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -43,17 +43,18 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
         if (isMounted && items && items.length > 0) {
           setPackages(items);
           setSelectedItemId((prev) => items.find(i => i.itemId === prev) ? prev : items[0].itemId);
+          setInitialAmountPaid((prev) => prev > 0 ? prev : items[0].itemPrice);
         }
       })
-      .catch((err) => console.warn('Could not load packages, using defaults', err));
+      .catch((err) => console.warn('Could not load packages from server:', err));
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const selectedPackage = packages.find(p => p.itemId === selectedItemId) || packages[0];
-  const unitPrice = selectedPackage?.itemPrice || 5000;
+  const selectedPackage = packages.find(p => p.itemId === selectedItemId) || packages[0] || null;
+  const unitPrice = selectedPackage?.itemPrice || 0;
   const totalAmount = Math.max(0, quantity * unitPrice);
 
   const handleSelectPackage = (itemId: string) => {
@@ -113,6 +114,11 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       return;
     }
 
+    if (!selectedPackage) {
+      setError('Please select a valid sponsorship package item.');
+      return;
+    }
+
     // Validate payment options
     if (paymentOption === 'Advance') {
       if (!initialAmountPaid || initialAmountPaid <= 0) {
@@ -158,7 +164,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       setTransactionReference('');
       setNotes('');
     } catch (err: any) {
-      setError(err.message || 'Failed to record corporate sponsorship.');
+      setError(err.message || 'Failed to record sponsorship.');
     } finally {
       setSubmitting(false);
     }
@@ -200,9 +206,9 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             <Building2 size={22} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                Accept Corporate Sponsorship
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: 'clamp(1.05rem, 3vw, 1.2rem)', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Accept Sponsorship
               </h2>
               <span style={{
                 background: '#EBF7EE',
@@ -216,8 +222,8 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 Instant Receipt
               </span>
             </div>
-            <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
-              Record business sponsorship packages with full, advance, or booking terms
+            <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600, display: 'block', marginTop: 2 }}>
+              Record customized sponsorship packages with full, advance, or booking terms
             </span>
           </div>
         </div>
@@ -259,7 +265,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
         }}>
           <CheckCircle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
           <div>
-            <span style={{ fontWeight: 800 }}>Corporate Sponsorship Registered!</span>
+            <span style={{ fontWeight: 800 }}>Sponsorship Registered!</span>
             <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
               Receipt Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedRecord.receiptToken}</span>
               {' '}• Registered for {recordedRecord.donorName}.
@@ -395,19 +401,24 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               className="input-field"
               value={selectedItemId}
               onChange={(e) => handleSelectPackage(e.target.value)}
+              disabled={packages.length === 0}
               style={{
                 fontSize: '0.92rem',
                 fontWeight: 700,
                 color: '#0F172A',
                 background: '#FFFFFF',
-                cursor: 'pointer'
+                cursor: packages.length === 0 ? 'not-allowed' : 'pointer'
               }}
             >
-              {packages.map((pkg) => (
-                <option key={pkg.itemId} value={pkg.itemId}>
-                  {pkg.name} — ₹{pkg.itemPrice.toLocaleString('en-IN')} per package
-                </option>
-              ))}
+              {packages.length === 0 ? (
+                <option value="">Loading live packages...</option>
+              ) : (
+                packages.map((pkg) => (
+                  <option key={pkg.itemId} value={pkg.itemId}>
+                    {pkg.name} — ₹{pkg.itemPrice.toLocaleString('en-IN')} per package
+                  </option>
+                ))
+              )}
             </select>
             {selectedPackage?.description && (
               <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: 4 }}>
@@ -569,7 +580,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800, fontSize: '0.84rem' }}>
-                <DollarSign size={14} strokeWidth={2.5} />
+                <IndianRupee size={14} strokeWidth={2.5} />
                 <span>Book / Reserve</span>
               </div>
               <span style={{
@@ -796,7 +807,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             ) : (
               <>
                 <Building2 size={18} />
-                <span>Accept Corporate Sponsorship</span>
+                <span>Accept Sponsorship</span>
               </>
             )}
           </button>

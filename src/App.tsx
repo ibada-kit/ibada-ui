@@ -73,6 +73,8 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 onViewReceipt={(don) => setActiveReceipt(don)}
+                onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
+                onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
               />
             )}
 
@@ -81,6 +83,8 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 onViewReceipt={(don) => setActiveReceipt(don)}
+                onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
+                onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
               />
             )}
 
@@ -89,6 +93,8 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 onViewReceipt={(don) => setActiveReceipt(don)}
+                onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
+                onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
               />
             )}
 

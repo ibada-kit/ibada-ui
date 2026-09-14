@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Award, MapPin, RefreshCw, PlusCircle } from 'lucide-react';
-import { sponsorshipsApi } from '../services/api';
-import type { SponsorshipLeaderboardResponse } from '../types';
+import { Building2, Award, MapPin, RefreshCw, PlusCircle, ShieldCheck } from 'lucide-react';
+import { sponsorshipsApi, getCurrentUser } from '../services/api';
+import type { SponsorshipLeaderboardResponse, User } from '../types';
 
 interface SponsorshipLeaderboardViewProps {
+  user?: User | null;
   onOpenSponsorshipModal?: () => void;
 }
 
 export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProps> = ({
+  user,
   onOpenSponsorshipModal
 }) => {
+  const effectiveUser = user ?? getCurrentUser();
+  const isAuthenticated = !!effectiveUser;
+  const isAdmin = effectiveUser?.role === 'Admin';
+
   const [data, setData] = useState<SponsorshipLeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState<'collectors' | 'wards' | 'firms'>('collectors');
@@ -63,7 +69,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
       }}>
         <RefreshCw size={28} className="animate-spin" color="#2C82C9" />
         <span style={{ color: '#64748B', fontSize: '0.9rem' }}>
-          Loading corporate sponsorship leaderboard...
+          Loading sponsorship leaderboard...
         </span>
       </div>
     );
@@ -74,85 +80,104 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
       {/* 4 Summary Cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: 14,
-        marginBottom: 24
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
+        gap: 12,
+        marginBottom: 20
       }}>
         {/* Card 1: Collected Amount */}
-        <div className="glass-card" style={{ padding: '18px 20px', background: '#FFFFFF' }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
-            Total Corporate Funds Collected
+        <div className="glass-card" style={{ padding: '16px 18px', background: '#FFFFFF', minWidth: 0 }}>
+          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700, display: 'block' }}>
+            Total Sponsorship Collected
           </span>
-          <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#008A2E', marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(1.25rem, 3.5vw, 1.65rem)', fontWeight: 900, color: '#008A2E', marginTop: 4 }}>
             ₹{summary.totalPaidAmount.toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: 2 }}>
-            Fully or partially realized funds
+          <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: 2 }}>
+            Realized funds
           </span>
         </div>
 
         {/* Card 2: Committed Amount */}
-        <div className="glass-card" style={{ padding: '18px 20px', background: '#FFFFFF' }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
-            Total Committed Sponsorships
+        <div className="glass-card" style={{ padding: '16px 18px', background: '#FFFFFF', minWidth: 0 }}>
+          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700, display: 'block' }}>
+            Total Committed
           </span>
-          <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#2C82C9', marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(1.25rem, 3.5vw, 1.65rem)', fontWeight: 900, color: '#2C82C9', marginTop: 4 }}>
             ₹{summary.totalCommittedAmount.toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: 2 }}>
+          <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: 2 }}>
             Across {summary.totalSponsorships} packages
           </span>
         </div>
 
         {/* Card 3: Pending Balance */}
-        <div className="glass-card" style={{ padding: '18px 20px', background: '#FFFFFF' }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
+        <div className="glass-card" style={{ padding: '16px 18px', background: '#FFFFFF', minWidth: 0 }}>
+          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700, display: 'block' }}>
             Pending Balance Amount
           </span>
-          <div style={{ fontSize: '1.7rem', fontWeight: 900, color: summary.totalPendingBalance > 0 ? '#B91C1C' : '#0F172A', marginTop: 4 }}>
+          <div style={{ fontSize: 'clamp(1.25rem, 3.5vw, 1.65rem)', fontWeight: 900, color: summary.totalPendingBalance > 0 ? '#B91C1C' : '#0F172A', marginTop: 4 }}>
             ₹{summary.totalPendingBalance.toLocaleString('en-IN')}
           </div>
-          <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: 2 }}>
-            To be collected from Booked & Advance
+          <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: 2 }}>
+            {summary.totalPendingBalance > 0 ? 'To be collected' : 'Fully settled'}
           </span>
         </div>
 
-        {/* Card 4: Status Breakdown */}
-        <div className="glass-card" style={{ padding: '18px 20px', background: '#FFFFFF' }}>
-          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
+        {/* Card 4: Status Breakdown - 3-Column Equal Grid so items never truncate or overflow */}
+        <div className="glass-card" style={{ padding: '16px 18px', background: '#FFFFFF', minWidth: 0, overflow: 'hidden' }}>
+          <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700, display: 'block', whiteSpace: 'nowrap' }}>
             Packages Count by Status
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-            <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 800,
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 6,
+            marginTop: 8
+          }}>
+            <div style={{
               background: '#EBF7EE',
-              color: '#008A2E',
-              padding: '4px 8px',
-              borderRadius: 6
+              borderRadius: 8,
+              padding: '6px 4px',
+              textAlign: 'center',
+              border: '1px solid #A5D6B8'
             }}>
-              {summary.completedCount} Paid
-            </span>
-            <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 800,
+              <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#008A2E', lineHeight: 1 }}>
+                {summary.completedCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#008A2E', marginTop: 3, textTransform: 'uppercase' }}>
+                Paid
+              </div>
+            </div>
+
+            <div style={{
               background: '#FEF3C7',
-              color: '#B45309',
-              padding: '4px 8px',
-              borderRadius: 6
+              borderRadius: 8,
+              padding: '6px 4px',
+              textAlign: 'center',
+              border: '1px solid #FDE68A'
             }}>
-              {summary.partialCount} Advance
-            </span>
-            <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 800,
+              <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#B45309', lineHeight: 1 }}>
+                {summary.partialCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#B45309', marginTop: 3, textTransform: 'uppercase' }}>
+                Advance
+              </div>
+            </div>
+
+            <div style={{
               background: '#EDF4FA',
-              color: '#2C82C9',
-              padding: '4px 8px',
-              borderRadius: 6
+              borderRadius: 8,
+              padding: '6px 4px',
+              textAlign: 'center',
+              border: '1px solid #B8D4EE'
             }}>
-              {summary.bookedCount} Booked
-            </span>
+              <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#2C82C9', lineHeight: 1 }}>
+                {summary.bookedCount}
+              </div>
+              <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#2C82C9', marginTop: 3, textTransform: 'uppercase' }}>
+                Booked
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -188,8 +213,8 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
           </h3>
 
           <p style={{ fontSize: '0.9rem', color: '#64748B', maxWidth: 480, margin: '0 auto 24px auto', lineHeight: 1.5 }}>
-            No corporate or organization sponsorships have been recorded so far for this drive.
-            Be the first fundraiser or committee member to record a business sponsorship!
+            No sponsorships have been recorded so far for this drive.
+            Be the first fundraiser or committee member to record a sponsorship!
           </p>
 
           {onOpenSponsorshipModal && (
@@ -207,7 +232,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
               }}
             >
               <PlusCircle size={18} />
-              <span>Record First Corporate Sponsorship</span>
+              <span>Record First Sponsorship</span>
             </button>
           )}
         </div>
@@ -243,25 +268,27 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                 <span>Top Wards ({data?.topWards?.length || 0})</span>
               </button>
 
-              <button
-                onClick={() => setActiveSubTab('firms')}
-                className={`tab-strip-btn ${activeSubTab === 'firms' ? 'active' : ''}`}
-                style={{
-                  background: activeSubTab === 'firms' ? '#2C82C9' : 'transparent',
-                  color: activeSubTab === 'firms' ? '#FFFFFF' : '#64748B',
-                  fontWeight: 700
-                }}
-              >
-                <Building2 size={15} />
-                <span>Sponsoring Firms ({data?.topSponsoringFirms?.length || 0})</span>
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => setActiveSubTab('firms')}
+                  className={`tab-strip-btn ${activeSubTab === 'firms' ? 'active' : ''}`}
+                  style={{
+                    background: activeSubTab === 'firms' ? '#2C82C9' : 'transparent',
+                    color: activeSubTab === 'firms' ? '#FFFFFF' : '#64748B',
+                    fontWeight: 700
+                  }}
+                >
+                  <Building2 size={15} />
+                  <span>{isAdmin ? 'All Sponsoring Firms' : `Ward ${effectiveUser?.wardNumber || ''} Sponsoring Firms`} ({data?.topSponsoringFirms?.length || 0})</span>
+                </button>
+              )}
             </div>
 
             <button
               onClick={loadLeaderboard}
               className="btn-secondary"
               style={{ padding: '8px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}
-              title="Refresh corporate leaderboard"
+              title="Refresh leaderboard"
             >
               <RefreshCw size={14} />
               <span>Refresh</span>
@@ -273,10 +300,10 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
             <div className="glass-card" style={{ background: '#FFFFFF', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <div className="leaderboard-row leaderboard-header">
                 <span>Rank</span>
-                <span>Fundraiser Name</span>
+                <span>Fundraiser</span>
                 <span className="col-ward">Ward</span>
-                <span style={{ textAlign: 'center' }}>Sponsorships</span>
-                <span style={{ textAlign: 'right' }}>Collected (₹)</span>
+                <span className="col-kits" style={{ textAlign: 'center' }}>Sponsorships</span>
+                <span className="col-raised" style={{ textAlign: 'right' }}>Collected (₹)</span>
               </div>
 
               {(data?.topCollectors || []).map((c, idx) => (
@@ -293,28 +320,29 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
                       {c.name}
                     </div>
-                    <span className="badge badge-blue" style={{ fontSize: '0.62rem', padding: '1px 5px', marginTop: 2 }}>
-                      {c.role || 'Coordinator'}
-                    </span>
+                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                      {c.role} • Ward {c.wardNumber || 'N/A'}
+                      <span className="mobile-only-inline" style={{ color: '#2C82C9', fontWeight: 700 }}>
+                        {' '}• {c.sponsorshipCount} {c.sponsorshipCount === 1 ? 'pkg' : 'pkgs'}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="col-ward">
-                    <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>
-                      Ward {c.wardNumber}
-                    </span>
+                  <div className="col-ward" style={{ fontWeight: 700, color: '#64748B', fontSize: '0.84rem' }}>
+                    Ward {c.wardNumber}
                   </div>
 
-                  <div style={{ textAlign: 'center', fontWeight: 800, color: '#2C82C9', fontSize: '0.98rem' }}>
-                    {c.sponsorshipCount} <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'block' }}>packages</span>
+                  <div className="col-kits" style={{ textAlign: 'center', fontWeight: 800, color: '#2C82C9' }}>
+                    {c.sponsorshipCount}
                   </div>
 
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 900, color: '#008A2E', fontSize: '1rem' }}>
+                  <div className="col-raised" style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 900, color: '#008A2E', fontSize: '0.95rem' }}>
                       ₹{c.totalPaidAmount.toLocaleString('en-IN')}
                     </div>
                     {c.balanceAmount > 0 && (
-                      <span style={{ fontSize: '0.7rem', color: '#B91C1C', display: 'block' }}>
-                        ₹{c.balanceAmount.toLocaleString('en-IN')} pending
+                      <span style={{ fontSize: '0.68rem', color: '#B91C1C', fontWeight: 700 }}>
+                        Bal: ₹{c.balanceAmount.toLocaleString('en-IN')}
                       </span>
                     )}
                   </div>
@@ -367,7 +395,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                         {w.wardName || `Ward ${w.wardNumber}`}
                       </h4>
                       <span style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                        {w.sponsorshipCount} Corporate {w.sponsorshipCount === 1 ? 'Sponsorship' : 'Sponsorships'}
+                        {w.sponsorshipCount} {w.sponsorshipCount === 1 ? 'Sponsorship' : 'Sponsorships'}
                       </span>
                     </div>
                   </div>
@@ -391,9 +419,29 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
             </div>
           )}
 
-          {/* Sub-Tab 3: Sponsoring Firms */}
-          {activeSubTab === 'firms' && (
+          {/* Sub-Tab 3: Sponsoring Firms (Protected Access Model) */}
+          {activeSubTab === 'firms' && isAuthenticated && (
             <div style={{ display: 'grid', gap: 12 }}>
+              {/* Access Scope Banner */}
+              <div style={{
+                padding: '10px 16px',
+                borderRadius: 'var(--radius-md)',
+                background: isAdmin ? '#FEF3C7' : '#EDF4FA',
+                border: isAdmin ? '1px solid #FCD34D' : '1px solid #B8D4EE',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10
+              }}>
+                <ShieldCheck size={18} color={isAdmin ? '#B45309' : '#2C82C9'} />
+                <div style={{ fontSize: '0.8rem', color: isAdmin ? '#92400E' : '#1E3A8A', fontWeight: 600 }}>
+                  {isAdmin ? (
+                    <span>Super Administrator: Viewing all sponsoring organizations across campaign wards.</span>
+                  ) : (
+                    <span>Restricted Access: Showing sponsoring firms collected in Ward {effectiveUser?.wardNumber || ''} by you and your ward members.</span>
+                  )}
+                </div>
+              </div>
+
               {(data?.topSponsoringFirms || []).map((firm, idx) => (
                 <div
                   key={idx}
@@ -408,7 +456,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     gap: 12
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: '1 1 220px' }}>
                     <div style={{
                       width: 42,
                       height: 42,
@@ -423,12 +471,13 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     }}>
                       <Building2 size={20} />
                     </div>
-                    <div>
-                      <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0, overflowWrap: 'break-word' }}>
                         {firm.firmName}
                       </h4>
                       <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '2px 0 0 0' }}>
                         {firm.quantity}x {firm.itemName} • Collected by <strong>{firm.collectedByName || 'Field Lead'}</strong>
+                        {firm.contactPerson && <> • Contact: {firm.contactPerson}</>}
                       </p>
                     </div>
                   </div>
@@ -437,6 +486,15 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
                       ₹{firm.totalAmount.toLocaleString('en-IN')}
                     </div>
+                    {firm.balanceAmount > 0 ? (
+                      <span style={{ fontSize: '0.7rem', color: '#B91C1C', fontWeight: 700, display: 'block' }}>
+                        Paid: ₹{firm.amountPaid.toLocaleString('en-IN')} • Bal: ₹{firm.balanceAmount.toLocaleString('en-IN')}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.7rem', color: '#008A2E', fontWeight: 700, display: 'block' }}>
+                        Paid in Full: ₹{firm.amountPaid.toLocaleString('en-IN')}
+                      </span>
+                    )}
                     <span style={{
                       display: 'inline-block',
                       marginTop: 2,
@@ -456,7 +514,9 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
 
               {(!data?.topSponsoringFirms || data.topSponsoringFirms.length === 0) && (
                 <div style={{ padding: '32px', textAlign: 'center', color: '#64748B', fontSize: '0.88rem' }}>
-                  No firm sponsorships recorded yet.
+                  {isAdmin
+                    ? 'No firm sponsorships recorded yet.'
+                    : `No firm sponsorships recorded yet for Ward ${effectiveUser?.wardNumber || ''}.`}
                 </div>
               )}
             </div>

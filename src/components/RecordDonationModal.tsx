@@ -99,10 +99,10 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
             </div>
             <div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                {formMode === 'kit' ? 'Record Kit Donation' : 'Accept Corporate Sponsorship'}
+                {formMode === 'kit' ? 'Record Kit Donation' : 'Record Sponsorship'}
               </h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
-                {formMode === 'kit' ? '₹1,000 per relief food & essential kit' : 'Special organization packages & terms'}
+                {formMode === 'kit' ? '₹1,000 per relief food & essential kit' : 'Special sponsorship packages & flexible terms'}
               </p>
             </div>
           </div>
@@ -111,7 +111,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
           </button>
         </div>
 
-        {/* Top Button Switcher: Kit Donation vs Corporate Sponsorship */}
+        {/* Top Button Switcher: Kit Donation vs Sponsorship */}
         <div style={{ padding: '14px 20px 0 20px' }}>
           <div style={{
             display: 'flex',
@@ -127,22 +127,24 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
               onClick={() => setFormMode('kit')}
               style={{
                 flex: 1,
-                padding: '9px 12px',
+                minWidth: 0,
+                padding: '9px clamp(6px, 2vw, 12px)',
                 borderRadius: 'var(--radius-md)',
                 border: formMode === 'kit' ? '1px solid #A5D6B8' : 'none',
                 background: formMode === 'kit' ? '#EBF7EE' : 'transparent',
                 color: formMode === 'kit' ? '#008A2E' : '#64748B',
                 fontWeight: 800,
-                fontSize: '0.84rem',
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
               }}
             >
-              <Heart size={15} />
+              <Heart size={15} style={{ flexShrink: 0 }} />
               <span>Kit Donation</span>
             </button>
 
@@ -152,23 +154,25 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
               onClick={() => setFormMode('sponsorship')}
               style={{
                 flex: 1,
-                padding: '9px 12px',
+                minWidth: 0,
+                padding: '9px clamp(6px, 2vw, 12px)',
                 borderRadius: 'var(--radius-md)',
                 border: formMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
                 background: formMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
                 color: formMode === 'sponsorship' ? '#2C82C9' : '#64748B',
                 fontWeight: 800,
-                fontSize: '0.84rem',
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
               }}
             >
-              <Building2 size={15} />
-              <span>Corporate Sponsorship</span>
+              <Building2 size={15} style={{ flexShrink: 0 }} />
+              <span>Sponsorship</span>
             </button>
           </div>
         </div>

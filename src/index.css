@@ -376,42 +376,54 @@ body {
   }
 }
 
-/* Responsive Horizontal Tab Strip - No horizontal squeeze on mobile */
+/* Single-line Horizontal Tab Strip - Strictly one line, no line breaks */
+/* Single-line Horizontal Tab Strip - Strictly one line, no line breaks */
 .tab-strip {
   display: flex;
-  gap: 6px;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 3px;
   background: var(--secondary-light);
-  padding: 5px;
+  padding: 3px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   width: 100%;
+  scroll-behavior: smooth;
+  scroll-padding: 8px;
 }
 
 .tab-strip::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
+  display: none;
 }
 
 .tab-strip-btn {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
   white-space: nowrap;
-  padding: 10px 14px;
+  padding: 6px 7px;
   border-radius: var(--radius-md);
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.77rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   border: none;
   cursor: pointer;
   background: transparent;
   color: var(--text-secondary);
   transition: all var(--transition-fast);
-  min-height: 40px;
+  min-height: 35px;
   touch-action: manipulation;
+  text-align: center;
+}
+
+.tab-strip-btn svg {
+  flex-shrink: 0;
 }
 
 .tab-strip-btn.active {
@@ -420,16 +432,73 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 840px) {
   .tab-strip-btn {
-    flex: 1 1 0px;
-    font-size: 0.86rem;
+    font-size: 0.78rem;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .tab-strip-btn {
+    font-size: 0.80rem;
+    padding: 7px 10px;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 639px) {
+  .tab-strip-btn {
+    flex: 0 0 auto;
+    padding: 6px 11px;
+    font-size: 0.78rem;
   }
 }
 
 @media (max-width: 520px) {
   .hidden-mobile {
     display: none !important;
+  }
+}
+
+/* Responsive 3-Way Collections Display (Donations | Sponsorship | Total) */
+.collections-split-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-lg);
+  padding: 8px 14px;
+  flex-wrap: wrap;
+}
+
+.collections-split-bar .split-divider {
+  color: #CBD5E1;
+  font-weight: 300;
+}
+
+@media (max-width: 580px) {
+  .collections-split-bar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+
+  .collections-split-bar .split-divider {
+    display: none !important;
+  }
+
+  .collections-split-bar > div {
+    display: flex;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center;
+    gap: 2px !important;
   }
 }
 

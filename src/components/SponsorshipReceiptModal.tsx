@@ -22,16 +22,16 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
   };
 
   const cleanPhone = sponsorship.mobileNumber.replace(/\D/g, '');
-  const shareMessage = `*Madavoor Relief Drive — Corporate Sponsorship Receipt*%0A%0A` +
+  const shareMessage = `*Madavoor Relief Drive — Sponsorship Receipt*%0A%0A` +
     `Dear *${sponsorship.donorName}*,%0A` +
-    `Thank you for your generous corporate sponsorship of *${sponsorship.quantity}x ${sponsorship.itemName}*.%0A%0A` +
+    `Thank you for your generous sponsorship of *${sponsorship.quantity}x ${sponsorship.itemName}*.%0A%0A` +
     `• *Receipt Token:* ${sponsorship.receiptToken}%0A` +
     `• *Total Committed:* ₹${sponsorship.totalAmount.toLocaleString('en-IN')}%0A` +
     `• *Amount Paid:* ₹${sponsorship.amountPaid.toLocaleString('en-IN')}%0A` +
     `• *Balance Remaining:* ₹${sponsorship.balanceAmount.toLocaleString('en-IN')}%0A` +
     `• *Status:* ${sponsorship.paymentStatus}%0A` +
     `• *Collected By:* ${sponsorship.collectedByName || 'Field Coordinator'}%0A%0A` +
-    `_May Allah reward your organization manifold!_`;
+    `_May Allah reward your contribution manifold!_`;
 
   const waUrl = `https://wa.me/${cleanPhone}?text=${shareMessage}`;
 
@@ -96,13 +96,13 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 520, padding: 0, overflow: 'hidden' }}
+        style={{ maxWidth: 'min(540px, 95vw)', width: '100%', margin: '0 auto', padding: 0, overflow: 'hidden' }}
       >
         {/* Header Ribbon */}
         <div style={{
-          background: 'linear-gradient(135deg, #1E3A8A 0%, #2C82C9 100%)',
+          background: 'linear-gradient(135deg, #008A2E 0%, #2C82C9 100%)',
           color: '#FFFFFF',
-          padding: '22px 24px',
+          padding: '20px clamp(16px, 4vw, 24px)',
           position: 'relative'
         }}>
           <button
@@ -125,7 +125,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <Building2 size={24} />
             <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, opacity: 0.9 }}>
-              Official Corporate Sponsorship Receipt
+              Official Sponsorship Receipt
             </span>
           </div>
 

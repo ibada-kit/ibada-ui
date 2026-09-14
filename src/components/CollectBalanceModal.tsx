@@ -58,7 +58,7 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1150 }}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 'min(480px, 95vw)', width: '100%', margin: '0 auto', padding: 0 }}>
         {/* Header */}
         <div style={{
           padding: '18px 22px',

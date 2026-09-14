@@ -20,9 +20,14 @@ import type {
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api');
 export const KIT_UNIT_RATE = 1000;
 
-// Local Storage Keys
+// Local Storage Keys (Auth Session only)
 const STORAGE_USER = 'charity_user';
-const STORAGE_DONATIONS = 'charity_donations';
+
+// Purge any legacy local mock/cache data from user browser
+try {
+  localStorage.removeItem('charity_donations');
+  localStorage.removeItem('charity_sponsorships');
+} catch {}
 
 // Helper to decode claims from JWT token
 export function parseJwt(token: string): any {
@@ -128,18 +133,7 @@ export const setCurrentUser = (user: User | null) => {
   }
 };
 
-// Local storage helper for session receipts/history
-function getStoredDonations(): Donation[] {
-  const data = localStorage.getItem(STORAGE_DONATIONS);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
+
 
 // ============================================================================
 // Auth API (Live Azure Backend)
@@ -257,10 +251,21 @@ export const donationsApi = {
           Sun: { kits: 0, amount: 0 }
         };
 
-        const donations = getStoredDonations();
-        donations.forEach(d => {
-          if (d.timestamp) {
-            const day = days[new Date(d.timestamp).getDay()];
+        let liveDonations: any[] = [];
+        try {
+          const donRes = await fetch(`${API_BASE_URL}/Donations`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          if (donRes.ok) {
+            const donData = await donRes.json();
+            if (Array.isArray(donData)) liveDonations = donData;
+          }
+        } catch {}
+
+        liveDonations.forEach(d => {
+          const rawDate = d.timestamp || d.transactionDate || d.TransactionDate;
+          if (rawDate) {
+            const day = days[new Date(rawDate).getDay()];
             if (dayCounts[day]) {
               dayCounts[day].kits += d.kitCount || 0;
               dayCounts[day].amount += d.totalAmount || 0;
@@ -380,7 +385,7 @@ export const donationsApi = {
   },
 
   // Get Recent Donations from backend server stream
-  getRecentDonations: async (userRole?: UserRole): Promise<Donation[]> => {
+  getRecentDonations: async (_userRole?: UserRole): Promise<Donation[]> => {
     const token = getCurrentUser()?.token;
     if (token) {
       try {
@@ -412,12 +417,7 @@ export const donationsApi = {
       }
     }
 
-    const all = getStoredDonations();
-    const role = userRole || getCurrentUser()?.role || 'Volunteer';
-    if (role === 'Admin') {
-      return all;
-    }
-    return all.filter((d) => d.collectedByRole === 'Volunteer' || !d.collectedByRole);
+    return [];
   },
 
   // Record a New Donation (POST /api/Donations)
@@ -462,18 +462,36 @@ export const donationsApi = {
       timestamp: data.timestamp || new Date().toISOString()
     };
 
-    // Store in local session stream for receipt history
-    const stored = [newDonation, ...getStoredDonations()];
-    localStorage.setItem(STORAGE_DONATIONS, JSON.stringify(stored));
-
     return newDonation;
   },
 
-  // Public Receipt Viewer
-  getPublicReceipt: async (token: string): Promise<Donation | null> => {
-    const donations = getStoredDonations();
-    const found = donations.find((d) => d.receiptToken.toUpperCase() === token.toUpperCase());
-    return found || null;
+  // Public Receipt Viewer (fetches live from API with local fallback)
+  getPublicReceipt: async (token: string, panchayath = 'Madavoor'): Promise<Donation | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Donations/receipt/${encodeURIComponent(token)}?panchayath=${encodeURIComponent(panchayath)}`);
+      if (res.ok) {
+        const d = await res.json();
+        return {
+          donationId: d.donationId || d.rowKey || d.RowKey,
+          receiptToken: d.receiptToken || d.rowKey || d.RowKey,
+          donorName: d.donorName || d.DonorName,
+          whatsAppNumber: d.whatsAppNumber || d.WhatsAppNumber || '',
+          kitCount: d.kitCount || d.KitCount || 1,
+          kitUnitRate: 1000,
+          totalAmount: d.totalAmount || d.TotalAmount || 1000,
+          panchayath: d.panchayath || d.partitionKey || d.PartitionKey || 'Madavoor',
+          wardNumber: d.wardNumber || d.WardNumber || 0,
+          collectedByUserId: d.userId || d.UserId || '',
+          collectedByName: d.collectedByName || d.CollectedByName || 'Volunteer',
+          collectedByRole: d.collectedByRole || d.CollectedByRole || 'Volunteer',
+          timestamp: d.transactionDate || d.TransactionDate || d.timestamp || d.Timestamp || new Date().toISOString()
+        };
+      }
+    } catch (err) {
+      console.warn('API getReceipt failed:', err);
+    }
+
+    return null;
   }
 };
 
@@ -823,59 +841,6 @@ export const coordinatorApi = {
 // Sponsorships API (Live Azure Backend & Corporate Ledger)
 // ============================================================================
 
-const STORAGE_SPONSORSHIPS = 'charity_sponsorships';
-
-export const DEFAULT_SPONSORSHIP_ITEMS: SponsorshipItem[] = [
-  {
-    itemId: 'ITEM-001',
-    name: 'Family Food Relief Kit Pack',
-    itemPrice: 5000,
-    description: 'Essential 1-month comprehensive food & nutrition ration pack for a distressed family.',
-    isActive: true,
-    displayOrder: 1
-  },
-  {
-    itemId: 'ITEM-002',
-    name: 'Student Education Kit Support',
-    itemPrice: 2500,
-    description: 'Annual educational support kit with school bags, notebooks, and study essentials.',
-    isActive: true,
-    displayOrder: 2
-  },
-  {
-    itemId: 'ITEM-003',
-    name: 'Chronic Illness Medical Care Pack',
-    itemPrice: 10000,
-    description: 'Vital critical medicines, diabetic care, and emergency prescription support.',
-    isActive: true,
-    displayOrder: 3
-  },
-  {
-    itemId: 'ITEM-004',
-    name: 'Ramadan Family Relief Care',
-    itemPrice: 7500,
-    description: 'Special seasonal food hamper, clothing assistance, and festive provisions.',
-    isActive: true,
-    displayOrder: 4
-  }
-];
-
-function getStoredSponsorships(): SponsorshipRecord[] {
-  const data = localStorage.getItem(STORAGE_SPONSORSHIPS);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function saveStoredSponsorships(records: SponsorshipRecord[]) {
-  localStorage.setItem(STORAGE_SPONSORSHIPS, JSON.stringify(records));
-}
-
 export const sponsorshipsApi = {
   // 1. Get Catalog Items (GET /api/Sponsorships/items)
   getItems: async (panchayath = 'Madavoor'): Promise<SponsorshipItem[]> => {
@@ -883,14 +848,14 @@ export const sponsorshipsApi = {
       const res = await fetch(`${API_BASE_URL}/Sponsorships/items?panchayath=${encodeURIComponent(panchayath)}`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           return data;
         }
       }
     } catch (err) {
       console.warn('Could not fetch catalog items from server:', err);
     }
-    return DEFAULT_SPONSORSHIP_ITEMS;
+    return [];
   },
 
   // 2. Accept New Corporate Sponsorship (POST /api/Sponsorships)
@@ -927,11 +892,6 @@ export const sponsorshipsApi = {
     }
 
     const created: SponsorshipRecord = await res.json();
-
-    // Cache in local session stream
-    const stored = getStoredSponsorships();
-    saveStoredSponsorships([created, ...stored.filter(s => s.receiptToken !== created.receiptToken)]);
-
     return created;
   },
 
@@ -949,8 +909,6 @@ export const sponsorshipsApi = {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
-            // Save fresh copy
-            saveStoredSponsorships(data);
             return data;
           }
         }
@@ -959,12 +917,7 @@ export const sponsorshipsApi = {
       }
     }
 
-    // Fallback to local session storage
-    const all = getStoredSponsorships();
-    if (status) {
-      return all.filter(s => s.paymentStatus.toLowerCase() === status.toLowerCase());
-    }
-    return all;
+    return [];
   },
 
   // 4. Update Payment for Outstanding Balance (POST /api/Sponsorships/{receiptToken}/payments)
@@ -995,11 +948,6 @@ export const sponsorshipsApi = {
     }
 
     const updated: SponsorshipRecord = await res.json();
-
-    // Update local store
-    const stored = getStoredSponsorships();
-    saveStoredSponsorships(stored.map(s => s.receiptToken === receiptToken ? updated : s));
-
     return updated;
   },
 
@@ -1016,43 +964,37 @@ export const sponsorshipsApi = {
         return data;
       }
     } catch (err) {
-      console.warn('Failed to load corporate leaderboard:', err);
+      console.warn('Failed to load corporate leaderboard from server:', err);
     }
-
-    // Fallback empty leaderboard response
-    const stored = getStoredSponsorships();
-    const totalCommitted = stored.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
-    const totalPaid = stored.reduce((acc, s) => acc + (s.amountPaid || 0), 0);
-    const totalBalance = stored.reduce((acc, s) => acc + (s.balanceAmount || 0), 0);
 
     return {
       topCollectors: [],
       topWards: [],
-      topSponsoringFirms: stored.map((s, idx) => ({
-        position: idx + 1,
-        firmName: s.donorName,
-        contactPerson: s.contactPerson || '',
-        mobileNumber: s.mobileNumber,
-        itemName: s.itemName,
-        quantity: s.quantity,
-        totalAmount: s.totalAmount,
-        amountPaid: s.amountPaid,
-        balanceAmount: s.balanceAmount,
-        paymentStatus: s.paymentStatus,
-        collectedByName: s.collectedByName,
-        date: s.createdDate
-      })),
+      topSponsoringFirms: [],
       summary: {
-        totalSponsorships: stored.length,
-        totalCommittedAmount: totalCommitted,
-        totalPaidAmount: totalPaid,
-        totalPendingBalance: totalBalance,
-        completedCount: stored.filter(s => s.paymentStatus === 'Completed').length,
-        partialCount: stored.filter(s => s.paymentStatus === 'Partial').length,
-        bookedCount: stored.filter(s => s.paymentStatus === 'Booked').length
+        totalSponsorships: 0,
+        totalCommittedAmount: 0,
+        totalPaidAmount: 0,
+        totalPendingBalance: 0,
+        completedCount: 0,
+        partialCount: 0,
+        bookedCount: 0
       },
       generatedAt: new Date().toISOString()
     };
+  },
+
+  // 6. Get Single Sponsorship Receipt by Token (GET /api/Sponsorships/{receiptToken})
+  getSponsorshipByToken: async (receiptToken: string, panchayath = 'Madavoor'): Promise<SponsorshipRecord | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/${encodeURIComponent(receiptToken)}?panchayath=${encodeURIComponent(panchayath)}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn('Could not fetch sponsorship receipt from server:', err);
+    }
+    return null;
   }
 };
 
