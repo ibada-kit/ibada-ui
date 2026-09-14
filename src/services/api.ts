@@ -578,22 +578,17 @@ export const adminApi = {
   getManagedUsers: async (): Promise<ManagedUser[]> => {
     const user = getCurrentUser();
     const token = user?.token;
-    console.log('[adminApi.getManagedUsers] Initiating call. User:', user?.fullName, '| Role:', user?.role, '| Token:', token ? `${token.substring(0, 15)}...` : 'NONE');
 
     const res = await fetch(`${API_BASE_URL}/Users/coordinators`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
 
-    console.log('[adminApi.getManagedUsers] HTTP Status:', res.status, res.statusText);
-
     if (!res.ok) {
       const msg = await extractErrorMessage(res, 'Failed to load coordinators');
-      console.error('[adminApi.getManagedUsers] Request failed:', msg);
       throw new Error(msg);
     }
 
     const data: any[] = await res.json();
-    console.log('[adminApi.getManagedUsers] Successfully loaded coordinators count:', data?.length, data);
 
     return data.map((u) => ({
       userId: u.userId,
@@ -772,22 +767,16 @@ export const analyticsApi = {
   // Get personal / team progress (GET /api/Analytics/my-progress)
   getMyProgress: async (tokenOverride?: string): Promise<UserProgress> => {
     const token = tokenOverride || getCurrentUser()?.token;
-    console.log('[analyticsApi.getMyProgress] Calling GET /Analytics/my-progress. Token present:', !!token);
-    console.log(token);
     const res = await fetch(`${API_BASE_URL}/Analytics/my-progress`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
 
-    console.log('[analyticsApi.getMyProgress] HTTP Status:', res.status, res.statusText);
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}: Failed to load progress` }));
-      console.error('[analyticsApi.getMyProgress] Error:', err);
       throw new Error(err.message || err.Message || `HTTP ${res.status}: Failed to load progress`);
     }
 
     const data = await res.json();
-    console.log('[analyticsApi.getMyProgress] Received data:', data);
 
     const targetKits = Number(data.targetKits ?? data.TargetKits ?? 0);
     const collectedKits = Number(data.collectedKits ?? data.CollectedKits ?? 0);
@@ -816,22 +805,17 @@ export const coordinatorApi = {
   getMyVolunteers: async (tokenOverride?: string): Promise<any[]> => {
     const token = tokenOverride || getCurrentUser()?.token;
     try {
-      console.log('[coordinatorApi.getMyVolunteers] Calling GET /Users/volunteers. Token present:', !!token);
       const res = await fetch(`${API_BASE_URL}/Users/volunteers`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
-      console.log('[coordinatorApi.getMyVolunteers] Status:', res.status, res.statusText);
-
       if (!res.ok) {
-        console.warn('[coordinatorApi.getMyVolunteers] Request rejected with status:', res.status);
         return [];
       }
 
       const data = await res.json();
       return Array.isArray(data) ? data : [];
-    } catch (err) {
-      console.warn('[coordinatorApi.getMyVolunteers] Fetch failed (network or server error):', err);
+    } catch {
       return [];
     }
   }

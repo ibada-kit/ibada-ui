@@ -40,7 +40,11 @@ export function exportSponsorshipsToCSV(
 
   const formatCell = (val: any): string => {
     if (val === null || val === undefined) return '""';
-    const str = String(val).trim();
+    let str = String(val).trim();
+    // Neutralize formula injection triggers for spreadsheet applications (=, +, -, @, tab, CR)
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = "'" + str;
+    }
     return `"${str.replace(/"/g, '""')}"`;
   };
 
