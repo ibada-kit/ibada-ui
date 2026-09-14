@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { User, Donation } from './types';
+import type { User, Donation, SponsorshipRecord } from './types';
 import { getCurrentUser, setCurrentUser } from './services/api';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './pages/AuthScreen';
@@ -10,6 +10,8 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { HomeScreen } from './pages/HomeScreen';
 import { RecordDonationModal } from './components/RecordDonationModal';
 import { ReceiptModal } from './components/ReceiptModal';
+import { SponsorshipReceiptModal } from './components/SponsorshipReceiptModal';
+import { CollectBalanceModal } from './components/CollectBalanceModal';
 
 export const App: React.FC = () => {
   const [currentUser, setCurUser] = useState<User | null>(() => getCurrentUser());
@@ -19,6 +21,8 @@ export const App: React.FC = () => {
   });
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<Donation | null>(null);
+  const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
+  const [activePayBalanceSponsorship, setActivePayBalanceSponsorship] = useState<SponsorshipRecord | null>(null);
   const [globalKitPrice, setGlobalKitPrice] = useState<number>(1000);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -69,6 +73,8 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 onViewReceipt={(don) => setActiveReceipt(don)}
+                onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
+                onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
               />
             )}
 
@@ -77,6 +83,8 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 onViewReceipt={(don) => setActiveReceipt(don)}
+                onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
+                onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
               />
             )}
 
@@ -85,6 +93,8 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 onViewReceipt={(don) => setActiveReceipt(don)}
+                onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
+                onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
               />
             )}
 
@@ -110,14 +120,41 @@ export const App: React.FC = () => {
             <RecordDonationModal
               onClose={() => setIsRecordModalOpen(false)}
               onDonationRecorded={handleDonationRecorded}
+              onSponsorshipRecorded={(spon) => {
+                setIsRecordModalOpen(false);
+                setActiveSponsorshipReceipt(spon);
+                setRefreshKey((prev) => prev + 1);
+              }}
             />
           )}
 
-          {/* Receipt Modal */}
+          {/* Kit Donation Receipt Modal */}
           {activeReceipt && (
             <ReceiptModal
               donation={activeReceipt}
               onClose={() => setActiveReceipt(null)}
+            />
+          )}
+
+          {/* Corporate Sponsorship Receipt Modal */}
+          {activeSponsorshipReceipt && (
+            <SponsorshipReceiptModal
+              sponsorship={activeSponsorshipReceipt}
+              onClose={() => setActiveSponsorshipReceipt(null)}
+              onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
+            />
+          )}
+
+          {/* Collect Outstanding Balance Modal */}
+          {activePayBalanceSponsorship && (
+            <CollectBalanceModal
+              sponsorship={activePayBalanceSponsorship}
+              onClose={() => setActivePayBalanceSponsorship(null)}
+              onPaymentRecorded={(updated) => {
+                setActivePayBalanceSponsorship(null);
+                setActiveSponsorshipReceipt(updated);
+                setRefreshKey((prev) => prev + 1);
+              }}
             />
           )}
         </>

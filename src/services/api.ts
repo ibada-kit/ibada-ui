@@ -8,16 +8,26 @@ import type {
   WardLeaderboardEntry,
   ManagedUser,
   CreateManagedUserRequest,
-  UpdateManagedUserRequest
+  UpdateManagedUserRequest,
+  SponsorshipItem,
+  CreateSponsorshipPayload,
+  SponsorshipRecord,
+  UpdatePaymentPayload,
+  SponsorshipLeaderboardResponse
 } from '../types';
 
 // Live Azure API Base URL (uses Vite proxy in DEV to eliminate local CORS restrictions)
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api');
 export const KIT_UNIT_RATE = 1000;
 
-// Local Storage Keys
+// Local Storage Keys (Auth Session only)
 const STORAGE_USER = 'charity_user';
-const STORAGE_DONATIONS = 'charity_donations';
+
+// Purge any legacy local mock/cache data from user browser
+try {
+  localStorage.removeItem('charity_donations');
+  localStorage.removeItem('charity_sponsorships');
+} catch {}
 
 // Helper to decode claims from JWT token
 export function parseJwt(token: string): any {
@@ -123,18 +133,7 @@ export const setCurrentUser = (user: User | null) => {
   }
 };
 
-// Local storage helper for session receipts/history
-function getStoredDonations(): Donation[] {
-  const data = localStorage.getItem(STORAGE_DONATIONS);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
+
 
 // ============================================================================
 // Auth API (Live Azure Backend)
@@ -252,10 +251,21 @@ export const donationsApi = {
           Sun: { kits: 0, amount: 0 }
         };
 
-        const donations = getStoredDonations();
-        donations.forEach(d => {
-          if (d.timestamp) {
-            const day = days[new Date(d.timestamp).getDay()];
+        let liveDonations: any[] = [];
+        try {
+          const donRes = await fetch(`${API_BASE_URL}/Donations`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          if (donRes.ok) {
+            const donData = await donRes.json();
+            if (Array.isArray(donData)) liveDonations = donData;
+          }
+        } catch {}
+
+        liveDonations.forEach(d => {
+          const rawDate = d.timestamp || d.transactionDate || d.TransactionDate;
+          if (rawDate) {
+            const day = days[new Date(rawDate).getDay()];
             if (dayCounts[day]) {
               dayCounts[day].kits += d.kitCount || 0;
               dayCounts[day].amount += d.totalAmount || 0;
@@ -375,7 +385,7 @@ export const donationsApi = {
   },
 
   // Get Recent Donations from backend server stream
-  getRecentDonations: async (userRole?: UserRole): Promise<Donation[]> => {
+  getRecentDonations: async (_userRole?: UserRole): Promise<Donation[]> => {
     const token = getCurrentUser()?.token;
     if (token) {
       try {
@@ -407,12 +417,7 @@ export const donationsApi = {
       }
     }
 
-    const all = getStoredDonations();
-    const role = userRole || getCurrentUser()?.role || 'Volunteer';
-    if (role === 'Admin') {
-      return all;
-    }
-    return all.filter((d) => d.collectedByRole === 'Volunteer' || !d.collectedByRole);
+    return [];
   },
 
   // Record a New Donation (POST /api/Donations)
@@ -457,18 +462,36 @@ export const donationsApi = {
       timestamp: data.timestamp || new Date().toISOString()
     };
 
-    // Store in local session stream for receipt history
-    const stored = [newDonation, ...getStoredDonations()];
-    localStorage.setItem(STORAGE_DONATIONS, JSON.stringify(stored));
-
     return newDonation;
   },
 
-  // Public Receipt Viewer
-  getPublicReceipt: async (token: string): Promise<Donation | null> => {
-    const donations = getStoredDonations();
-    const found = donations.find((d) => d.receiptToken.toUpperCase() === token.toUpperCase());
-    return found || null;
+  // Public Receipt Viewer (fetches live from API with local fallback)
+  getPublicReceipt: async (token: string, panchayath = 'Madavoor'): Promise<Donation | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Donations/receipt/${encodeURIComponent(token)}?panchayath=${encodeURIComponent(panchayath)}`);
+      if (res.ok) {
+        const d = await res.json();
+        return {
+          donationId: d.donationId || d.rowKey || d.RowKey,
+          receiptToken: d.receiptToken || d.rowKey || d.RowKey,
+          donorName: d.donorName || d.DonorName,
+          whatsAppNumber: d.whatsAppNumber || d.WhatsAppNumber || '',
+          kitCount: d.kitCount || d.KitCount || 1,
+          kitUnitRate: 1000,
+          totalAmount: d.totalAmount || d.TotalAmount || 1000,
+          panchayath: d.panchayath || d.partitionKey || d.PartitionKey || 'Madavoor',
+          wardNumber: d.wardNumber || d.WardNumber || 0,
+          collectedByUserId: d.userId || d.UserId || '',
+          collectedByName: d.collectedByName || d.CollectedByName || 'Volunteer',
+          collectedByRole: d.collectedByRole || d.CollectedByRole || 'Volunteer',
+          timestamp: d.transactionDate || d.TransactionDate || d.timestamp || d.Timestamp || new Date().toISOString()
+        };
+      }
+    } catch (err) {
+      console.warn('API getReceipt failed:', err);
+    }
+
+    return null;
   }
 };
 
@@ -813,3 +836,165 @@ export const coordinatorApi = {
     }
   }
 };
+
+// ============================================================================
+// Sponsorships API (Live Azure Backend & Corporate Ledger)
+// ============================================================================
+
+export const sponsorshipsApi = {
+  // 1. Get Catalog Items (GET /api/Sponsorships/items)
+  getItems: async (panchayath = 'Madavoor'): Promise<SponsorshipItem[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/items?panchayath=${encodeURIComponent(panchayath)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          return data;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch catalog items from server:', err);
+    }
+    return [];
+  },
+
+  // 2. Accept New Corporate Sponsorship (POST /api/Sponsorships)
+  acceptSponsorship: async (payload: CreateSponsorshipPayload): Promise<SponsorshipRecord> => {
+    const user = getCurrentUser();
+    const token = user?.token;
+
+    const cleanPhone = payload.mobileNumber.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
+
+    const res = await fetch(`${API_BASE_URL}/Sponsorships`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        donorName: payload.donorName.trim(),
+        contactPerson: payload.contactPerson?.trim() || '',
+        mobileNumber: formattedPhone,
+        itemId: payload.itemId,
+        quantity: Math.max(1, Math.floor(Number(payload.quantity) || 1)),
+        paymentOption: payload.paymentOption,
+        initialAmountPaid: payload.initialAmountPaid !== undefined ? Number(payload.initialAmountPaid) : undefined,
+        paymentMode: payload.paymentMode || 'Cash',
+        transactionReference: payload.transactionReference?.trim() || '',
+        notes: payload.notes?.trim() || ''
+      })
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to record sponsorship');
+      throw new Error(msg);
+    }
+
+    const created: SponsorshipRecord = await res.json();
+    return created;
+  },
+
+  // 3. List Sponsorships by Status / Hierarchy (GET /api/Sponsorships)
+  getSponsorships: async (status?: string): Promise<SponsorshipRecord[]> => {
+    const token = getCurrentUser()?.token;
+    if (token) {
+      try {
+        const url = status 
+          ? `${API_BASE_URL}/Sponsorships?status=${encodeURIComponent(status)}`
+          : `${API_BASE_URL}/Sponsorships`;
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            return data;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch sponsorships from server:', err);
+      }
+    }
+
+    return [];
+  },
+
+  // 4. Update Payment for Outstanding Balance (POST /api/Sponsorships/{receiptToken}/payments)
+  updatePayment: async (
+    receiptToken: string,
+    payload: UpdatePaymentPayload,
+    panchayath = 'Madavoor'
+  ): Promise<SponsorshipRecord> => {
+    const token = getCurrentUser()?.token;
+
+    const res = await fetch(`${API_BASE_URL}/Sponsorships/${encodeURIComponent(receiptToken)}/payments?panchayath=${encodeURIComponent(panchayath)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        amountToPay: Number(payload.amountToPay),
+        paymentMode: payload.paymentMode || 'Cash',
+        transactionReference: payload.transactionReference?.trim() || '',
+        notes: payload.notes?.trim() || ''
+      })
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to update payment');
+      throw new Error(msg);
+    }
+
+    const updated: SponsorshipRecord = await res.json();
+    return updated;
+  },
+
+  // 5. Dedicated Sponsorship Leaderboard (GET /api/Sponsorships/leaderboard)
+  getLeaderboard: async (): Promise<SponsorshipLeaderboardResponse> => {
+    const token = getCurrentUser()?.token;
+    try {
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/leaderboard`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return data;
+      }
+    } catch (err) {
+      console.warn('Failed to load corporate leaderboard from server:', err);
+    }
+
+    return {
+      topCollectors: [],
+      topWards: [],
+      topSponsoringFirms: [],
+      summary: {
+        totalSponsorships: 0,
+        totalCommittedAmount: 0,
+        totalPaidAmount: 0,
+        totalPendingBalance: 0,
+        completedCount: 0,
+        partialCount: 0,
+        bookedCount: 0
+      },
+      generatedAt: new Date().toISOString()
+    };
+  },
+
+  // 6. Get Single Sponsorship Receipt by Token (GET /api/Sponsorships/{receiptToken})
+  getSponsorshipByToken: async (receiptToken: string, panchayath = 'Madavoor'): Promise<SponsorshipRecord | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/${encodeURIComponent(receiptToken)}?panchayath=${encodeURIComponent(panchayath)}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn('Could not fetch sponsorship receipt from server:', err);
+    }
+    return null;
+  }
+};
+

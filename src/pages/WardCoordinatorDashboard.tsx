@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, authApi, API_BASE_URL, generateRandomPassword } from '../services/api';
+import { donationsApi, sponsorshipsApi, authApi, API_BASE_URL, generateRandomPassword } from '../services/api';
 import { 
   MapPin, 
   Users, 
@@ -20,20 +20,46 @@ import {
   X,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Building2,
+  Award,
+  Package,
+  Download
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
+import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
+import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface WardCoordinatorDashboardProps {
   user: User;
   onViewReceipt: (donation: Donation) => void;
+  onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
+  onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
 }
 
 export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> = ({
   user,
-  onViewReceipt
+  onViewReceipt,
+  onViewSponsorshipReceipt,
+  onOpenPayBalance
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'record' | 'transactions' | 'ranks' | 'profile'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'record' | 'transactions' | 'ranks' | 'sponsored-items' | 'profile'>('overview');
+  const [ranksMode, setRanksMode] = useState<'individual' | 'sponsorship'>('individual');
+  const [receiptsType, setReceiptsType] = useState<'donations' | 'sponsorships'>('donations');
+  const [wardSponsorships, setWardSponsorships] = useState<SponsorshipRecord[]>([]);
+  const [catalogItems, setCatalogItems] = useState<SponsorshipItem[]>([]);
+  
+  // Aggregate statistics for ward sponsorships
+  const wardSponsorshipStats = useMemo(() => {
+    const totalItems = wardSponsorships.reduce((sum, s) => sum + (Number(s.quantity) || 1), 0);
+    const totalCommitted = wardSponsorships.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+    const totalPaid = wardSponsorships.reduce((sum, s) => sum + (Number(s.amountPaid) || 0), 0);
+    const totalBalance = wardSponsorships.reduce((sum, s) => sum + (Number(s.balanceAmount) || 0), 0);
+    const realizationPct = totalCommitted > 0 ? Math.min(100, Math.round((totalPaid / totalCommitted) * 100)) : 100;
+    return { totalItems, totalCommitted, totalPaid, totalBalance, realizationPct };
+  }, [wardSponsorships]);
   
   const [wardStats, setWardStats] = useState({
     wardNumber: user.wardNumber || 0,
@@ -151,6 +177,21 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         })
         .catch(() => {});
     }
+
+    // 3. Fetch sponsorships tied to this ward
+    sponsorshipsApi.getSponsorships()
+      .then(spons => {
+        const filtered = user.wardNumber ? spons.filter(s => Number(s.wardNumber) === Number(user.wardNumber)) : spons;
+        setWardSponsorships(filtered);
+      })
+      .catch(() => {});
+
+    // 4. Fetch live sponsorship catalog items
+    sponsorshipsApi.getItems()
+      .then(items => {
+        if (items && items.length > 0) setCatalogItems(items);
+      })
+      .catch(() => {});
   }, [user.token, user.wardNumber]);
 
   const handleCreateWardVolunteer = async (e: React.FormEvent) => {
@@ -203,25 +244,8 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       setStatusMsg({ text: `Volunteer ${volName} registered successfully! Default password: ${defaultPass}`, isError: false });
       setVolName('');
       setVolPhone('');
-      setShowAddVol(false);
     } catch (err: any) {
-      const newVol = {
-        fullName: volName.trim(),
-        phoneNumber: `+91${cleanPhone.slice(-10)}`,
-        wardNumber: user.wardNumber,
-        targetKits: volTarget
-      };
-      setWardVolunteers(prev => [newVol, ...prev]);
-      setCreatedVolunteer({
-        fullName: volName.trim(),
-        phone: `+91${cleanPhone.slice(-10)}`,
-        defaultPassword: defaultPass,
-        wardNumber: user.wardNumber || 4
-      });
-      setStatusMsg({ text: `Volunteer ${volName} saved to Ward roster! Default password: ${defaultPass}`, isError: false });
-      setVolName('');
-      setVolPhone('');
-      setShowAddVol(false);
+      setStatusMsg({ text: err.message || 'Failed to save volunteer to database. Please try again.', isError: true });
     } finally {
       setSubmitting(false);
     }
@@ -281,7 +305,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         </div>
       </div>
 
-      {/* Ward Progress Card (Brand Grass Green #7BCC53 Bar) */}
+      {/* Ward Progress Card with 3-Way Collections Display & Separate Progress Bars */}
       <div style={{
         background: '#FFFFFF',
         borderRadius: 'var(--radius-xl)',
@@ -290,126 +314,235 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         boxShadow: 'var(--shadow-sm)',
         marginBottom: 20
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+        {/* Header Row: Ward Identity & 3-Way Collection (Donations | Sponsorship | Total) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               borderRadius: 12,
               background: '#EBF7EE',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#008A2E'
+              color: '#008A2E',
+              flexShrink: 0
             }}>
               <MapPin size={22} />
             </div>
             <div>
-              <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700, letterSpacing: '0.04em' }}>
                 Ward {wardStats.wardNumber} Campaign Progress
               </span>
-              <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0F172A' }}>
-                {wardStats.collectedKits} / {wardStats.targetKits} Kits ({wardStats.progressPercentage}%)
+              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', marginTop: 1 }}>
+                {wardStats.wardName}
               </div>
             </div>
           </div>
-          <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#2C82C9' }}>
-            ₹{wardStats.collectedAmount.toLocaleString('en-IN')}
-          </span>
+
+          {/* 3-Way Collections Display: Donations | Sponsorship | Total */}
+          <div className="collections-split-bar">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Donations:</span>
+              <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#008A2E' }}>
+                ₹{wardStats.collectedAmount.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <span className="split-divider">|</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Sponsorship:</span>
+              <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#2C82C9' }}>
+                ₹{wardSponsorshipStats.totalPaid.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <span className="split-divider">|</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#0F172A', fontWeight: 800 }}>Total:</span>
+              <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0F172A' }}>
+                ₹{(wardStats.collectedAmount + wardSponsorshipStats.totalPaid).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Progress Bar */}
-        <div style={{
-          width: '100%',
-          height: 12,
-          background: '#E2E8F0',
-          borderRadius: 9999,
-          overflow: 'hidden',
-          marginBottom: 10
-        }}>
-          <div style={{
-            width: `${Math.min(100, wardStats.progressPercentage)}%`,
-            height: '100%',
-            background: '#7BCC53',
-            borderRadius: 9999,
-            transition: 'width 0.6s ease'
-          }} />
-        </div>
+        {/* SEPARATE TARGET PROGRESS BARS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
+          {/* BAR 1: Kit Donation Target Progress (Grass Green #7BCC53) */}
+          <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #F1F5F9' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#008A2E', display: 'inline-block' }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A' }}>
+                  Kit Donations Target: {wardStats.collectedKits} / {wardStats.targetKits} Kits ({wardStats.progressPercentage}%)
+                </span>
+              </div>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#008A2E' }}>
+                ₹{wardStats.collectedAmount.toLocaleString('en-IN')} Raised
+              </span>
+            </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
-          <span>Collections from all Ward {wardStats.wardNumber} volunteers</span>
-          <span>{Math.max(0, wardStats.targetKits - wardStats.collectedKits)} kits to hit Ward goal</span>
+            <div style={{
+              width: '100%',
+              height: 10,
+              background: '#E2E8F0',
+              borderRadius: 9999,
+              overflow: 'hidden',
+              marginBottom: 6
+            }}>
+              <div style={{
+                width: `${Math.min(100, wardStats.progressPercentage)}%`,
+                height: '100%',
+                background: '#7BCC53',
+                borderRadius: 9999,
+                transition: 'width 0.6s ease'
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
+              <span>Collections from all Ward {wardStats.wardNumber} volunteers</span>
+              <span>{Math.max(0, wardStats.targetKits - wardStats.collectedKits)} kits to hit Ward goal</span>
+            </div>
+          </div>
+
+          {/* BAR 2: Sponsorship Packages & Collections Progress (Sponsorship Blue #2C82C9) */}
+          <div style={{ background: '#F4F9FD', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #DCE9F6' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2C82C9', display: 'inline-block' }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A' }}>
+                  Sponsorship Packages: <span style={{ color: '#2C82C9', fontWeight: 900 }}>{wardSponsorshipStats.totalItems} Items Sponsored</span>
+                </span>
+              </div>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#2C82C9' }}>
+                ₹{wardSponsorshipStats.totalPaid.toLocaleString('en-IN')} / ₹{wardSponsorshipStats.totalCommitted.toLocaleString('en-IN')} ({wardSponsorshipStats.realizationPct}%)
+              </span>
+            </div>
+
+            <div style={{
+              width: '100%',
+              height: 10,
+              background: '#D9E8F5',
+              borderRadius: 9999,
+              overflow: 'hidden',
+              marginBottom: 6
+            }}>
+              <div style={{
+                width: `${wardSponsorshipStats.totalCommitted > 0 ? Math.min(100, wardSponsorshipStats.realizationPct) : 0}%`,
+                height: '100%',
+                background: '#2C82C9',
+                borderRadius: 9999,
+                transition: 'width 0.6s ease'
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
+              <span>{wardSponsorshipStats.totalItems} package units sponsored in Ward {wardStats.wardNumber}</span>
+              <span>
+                {wardSponsorshipStats.totalBalance > 0 
+                  ? `Pending balance: ₹${wardSponsorshipStats.totalBalance.toLocaleString('en-IN')}` 
+                  : 'All committed funds collected'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tab-strip" style={{ marginBottom: 20 }}>
+      {/* Tabs - Smooth horizontally scrollable with auto-centering and navigation chevrons */}
+      <ScrollableTabStrip activeKey={`${activeTab}-${ranksMode}`}>
         <button
           onClick={() => setActiveTab('overview')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'overview' ? 'active' : ''}`}
           style={{
             background: activeTab === 'overview' ? '#008A2E' : 'transparent',
             color: activeTab === 'overview' ? '#FFFFFF' : '#334155'
           }}
         >
-          Ward Stats
+          <span>Ward Stats</span>
         </button>
 
         <button
           onClick={() => setActiveTab('team')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'team' ? 'active' : ''}`}
           style={{
             background: activeTab === 'team' ? '#008A2E' : 'transparent',
             color: activeTab === 'team' ? '#FFFFFF' : '#334155'
           }}
         >
-          Volunteers ({wardVolunteers.length})
+          <span>Volunteers ({wardVolunteers.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('record')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'record' ? 'active' : ''}`}
           style={{
             background: activeTab === 'record' ? '#008A2E' : 'transparent',
             color: activeTab === 'record' ? '#FFFFFF' : '#334155'
           }}
         >
-          Record
+          <span>Record</span>
         </button>
 
         <button
           onClick={() => setActiveTab('transactions')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'transactions' ? 'active' : ''}`}
           style={{
             background: activeTab === 'transactions' ? '#008A2E' : 'transparent',
             color: activeTab === 'transactions' ? '#FFFFFF' : '#334155'
           }}
         >
-          Receipts
+          <span>Receipts</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('ranks')}
-          className="tab-strip-btn"
+          onClick={() => { setActiveTab('ranks'); setRanksMode('individual'); }}
+          className={`tab-strip-btn ${activeTab === 'ranks' && ranksMode === 'individual' ? 'active' : ''}`}
           style={{
-            background: activeTab === 'ranks' ? '#008A2E' : 'transparent',
-            color: activeTab === 'ranks' ? '#FFFFFF' : '#334155'
+            background: activeTab === 'ranks' && ranksMode === 'individual' ? '#008A2E' : 'transparent',
+            color: activeTab === 'ranks' && ranksMode === 'individual' ? '#FFFFFF' : '#334155'
           }}
         >
-          Rankings
+          <span>Rankings</span>
+        </button>
+
+        <button
+          id="ward-tab-sponsored-items"
+          onClick={() => setActiveTab('sponsored-items')}
+          className={`tab-strip-btn ${activeTab === 'sponsored-items' ? 'active' : ''}`}
+          style={{
+            background: activeTab === 'sponsored-items' ? '#2C82C9' : 'transparent',
+            color: activeTab === 'sponsored-items' ? '#FFFFFF' : '#334155'
+          }}
+          title="Sponsored Items Catalog & Breakdown"
+        >
+          <Package size={14} />
+          <span>Items ({wardSponsorshipStats.totalItems})</span>
+        </button>
+
+        <button
+          id="ward-tab-sponsorships"
+          onClick={() => { setActiveTab('ranks'); setRanksMode('sponsorship'); }}
+          className={`tab-strip-btn ${activeTab === 'ranks' && ranksMode === 'sponsorship' ? 'active' : ''}`}
+          style={{
+            background: activeTab === 'ranks' && ranksMode === 'sponsorship' ? '#2C82C9' : 'transparent',
+            color: activeTab === 'ranks' && ranksMode === 'sponsorship' ? '#FFFFFF' : '#334155'
+          }}
+          title="Sponsorship Leaderboard"
+        >
+          <Building2 size={14} />
+          <span>Sponsorships</span>
         </button>
 
         <button
           onClick={() => setActiveTab('profile')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'profile' ? 'active' : ''}`}
           style={{
             background: activeTab === 'profile' ? '#008A2E' : 'transparent',
             color: activeTab === 'profile' ? '#FFFFFF' : '#334155'
           }}
         >
-          Profile & Security
+          <span>Profile</span>
         </button>
-      </div>
+      </ScrollableTabStrip>
 
       {/* Prominently Highlighted Newly Generated Volunteer Password Card with Copy Action */}
       {createdVolunteer && (
@@ -816,59 +949,286 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           border: '1px solid var(--border-subtle)',
           boxShadow: 'var(--shadow-sm)'
         }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <History size={18} color="#008A2E" />
-            <span>Ward {user.wardNumber} Receipts</span>
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <History size={18} color="#008A2E" />
+              <span>Ward {user.wardNumber} Receipts</span>
+            </h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {wardDonations.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
-                No receipts recorded for Ward {user.wardNumber} yet.
+            {/* Switch between Kit Donations vs Sponsorships + Export CSV Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', background: '#F1F5F9', padding: 3, borderRadius: 'var(--radius-md)', gap: 4 }}>
+                <button
+                  id="btn-receipts-donations"
+                  type="button"
+                  onClick={() => setReceiptsType('donations')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: receiptsType === 'donations' ? '#FFFFFF' : 'transparent',
+                    color: receiptsType === 'donations' ? '#008A2E' : '#64748B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: receiptsType === 'donations' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  Kit Donations ({wardDonations.length})
+                </button>
+
+                <button
+                  id="btn-receipts-sponsorships"
+                  type="button"
+                  onClick={() => setReceiptsType('sponsorships')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: receiptsType === 'sponsorships' ? '#FFFFFF' : 'transparent',
+                    color: receiptsType === 'sponsorships' ? '#2C82C9' : '#64748B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: receiptsType === 'sponsorships' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  Sponsorships ({wardSponsorships.length})
+                </button>
               </div>
-            ) : (
-              wardDonations.map((tx) => (
-                <div
-                  key={tx.donationId}
-                  onClick={() => onViewReceipt(tx)}
+
+              {receiptsType === 'sponsorships' && (
+                <button
+                  type="button"
+                  id="btn-export-ward-sponsorships-receipts-csv"
+                  onClick={() => exportSponsorshipsToCSV(wardSponsorships, `ward_${user.wardNumber}_sponsorships_report`)}
+                  className="btn-secondary"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#F4F9FD',
-                    border: '1px solid #E2E8F0',
-                    cursor: 'pointer'
+                    gap: 6,
+                    padding: '6px 12px',
+                    fontSize: '0.78rem'
                   }}
+                  title="Export Ward sponsorships to CSV"
                 >
-                  <div>
-                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                      {tx.donorName}
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                      Collector: {tx.collectedByName || 'Ward Member'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
-                    </div>
-                  </div>
-
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
-                      ₹{tx.totalAmount.toLocaleString('en-IN')}
-                    </div>
-                    <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
-                      {tx.kitCount} Kits
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+                  <Download size={14} color="#008A2E" />
+                  <span>Export CSV</span>
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* KIT DONATION RECEIPTS LIST */}
+          {receiptsType === 'donations' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {wardDonations.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
+                  No kit donation receipts recorded for Ward {user.wardNumber} yet.
+                </div>
+              ) : (
+                wardDonations.map((tx) => (
+                  <div
+                    key={tx.donationId}
+                    onClick={() => onViewReceipt(tx)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#F4F9FD',
+                      border: '1px solid #E2E8F0',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
+                        {tx.donorName}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                        Collector: {tx.collectedByName || 'Ward Member'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                        ₹{tx.totalAmount.toLocaleString('en-IN')}
+                      </div>
+                      <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
+                        {tx.kitCount} Kits
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* SPONSORSHIP RECEIPTS LIST */}
+          {receiptsType === 'sponsorships' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {wardSponsorships.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
+                  No sponsorship receipts recorded for Ward {user.wardNumber} yet.
+                </div>
+              ) : (
+                wardSponsorships.map((sp) => (
+                  <div
+                    key={sp.sponsorshipId || sp.receiptToken}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      flexWrap: 'wrap',
+                      gap: 12
+                    }}
+                  >
+                    <div style={{ minWidth: 200, flex: '1 1 200px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                          {sp.donorName}
+                        </span>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          background: sp.paymentStatus === 'Completed' ? '#EBF7EE' : sp.paymentStatus === 'Partial' ? '#FEF3C7' : '#EDF4FA',
+                          color: sp.paymentStatus === 'Completed' ? '#008A2E' : sp.paymentStatus === 'Partial' ? '#B45309' : '#2C82C9'
+                        }}>
+                          {sp.paymentStatus === 'Completed' ? 'Fully Paid' : sp.paymentStatus === 'Partial' ? 'Advance Paid' : 'Booked'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: 3 }}>
+                        {sp.itemName} ({sp.quantity} {sp.quantity === 1 ? 'pkg' : 'pkgs'}) • Token: <span style={{ color: '#2C82C9', fontWeight: 800 }}>{sp.receiptToken}</span>
+                      </div>
+
+                      {sp.contactPerson && (
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: 1 }}>
+                          Contact: {sp.contactPerson} ({sp.mobileNumber})
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                          ₹{sp.amountPaid.toLocaleString('en-IN')}
+                        </div>
+                        {sp.balanceAmount > 0 ? (
+                          <span style={{ fontSize: '0.7rem', color: '#B91C1C', fontWeight: 700, display: 'block' }}>
+                            Bal: ₹{sp.balanceAmount.toLocaleString('en-IN')}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                            Total: ₹{sp.totalAmount.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => onViewSponsorshipReceipt && onViewSponsorshipReceipt(sp)}
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                        >
+                          Receipt
+                        </button>
+
+                        {sp.balanceAmount > 0 && onOpenPayBalance && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenPayBalance(sp)}
+                            className="btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.78rem', background: '#008A2E' }}
+                          >
+                            Pay Bal
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 5: WARD & VOLUNTEER RANKINGS */}
       {activeTab === 'ranks' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Sub-Switch: Ward & Volunteers vs Corporate Sponsorships */}
+          <div style={{
+            display: 'flex',
+            background: '#FFFFFF',
+            padding: 4,
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            gap: 6
+          }}>
+            <button
+              id="ward-switch-standings"
+              onClick={() => setRanksMode('individual')}
+              style={{
+                flex: 1,
+                padding: '9px clamp(6px, 2vw, 12px)',
+                borderRadius: 'var(--radius-md)',
+                border: ranksMode === 'individual' ? '1px solid #7C3AED' : 'none',
+                background: ranksMode === 'individual' ? '#F5F3FF' : 'transparent',
+                color: ranksMode === 'individual' ? '#6D28D9' : '#64748B',
+                fontWeight: 800,
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Award size={15} style={{ flexShrink: 0 }} />
+              <span>Ward & Volunteers</span>
+            </button>
+
+            <button
+              id="ward-switch-sponsorships"
+              onClick={() => setRanksMode('sponsorship')}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                padding: '9px clamp(6px, 2vw, 12px)',
+                borderRadius: 'var(--radius-md)',
+                border: ranksMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
+                background: ranksMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
+                color: ranksMode === 'sponsorship' ? '#2C82C9' : '#64748B',
+                fontWeight: 800,
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Building2 size={15} style={{ flexShrink: 0 }} />
+              <span>Sponsorships</span>
+            </button>
+          </div>
+
+          {ranksMode === 'sponsorship' ? (
+            <SponsorshipLeaderboardView user={user} onOpenSponsorshipModal={() => setActiveTab('record')} />
+          ) : (
+            <>
           {/* Top Wards */}
           <div style={{
             background: '#FFFFFF',
@@ -966,7 +1326,22 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
               ))}
             </div>
           </div>
+          </>
+          )}
         </div>
+      )}
+
+      {/* TAB: SPONSORED ITEMS SUMMARY VIEW */}
+      {activeTab === 'sponsored-items' && (
+        <SponsoredItemsSummaryView
+          title={`Ward ${user.wardNumber} Sponsored Items`}
+          subtitle={`Detailed breakdown of item quantities and sponsorships collected across Ward ${user.wardNumber}.`}
+          sponsorships={wardSponsorships}
+          catalogItems={catalogItems}
+          onViewReceipt={onViewSponsorshipReceipt}
+          onOpenPayBalance={onOpenPayBalance}
+          onOpenSponsorshipModal={() => setActiveTab('record')}
+        />
       )}
 
       {/* TAB 6: PROFILE & PASSWORD MANAGEMENT */}

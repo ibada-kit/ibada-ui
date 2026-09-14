@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import type { User, Donation, LeaderboardEntry } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { User, Donation, LeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, analyticsApi, coordinatorApi, API_BASE_URL, generateRandomPassword } from '../services/api';
-import type { UserProgress } from '../services/api';
+import { donationsApi, analyticsApi, coordinatorApi, sponsorshipsApi, API_BASE_URL, generateRandomPassword, type UserProgress } from '../services/api';
 import { 
   Users, 
   TrendingUp, 
@@ -11,26 +10,51 @@ import {
   Trophy, 
   UserPlus, 
   Package, 
-  RefreshCw,
-  KeyRound,
-  Copy,
-  Check,
-  Share2,
-  CheckCircle2,
-  X
+  RefreshCw, 
+  KeyRound, 
+  Copy, 
+  Check, 
+  Share2, 
+  CheckCircle2, 
+  X, 
+  Building2, 
+  Award,
+  Download
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
+import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
+import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface CoordinatorDashboardProps {
   user: User;
   onViewReceipt: (donation: Donation) => void;
+  onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
+  onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
 }
 
 export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   user,
-  onViewReceipt
+  onViewReceipt,
+  onViewSponsorshipReceipt,
+  onOpenPayBalance
 }) => {
-  const [activeTab, setActiveTab] = useState<'progress' | 'record' | 'team' | 'transactions' | 'leaderboard'>('progress');
+  const [activeTab, setActiveTab] = useState<'progress' | 'record' | 'team' | 'transactions' | 'leaderboard' | 'sponsored-items'>('progress');
+  const [leaderboardMode, setLeaderboardMode] = useState<'individual' | 'sponsorship'>('individual');
+  const [receiptsType, setReceiptsType] = useState<'donations' | 'sponsorships'>('donations');
+  const [teamSponsorships, setTeamSponsorships] = useState<SponsorshipRecord[]>([]);
+  const [catalogItems, setCatalogItems] = useState<SponsorshipItem[]>([]);
+  
+  // Aggregate statistics for coordinator team sponsorships
+  const coordinatorSponsorshipStats = useMemo(() => {
+    const totalItems = teamSponsorships.reduce((sum, s) => sum + (Number(s.quantity) || 1), 0);
+    const totalCommitted = teamSponsorships.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+    const totalPaid = teamSponsorships.reduce((sum, s) => sum + (Number(s.amountPaid) || 0), 0);
+    const totalBalance = teamSponsorships.reduce((sum, s) => sum + (Number(s.balanceAmount) || 0), 0);
+    const realizationPct = totalCommitted > 0 ? Math.min(100, Math.round((totalPaid / totalCommitted) * 100)) : 100;
+    return { totalItems, totalCommitted, totalPaid, totalBalance, realizationPct };
+  }, [teamSponsorships]);
   
   const [progress, setProgress] = useState<UserProgress>({
     targetKits: 0,
@@ -98,10 +122,33 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
       .then((board) => { if (isMounted) setVolunteersBoard(board); })
       .catch(() => {});
 
+    // 4. Fetch coordinator's team & ward sponsorships
+    sponsorshipsApi.getSponsorships()
+      .then((spons) => {
+        if (isMounted) {
+          const wardOrTeamSpons = spons.filter(s =>
+            s.collectedByUserId === user.userId ||
+            s.parentUserId === user.userId ||
+            (user.wardNumber && Number(s.wardNumber) === Number(user.wardNumber))
+          );
+          setTeamSponsorships(wardOrTeamSpons);
+        }
+      })
+      .catch(() => {});
+
+    // 5. Fetch live sponsorship catalog items
+    sponsorshipsApi.getItems()
+      .then((items) => {
+        if (isMounted && items && items.length > 0) {
+          setCatalogItems(items);
+        }
+      })
+      .catch(() => {});
+
     return () => {
       isMounted = false;
     };
-  }, [user.token, user.userId]);
+  }, [user.token, user.userId, user.wardNumber]);
 
   const handleCreateVolunteer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,26 +202,8 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
       setVolFullName('');
       setVolPhone('');
-      setShowAddVolunteer(false);
     } catch (err: any) {
-      // Fallback local addition if network fails
-      setTeamMembers(prev => [{
-        fullName: volFullName.trim(),
-        phoneNumber: `+91${cleanPhone.slice(-10)}`,
-        role: 'Volunteer',
-        wardNumber: volWard,
-        targetKits: volTarget
-      }, ...prev]);
-      setCreatedVolunteer({
-        fullName: volFullName.trim(),
-        phone: `+91${cleanPhone.slice(-10)}`,
-        defaultPassword: defaultPass,
-        wardNumber: Number(volWard)
-      });
-      setCreateMsg({ text: `Volunteer ${volFullName} added to team roster. Default password: ${defaultPass}`, isError: false });
-      setVolFullName('');
-      setVolPhone('');
-      setShowAddVolunteer(false);
+      setCreateMsg({ text: err.message || 'Failed to create volunteer on server. Please try again.', isError: true });
     } finally {
       setCreatingVol(false);
     }
@@ -230,7 +259,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         </button>
       </div>
 
-      {/* Coordinator Progress Card (Grass Green #7BCC53 Bar) */}
+      {/* Coordinator Progress Card with 3-Way Collections Display & Separate Progress Bars */}
       <div style={{
         background: '#FFFFFF',
         borderRadius: 'var(--radius-xl)',
@@ -239,11 +268,12 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         boxShadow: 'var(--shadow-sm)',
         marginBottom: 18
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+        {/* Header Row: Coordinator Team Title & 3-Way Collections Display (Donations | Sponsorship | Total) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               borderRadius: 12,
               background: '#EBF7EE',
               display: 'flex',
@@ -255,51 +285,124 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
               <TrendingUp size={22} />
             </div>
             <div>
-              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700, letterSpacing: '0.04em' }}>
                 Coordinator Team Campaign Target
               </span>
-              <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.3rem)', fontWeight: 900, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 8 }}>
-                {loadingProgress ? (
-                  <span style={{ fontSize: '0.86rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <RefreshCw size={14} className="animate-spin" /> Loading live data...
-                  </span>
-                ) : (
-                  <span>{progress.collectedKits} / {progress.targetKits} Kits ({progress.achievementPercentage}%)</span>
-                )}
+              <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.25rem)', fontWeight: 900, color: '#0F172A', marginTop: 1 }}>
+                {user.fullName} {user.wardNumber ? `(Ward ${user.wardNumber})` : ''}
               </div>
             </div>
           </div>
-          <span style={{ fontSize: 'clamp(1.15rem, 3.5vw, 1.4rem)', fontWeight: 900, color: '#2C82C9' }}>
-            {loadingProgress ? '...' : `₹${progress.collectedAmount.toLocaleString('en-IN')}`}
-          </span>
+
+          {/* 3-Way Collections Display: Donations | Sponsorship | Total */}
+          <div className="collections-split-bar">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Donations:</span>
+              <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#008A2E' }}>
+                {loadingProgress ? '...' : `₹${progress.collectedAmount.toLocaleString('en-IN')}`}
+              </span>
+            </div>
+            <span className="split-divider">|</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Sponsorship:</span>
+              <span style={{ fontSize: '0.94rem', fontWeight: 800, color: '#2C82C9' }}>
+                ₹{coordinatorSponsorshipStats.totalPaid.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <span className="split-divider">|</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#0F172A', fontWeight: 800 }}>Total:</span>
+              <span style={{ fontSize: '1.12rem', fontWeight: 900, color: '#0F172A' }}>
+                {loadingProgress ? '...' : `₹${(progress.collectedAmount + coordinatorSponsorshipStats.totalPaid).toLocaleString('en-IN')}`}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Brand Progress Bar */}
-        <div style={{
-          width: '100%',
-          height: 12,
-          background: '#F1F5F9',
-          borderRadius: 9999,
-          overflow: 'hidden',
-          marginBottom: 10
-        }}>
-          <div style={{
-            width: `${Math.min(100, progress.achievementPercentage)}%`,
-            height: '100%',
-            background: '#7BCC53',
-            borderRadius: 9999,
-            transition: 'width 0.6s ease'
-          }} />
-        </div>
+        {/* SEPARATE TARGET PROGRESS BARS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
+          {/* BAR 1: Kit Donation Target Progress (Grass Green #7BCC53) */}
+          <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #F1F5F9' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#008A2E', display: 'inline-block' }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A' }}>
+                  {loadingProgress ? 'Loading kits target...' : `Kit Donations Target: ${progress.collectedKits} / ${progress.targetKits} Kits (${progress.achievementPercentage}%)`}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#008A2E' }}>
+                {loadingProgress ? '...' : `₹${progress.collectedAmount.toLocaleString('en-IN')} Raised`}
+              </span>
+            </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
-          <span>Covers volunteers assigned under this coordinator</span>
-          <span>{Math.max(0, progress.targetKits - progress.collectedKits)} kits to goal</span>
+            <div style={{
+              width: '100%',
+              height: 10,
+              background: '#E2E8F0',
+              borderRadius: 9999,
+              overflow: 'hidden',
+              marginBottom: 6
+            }}>
+              <div style={{
+                width: `${Math.min(100, progress.achievementPercentage)}%`,
+                height: '100%',
+                background: '#7BCC53',
+                borderRadius: 9999,
+                transition: 'width 0.6s ease'
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
+              <span>Covers volunteers assigned under this coordinator</span>
+              <span>{Math.max(0, progress.targetKits - progress.collectedKits)} kits to goal</span>
+            </div>
+          </div>
+
+          {/* BAR 2: Sponsorship Packages & Collections Progress (Sponsorship Blue #2C82C9) */}
+          <div style={{ background: '#F4F9FD', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #DCE9F6' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2C82C9', display: 'inline-block' }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A' }}>
+                  Sponsorship Packages: <span style={{ color: '#2C82C9', fontWeight: 900 }}>{coordinatorSponsorshipStats.totalItems} Items Sponsored</span>
+                </span>
+              </div>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#2C82C9' }}>
+                ₹{coordinatorSponsorshipStats.totalPaid.toLocaleString('en-IN')} / ₹{coordinatorSponsorshipStats.totalCommitted.toLocaleString('en-IN')} ({coordinatorSponsorshipStats.realizationPct}%)
+              </span>
+            </div>
+
+            <div style={{
+              width: '100%',
+              height: 10,
+              background: '#D9E8F5',
+              borderRadius: 9999,
+              overflow: 'hidden',
+              marginBottom: 6
+            }}>
+              <div style={{
+                width: `${coordinatorSponsorshipStats.totalCommitted > 0 ? Math.min(100, coordinatorSponsorshipStats.realizationPct) : 0}%`,
+                height: '100%',
+                background: '#2C82C9',
+                borderRadius: 9999,
+                transition: 'width 0.6s ease'
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
+              <span>{coordinatorSponsorshipStats.totalItems} package units sponsored across team</span>
+              <span>
+                {coordinatorSponsorshipStats.totalBalance > 0 
+                  ? `Pending balance: ₹${coordinatorSponsorshipStats.totalBalance.toLocaleString('en-IN')}` 
+                  : 'All committed funds collected'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tabs Navigation - Responsive tab-strip */}
-      <div className="tab-strip" style={{ marginBottom: 18 }}>
+      {/* Tabs Navigation - Responsive Scrollable tab-strip */}
+      <ScrollableTabStrip activeKey={`${activeTab}-${leaderboardMode}`}>
         <button
           onClick={() => setActiveTab('progress')}
           className={`tab-strip-btn ${activeTab === 'progress' ? 'active' : ''}`}
@@ -311,34 +414,62 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           onClick={() => setActiveTab('team')}
           className={`tab-strip-btn ${activeTab === 'team' ? 'active' : ''}`}
         >
-          <Users size={15} />
-          <span>My Team ({teamMembers.length})</span>
+          <Users size={14} />
+          <span>Team ({teamMembers.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('record')}
           className={`tab-strip-btn ${activeTab === 'record' ? 'active' : ''}`}
         >
-          <PlusCircle size={15} />
-          <span>Record Donation</span>
+          <PlusCircle size={14} />
+          <span>Record</span>
         </button>
 
         <button
           onClick={() => setActiveTab('transactions')}
           className={`tab-strip-btn ${activeTab === 'transactions' ? 'active' : ''}`}
         >
-          <History size={15} />
+          <History size={14} />
           <span>Receipts ({recentTransactions.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('leaderboard')}
-          className={`tab-strip-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
+          className={`tab-strip-btn ${activeTab === 'leaderboard' && leaderboardMode === 'individual' ? 'active' : ''}`}
         >
-          <Trophy size={15} />
+          <Trophy size={14} />
           <span>Leaderboard</span>
         </button>
-      </div>
+
+        <button
+          id="coord-tab-sponsored-items"
+          onClick={() => setActiveTab('sponsored-items')}
+          className={`tab-strip-btn ${activeTab === 'sponsored-items' ? 'active' : ''}`}
+          style={{
+            background: activeTab === 'sponsored-items' ? '#2C82C9' : undefined,
+            color: activeTab === 'sponsored-items' ? '#FFFFFF' : undefined
+          }}
+          title="Sponsored Items Catalog & Breakdown"
+        >
+          <Package size={14} />
+          <span>Items ({coordinatorSponsorshipStats.totalItems})</span>
+        </button>
+
+        <button
+          id="coord-tab-sponsorships"
+          onClick={() => { setActiveTab('leaderboard'); setLeaderboardMode('sponsorship'); }}
+          className={`tab-strip-btn ${activeTab === 'leaderboard' && leaderboardMode === 'sponsorship' ? 'active' : ''}`}
+          style={{
+            background: activeTab === 'leaderboard' && leaderboardMode === 'sponsorship' ? '#2C82C9' : undefined,
+            color: activeTab === 'leaderboard' && leaderboardMode === 'sponsorship' ? '#FFFFFF' : undefined
+          }}
+          title="Sponsorship Leaderboard"
+        >
+          <Building2 size={14} />
+          <span>Sponsorships</span>
+        </button>
+      </ScrollableTabStrip>
 
       {createMsg && (
         <div style={{
@@ -707,7 +838,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           kitPrice={1000}
           onSuccess={(donation) => {
             setRecentTransactions(prev => [donation, ...prev]);
-            setProgress(prev => ({
+            setProgress((prev: UserProgress) => ({
               ...prev,
               collectedKits: prev.collectedKits + donation.kitCount,
               collectedAmount: prev.collectedAmount + donation.totalAmount
@@ -725,106 +856,349 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           border: '1px solid var(--border-subtle)',
           boxShadow: 'var(--shadow-sm)'
         }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <History size={18} color="#008A2E" />
-            <span>Team Donation Receipts</span>
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <History size={18} color="#008A2E" />
+              <span>Team Receipts</span>
+            </h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {recentTransactions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
-                No receipts recorded yet for your team. Click "Record Donation" to log contributions!
+            {/* Switch between Kit Donations vs Sponsorships + Export CSV Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', background: '#F1F5F9', padding: 3, borderRadius: 'var(--radius-md)', gap: 4 }}>
+                <button
+                  id="btn-coord-receipts-donations"
+                  type="button"
+                  onClick={() => setReceiptsType('donations')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: receiptsType === 'donations' ? '#FFFFFF' : 'transparent',
+                    color: receiptsType === 'donations' ? '#008A2E' : '#64748B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: receiptsType === 'donations' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  Kit Donations ({recentTransactions.length})
+                </button>
+
+                <button
+                  id="btn-coord-receipts-sponsorships"
+                  type="button"
+                  onClick={() => setReceiptsType('sponsorships')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: receiptsType === 'sponsorships' ? '#FFFFFF' : 'transparent',
+                    color: receiptsType === 'sponsorships' ? '#2C82C9' : '#64748B',
+                    fontWeight: 800,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: receiptsType === 'sponsorships' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  Sponsorships ({teamSponsorships.length})
+                </button>
               </div>
-            ) : (
-              recentTransactions.map((tx) => (
-                <div
-                  key={tx.donationId}
-                  onClick={() => onViewReceipt(tx)}
+
+              {receiptsType === 'sponsorships' && (
+                <button
+                  type="button"
+                  id="btn-export-coord-sponsorships-receipts-csv"
+                  onClick={() => exportSponsorshipsToCSV(teamSponsorships, `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_sponsorships_report`)}
+                  className="btn-secondary"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#F4F9FD',
-                    border: '1px solid #E2E8F0',
-                    cursor: 'pointer'
+                    gap: 6,
+                    padding: '6px 12px',
+                    fontSize: '0.78rem'
                   }}
+                  title="Export team sponsorships to CSV"
                 >
-                  <div>
-                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                      {tx.donorName}
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                      Collector: {tx.collectedByName || 'Volunteer'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
-                    </div>
-                  </div>
-
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
-                      ₹{tx.totalAmount.toLocaleString('en-IN')}
-                    </div>
-                    <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
-                      {tx.kitCount} Kits
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
+                  <Download size={14} color="#008A2E" />
+                  <span>Export CSV</span>
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* KIT DONATION RECEIPTS LIST */}
+          {receiptsType === 'donations' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {recentTransactions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
+                  No kit receipts recorded yet for your team. Click "Record Donation" to log contributions!
+                </div>
+              ) : (
+                recentTransactions.map((tx) => (
+                  <div
+                    key={tx.donationId}
+                    onClick={() => onViewReceipt(tx)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#F4F9FD',
+                      border: '1px solid #E2E8F0',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
+                        {tx.donorName}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                        Collector: {tx.collectedByName || 'Volunteer'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                        ₹{tx.totalAmount.toLocaleString('en-IN')}
+                      </div>
+                      <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
+                        {tx.kitCount} Kits
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* SPONSORSHIP RECEIPTS LIST */}
+          {receiptsType === 'sponsorships' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {teamSponsorships.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748B', fontSize: '0.86rem' }}>
+                  No sponsorship receipts recorded yet. Click "Sponsorship" to book and record corporate contributions!
+                </div>
+              ) : (
+                teamSponsorships.map((sp) => (
+                  <div
+                    key={sp.sponsorshipId || sp.receiptToken}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 16px',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      flexWrap: 'wrap',
+                      gap: 12
+                    }}
+                  >
+                    <div style={{ minWidth: 200, flex: '1 1 200px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                          {sp.donorName}
+                        </span>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          background: sp.paymentStatus === 'Completed' ? '#EBF7EE' : sp.paymentStatus === 'Partial' ? '#FEF3C7' : '#EDF4FA',
+                          color: sp.paymentStatus === 'Completed' ? '#008A2E' : sp.paymentStatus === 'Partial' ? '#B45309' : '#2C82C9'
+                        }}>
+                          {sp.paymentStatus === 'Completed' ? 'Fully Paid' : sp.paymentStatus === 'Partial' ? 'Advance Paid' : 'Booked'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: 3 }}>
+                        {sp.itemName} ({sp.quantity} {sp.quantity === 1 ? 'pkg' : 'pkgs'}) • Token: <span style={{ color: '#2C82C9', fontWeight: 800 }}>{sp.receiptToken}</span>
+                      </div>
+
+                      {sp.contactPerson && (
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: 1 }}>
+                          Contact: {sp.contactPerson} ({sp.mobileNumber})
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                          ₹{sp.amountPaid.toLocaleString('en-IN')}
+                        </div>
+                        {sp.balanceAmount > 0 ? (
+                          <span style={{ fontSize: '0.7rem', color: '#B91C1C', fontWeight: 700, display: 'block' }}>
+                            Bal: ₹{sp.balanceAmount.toLocaleString('en-IN')}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                            Total: ₹{sp.totalAmount.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => onViewSponsorshipReceipt && onViewSponsorshipReceipt(sp)}
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                        >
+                          Receipt
+                        </button>
+
+                        {sp.balanceAmount > 0 && onOpenPayBalance && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenPayBalance(sp)}
+                            className="btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.78rem', background: '#008A2E' }}
+                          >
+                            Pay Bal
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 5: LEADERBOARD */}
       {activeTab === 'leaderboard' && (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: 'var(--radius-xl)',
-          padding: '20px',
-          border: '1px solid var(--border-subtle)',
-          boxShadow: 'var(--shadow-sm)'
-        }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Trophy size={18} color="#008A2E" />
-            <span>Drive Volunteer Rankings</span>
-          </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Sub-Switch: Field Volunteers vs Corporate Sponsorships */}
+          <div style={{
+            display: 'flex',
+            background: '#FFFFFF',
+            padding: 4,
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            gap: 6
+          }}>
+            <button
+              id="coord-switch-volunteers"
+              onClick={() => setLeaderboardMode('individual')}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                padding: '9px clamp(6px, 2vw, 12px)',
+                borderRadius: 'var(--radius-md)',
+                border: leaderboardMode === 'individual' ? '1px solid #A5D6B8' : 'none',
+                background: leaderboardMode === 'individual' ? '#EBF7EE' : 'transparent',
+                color: leaderboardMode === 'individual' ? '#008A2E' : '#64748B',
+                fontWeight: 800,
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Award size={15} style={{ flexShrink: 0 }} />
+              <span>Volunteer Rankings</span>
+            </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {volunteersBoard.map((vol, i) => (
-              <div
-                key={vol.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F8FAFC',
-                  border: '1px solid var(--border-subtle)'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 22, fontWeight: 800, fontSize: '0.85rem', color: '#64748B' }}>
-                    #{i + 1}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0F172A' }}>{vol.name}</div>
-                    <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Ward {vol.wardNumber} • {vol.role}</div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.9rem' }}>
-                    {vol.kitsCollected} Kits
-                  </span>
-                  <div style={{ fontSize: '0.72rem', color: '#2C82C9', fontWeight: 700 }}>
-                    ₹{vol.totalAmount.toLocaleString('en-IN')}
-                  </div>
-                </div>
-              </div>
-            ))}
+            <button
+              id="coord-switch-sponsorships"
+              onClick={() => setLeaderboardMode('sponsorship')}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                padding: '9px clamp(6px, 2vw, 12px)',
+                borderRadius: 'var(--radius-md)',
+                border: leaderboardMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
+                background: leaderboardMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
+                color: leaderboardMode === 'sponsorship' ? '#2C82C9' : '#64748B',
+                fontWeight: 800,
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Building2 size={15} style={{ flexShrink: 0 }} />
+              <span>Sponsorships</span>
+            </button>
           </div>
+
+          {leaderboardMode === 'sponsorship' ? (
+            <SponsorshipLeaderboardView user={user} onOpenSponsorshipModal={() => setActiveTab('record')} />
+          ) : (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-xl)',
+              padding: '20px',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Trophy size={18} color="#008A2E" />
+                <span>Drive Volunteer Rankings</span>
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {volunteersBoard.map((vol, i) => (
+                  <div
+                    key={vol.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#F8FAFC',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ width: 22, fontWeight: 800, fontSize: '0.85rem', color: '#64748B' }}>
+                        #{i + 1}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0F172A' }}>{vol.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>Ward {vol.wardNumber} • {vol.role}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.9rem' }}>
+                        {vol.kitsCollected} Kits
+                      </span>
+                      <div style={{ fontSize: '0.72rem', color: '#2C82C9', fontWeight: 700 }}>
+                        ₹{vol.totalAmount.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* TAB: SPONSORED ITEMS SUMMARY VIEW */}
+      {activeTab === 'sponsored-items' && (
+        <SponsoredItemsSummaryView
+          title="Team & Ward Sponsored Items"
+          subtitle="Item-by-item breakdown of quantities sponsored and funds collected across your assigned team and ward."
+          sponsorships={teamSponsorships}
+          catalogItems={catalogItems}
+          onViewReceipt={onViewSponsorshipReceipt}
+          onOpenPayBalance={onOpenPayBalance}
+          onOpenSponsorshipModal={() => setActiveTab('record')}
+        />
       )}
 
       {/* RESET VOLUNTEER PASSWORD MODAL */}

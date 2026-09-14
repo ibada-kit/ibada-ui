@@ -1,19 +1,28 @@
 import React, { useState } from 'react';
-import { Package, User, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2 } from 'lucide-react';
 import { donationsApi } from '../services/api';
-import type { Donation } from '../types';
+import type { Donation, SponsorshipRecord } from '../types';
+import { SponsorshipForm } from './SponsorshipForm';
+import { SponsorshipReceiptModal } from './SponsorshipReceiptModal';
 
 interface DonationFormProps {
   kitPrice?: number;
+  initialMode?: 'kit' | 'sponsorship';
   onSuccess?: (donation: Donation) => void;
+  onSponsorshipSuccess?: (sponsorship: SponsorshipRecord) => void;
   onCancel?: () => void;
 }
 
 export const DonationForm: React.FC<DonationFormProps> = ({
   kitPrice = 1000,
+  initialMode = 'kit',
   onSuccess,
+  onSponsorshipSuccess,
   onCancel
 }) => {
+  const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>(initialMode);
+  const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
+
   const [donorName, setDonorName] = useState('');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
   const [kitCount, setKitCount] = useState<number>(1);
@@ -62,16 +71,90 @@ export const DonationForm: React.FC<DonationFormProps> = ({
   };
 
   return (
-    <div style={{
-      background: '#FFFFFF',
-      borderRadius: 'var(--radius-xl)',
-      padding: '24px clamp(14px, 4vw, 22px)',
-      border: '1px solid var(--border-subtle)',
-      boxShadow: 'var(--shadow-sm)',
-      maxWidth: 580,
-      margin: '0 auto',
-      width: '100%'
-    }}>
+    <div style={{ maxWidth: 620, margin: '0 auto', width: '100%' }}>
+      {/* Top Toggle Switcher: Same Form Container, Switch between Kit Donation & Sponsorship */}
+      <div style={{
+        display: 'flex',
+        background: '#FFFFFF',
+        padding: '4px',
+        borderRadius: 'var(--radius-xl)',
+        marginBottom: 16,
+        border: '1px solid var(--border-subtle)',
+        boxShadow: 'var(--shadow-sm)',
+        gap: 6
+      }}>
+        <button
+          id="btn-switch-kit-donation"
+          type="button"
+          onClick={() => setFormMode('kit')}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '10px clamp(8px, 2.5vw, 14px)',
+            borderRadius: 'var(--radius-lg)',
+            border: formMode === 'kit' ? '1px solid #A5D6B8' : 'none',
+            background: formMode === 'kit' ? '#EBF7EE' : 'transparent',
+            color: formMode === 'kit' ? '#008A2E' : '#64748B',
+            fontWeight: 800,
+            fontSize: 'clamp(0.8rem, 2.8vw, 0.88rem)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Package size={17} style={{ flexShrink: 0 }} />
+          <span>Relief Kit Donation</span>
+        </button>
+
+        <button
+          id="btn-switch-sponsorship"
+          type="button"
+          onClick={() => setFormMode('sponsorship')}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: '10px clamp(8px, 2.5vw, 14px)',
+            borderRadius: 'var(--radius-lg)',
+            border: formMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
+            background: formMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
+            color: formMode === 'sponsorship' ? '#2C82C9' : '#64748B',
+            fontWeight: 800,
+            fontSize: 'clamp(0.8rem, 2.8vw, 0.88rem)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Building2 size={17} style={{ flexShrink: 0 }} />
+          <span>Sponsorship</span>
+        </button>
+      </div>
+
+      {formMode === 'sponsorship' ? (
+        <SponsorshipForm
+          onSuccess={(spon) => {
+            setActiveSponsorshipReceipt(spon);
+            if (onSponsorshipSuccess) onSponsorshipSuccess(spon);
+          }}
+          onCancel={onCancel}
+        />
+      ) : (
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 'var(--radius-xl)',
+          padding: '24px clamp(14px, 4vw, 22px)',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)',
+          width: '100%'
+        }}>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -340,6 +423,17 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           </button>
         </div>
       </form>
+        </div>
+      )}
+
+      {/* Corporate Sponsorship Receipt Modal */}
+      {activeSponsorshipReceipt && (
+        <SponsorshipReceiptModal
+          sponsorship={activeSponsorshipReceipt}
+          onClose={() => setActiveSponsorshipReceipt(null)}
+        />
+      )}
     </div>
   );
 };
+

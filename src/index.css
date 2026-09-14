@@ -376,42 +376,123 @@ body {
   }
 }
 
-/* Responsive Horizontal Tab Strip - No horizontal squeeze on mobile */
-.tab-strip {
-  display: flex;
-  gap: 6px;
-  background: var(--secondary-light);
-  padding: 5px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
+/* Single-line Horizontal Tab Strip - Strictly one line, no line breaks */
+/* Scrollable Tab Wrapper with Navigation Chevrons */
+.scrollable-tab-wrapper {
+  position: relative;
   width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
 }
 
-.tab-strip::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
-}
-
-.tab-strip-btn {
-  flex: 1 0 auto;
-  white-space: nowrap;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  font-weight: 700;
-  font-size: 0.82rem;
+.tab-scroll-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #0F172A;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.tab-scroll-arrow:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.tab-scroll-arrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.tab-scroll-arrow-left {
+  left: -6px;
+}
+
+.tab-scroll-arrow-right {
+  right: -6px;
+  animation: tab-pulse 2s infinite ease-in-out;
+}
+
+@keyframes tab-pulse {
+  0%, 100% { box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15); }
+  50% { box-shadow: 0 4px 12px rgba(0, 138, 46, 0.35); }
+}
+
+/* Single-line Horizontal Tab Strip with visible sleek micro-scrollbar */
+.tab-strip {
+  display: flex;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 4px;
+  background: var(--secondary-light);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  width: 100%;
+  scroll-behavior: smooth;
+  scroll-padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+  overscroll-behavior-x: contain;
+}
+
+.tab-strip::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-strip::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+.tab-strip::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.tab-strip-btn {
+  flex: 0 0 auto;
+  min-width: 0;
+  white-space: nowrap;
+  padding: 6px 11px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   border: none;
   cursor: pointer;
   background: transparent;
   color: var(--text-secondary);
   transition: all var(--transition-fast);
-  min-height: 40px;
+  min-height: 36px;
   touch-action: manipulation;
+  text-align: center;
+}
+
+.tab-strip-btn svg {
+  flex-shrink: 0;
 }
 
 .tab-strip-btn.active {
@@ -420,16 +501,66 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 840px) {
   .tab-strip-btn {
-    flex: 1 1 0px;
-    font-size: 0.86rem;
+    flex: 1 1 auto;
+    font-size: 0.80rem;
+    padding: 7px 10px;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 639px) {
+  .tab-strip-btn {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    font-size: 0.78rem;
   }
 }
 
 @media (max-width: 520px) {
   .hidden-mobile {
     display: none !important;
+  }
+}
+
+/* Responsive 3-Way Collections Display (Donations | Sponsorship | Total) */
+.collections-split-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-lg);
+  padding: 8px 14px;
+  flex-wrap: wrap;
+}
+
+.collections-split-bar .split-divider {
+  color: #CBD5E1;
+  font-weight: 300;
+}
+
+@media (max-width: 580px) {
+  .collections-split-bar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+
+  .collections-split-bar .split-divider {
+    display: none !important;
+  }
+
+  .collections-split-bar > div {
+    display: flex;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center;
+    gap: 2px !important;
   }
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, ManagedUser, LeaderboardEntry, WardLeaderboardEntry } from '../types';
-import { adminApi, donationsApi, analyticsApi, generateRandomPassword, type UserProgress } from '../services/api';
+import { adminApi, donationsApi, analyticsApi, sponsorshipsApi, generateRandomPassword, type UserProgress } from '../services/api';
 import { 
   ShieldCheck, 
   Users, 
@@ -17,9 +17,13 @@ import {
   Copy,
   Check,
   AlertTriangle,
-  X
+  X,
+  Building2
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
+import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
+import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
+import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface AdminDashboardProps {
   currentUser: User;
@@ -32,7 +36,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   kitPrice,
   onUpdateKitPrice
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'targets' | 'reports' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'targets' | 'reports' | 'sponsorships' | 'settings'>('users');
   
   const [coordinators, setCoordinators] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -261,6 +265,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     document.body.removeChild(link);
   };
 
+  // Export Detailed Sponsorships Report
+  const handleDownloadSponsorshipsReport = async () => {
+    try {
+      setLoading(true);
+      const allSpons = await sponsorshipsApi.getSponsorships();
+      exportSponsorshipsToCSV(allSpons, 'madavoor_campaign_sponsorships_detailed_report');
+    } catch {
+      alert('Failed to retrieve full campaign sponsorships list.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{
       maxWidth: 1040,
@@ -374,11 +391,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="tab-strip" style={{ marginBottom: 20 }}>
+      {/* Tabs - Smooth horizontally scrollable with auto-centering and navigation chevrons */}
+      <ScrollableTabStrip activeKey={activeTab}>
         <button
           onClick={() => setActiveTab('users')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'users' ? 'active' : ''}`}
           style={{
             background: activeTab === 'users' ? '#008A2E' : 'transparent',
             color: activeTab === 'users' ? '#FFFFFF' : '#334155',
@@ -394,7 +411,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('targets')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'targets' ? 'active' : ''}`}
           style={{
             background: activeTab === 'targets' ? '#008A2E' : 'transparent',
             color: activeTab === 'targets' ? '#FFFFFF' : '#334155',
@@ -410,7 +427,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('reports')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'reports' ? 'active' : ''}`}
           style={{
             background: activeTab === 'reports' ? '#008A2E' : 'transparent',
             color: activeTab === 'reports' ? '#FFFFFF' : '#334155',
@@ -425,8 +442,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </button>
 
         <button
+          id="admin-tab-sponsorships"
+          onClick={() => setActiveTab('sponsorships')}
+          className={`tab-strip-btn ${activeTab === 'sponsorships' ? 'active' : ''}`}
+          style={{
+            background: activeTab === 'sponsorships' ? '#2C82C9' : 'transparent',
+            color: activeTab === 'sponsorships' ? '#FFFFFF' : '#334155',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6
+          }}
+        >
+          <Building2 size={16} />
+          <span>Sponsorships</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('settings')}
-          className="tab-strip-btn"
+          className={`tab-strip-btn ${activeTab === 'settings' ? 'active' : ''}`}
           style={{
             background: activeTab === 'settings' ? '#008A2E' : 'transparent',
             color: activeTab === 'settings' ? '#FFFFFF' : '#334155',
@@ -439,7 +473,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <Settings size={16} />
           <span>Settings</span>
         </button>
-      </div>
+      </ScrollableTabStrip>
 
       {/* MODAL: ADD COORDINATOR */}
       {showAddModal && (
@@ -1112,14 +1146,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </p>
             </div>
 
-            <button
-              onClick={handleDownloadReport}
-              className="btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#008A2E' }}
-            >
-              <Download size={16} />
-              <span>Export CSV Report</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={handleDownloadReport}
+                className="btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                title="Export kit donations report"
+              >
+                <Download size={16} />
+                <span>Kit Donations CSV</span>
+              </button>
+
+              <button
+                onClick={handleDownloadSponsorshipsReport}
+                className="btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#2C82C9' }}
+                title="Export detailed sponsorships report across all wards"
+              >
+                <Download size={16} />
+                <span>Sponsorships Detailed CSV</span>
+              </button>
+            </div>
           </div>
 
           {/* Top Wards Table */}
@@ -1223,6 +1270,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </span>
           </form>
         </div>
+      )}
+
+      {/* TAB: SPONSORSHIPS */}
+      {activeTab === 'sponsorships' && (
+        <SponsorshipLeaderboardView user={currentUser} />
       )}
 
       {/* RESET PASSWORD MODAL FOR COORDINATORS & WARD COMMITTEES */}

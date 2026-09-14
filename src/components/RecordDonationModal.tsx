@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
-import type { Donation } from '../types';
+import type { Donation, SponsorshipRecord } from '../types';
 import { donationsApi, KIT_UNIT_RATE } from '../services/api';
 import confetti from 'canvas-confetti';
-import { X, Heart, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Heart, RefreshCw, AlertCircle, Sparkles, Building2 } from 'lucide-react';
+import { SponsorshipForm } from './SponsorshipForm';
 
 interface RecordDonationModalProps {
   onClose: () => void;
   onDonationRecorded: (donation: Donation) => void;
+  onSponsorshipRecorded?: (sponsorship: SponsorshipRecord) => void;
 }
 
 export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
   onClose,
-  onDonationRecorded
+  onDonationRecorded,
+  onSponsorshipRecorded
 }) => {
+  const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>('kit');
   const [donorName, setDonorName] = useState('');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
   const [kitCount, setKitCount] = useState<number>(2);
@@ -70,10 +74,10 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600, padding: 0 }}>
         {/* Header */}
         <div style={{
-          padding: '20px 24px',
+          padding: '18px 24px',
           borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
@@ -84,19 +88,21 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
               width: 36,
               height: 36,
               borderRadius: 10,
-              background: '#EBF7F0',
-              border: '1px solid #A5D6B8',
+              background: formMode === 'kit' ? '#EBF7F0' : '#EDF4FA',
+              border: formMode === 'kit' ? '1px solid #A5D6B8' : '1px solid #B8D4EE',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#42B06F'
+              color: formMode === 'kit' ? '#42B06F' : '#2C82C9'
             }}>
-              <Heart size={20} />
+              {formMode === 'kit' ? <Heart size={20} /> : <Building2 size={20} />}
             </div>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>Record Kit Donation</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                ₹500 per relief food & essential kit
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                {formMode === 'kit' ? 'Record Kit Donation' : 'Record Sponsorship'}
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+                {formMode === 'kit' ? '₹1,000 per relief food & essential kit' : 'Special sponsorship packages & flexible terms'}
               </p>
             </div>
           </div>
@@ -105,8 +111,89 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
+        {/* Top Button Switcher: Kit Donation vs Sponsorship */}
+        <div style={{ padding: '14px 20px 0 20px' }}>
+          <div style={{
+            display: 'flex',
+            background: '#F1F5F9',
+            padding: 4,
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            gap: 6
+          }}>
+            <button
+              id="modal-btn-switch-kit"
+              type="button"
+              onClick={() => setFormMode('kit')}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                padding: '9px clamp(6px, 2vw, 12px)',
+                borderRadius: 'var(--radius-md)',
+                border: formMode === 'kit' ? '1px solid #A5D6B8' : 'none',
+                background: formMode === 'kit' ? '#EBF7EE' : 'transparent',
+                color: formMode === 'kit' ? '#008A2E' : '#64748B',
+                fontWeight: 800,
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Heart size={15} style={{ flexShrink: 0 }} />
+              <span>Kit Donation</span>
+            </button>
+
+            <button
+              id="modal-btn-switch-sponsorship"
+              type="button"
+              onClick={() => setFormMode('sponsorship')}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                padding: '9px clamp(6px, 2vw, 12px)',
+                borderRadius: 'var(--radius-md)',
+                border: formMode === 'sponsorship' ? '1px solid #B8D4EE' : 'none',
+                background: formMode === 'sponsorship' ? '#EDF4FA' : 'transparent',
+                color: formMode === 'sponsorship' ? '#2C82C9' : '#64748B',
+                fontWeight: 800,
+                fontSize: 'clamp(0.78rem, 2.5vw, 0.84rem)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Building2 size={15} style={{ flexShrink: 0 }} />
+              <span>Sponsorship</span>
+            </button>
+          </div>
+        </div>
+
+        {formMode === 'sponsorship' ? (
+          <div style={{ padding: '16px 20px 20px 20px' }}>
+            <SponsorshipForm
+              hideHeader={true}
+              onSuccess={(spon) => {
+                if (onSponsorshipRecorded) {
+                  onSponsorshipRecorded(spon);
+                }
+                onClose();
+              }}
+              onCancel={onClose}
+            />
+          </div>
+        ) : (
+          /* Form Body */
+          <form onSubmit={handleSubmit} style={{ padding: '20px 24px 24px 24px' }}>
+
           {error && (
             <div style={{
               display: 'flex',
@@ -272,7 +359,9 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
 };
+
