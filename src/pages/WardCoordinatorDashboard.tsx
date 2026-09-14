@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, sponsorshipsApi, authApi, API_BASE_URL, generateRandomPassword } from '../services/api';
+import { donationsApi, sponsorshipsApi, authApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice } from '../services/api';
 import { 
   MapPin, 
   Users, 
@@ -34,6 +34,7 @@ import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface WardCoordinatorDashboardProps {
   user: User;
+  kitPrice?: number;
   onViewReceipt: (donation: Donation) => void;
   onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
@@ -41,6 +42,7 @@ interface WardCoordinatorDashboardProps {
 
 export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> = ({
   user,
+  kitPrice = getKitUnitPrice(),
   onViewReceipt,
   onViewSponsorshipReceipt,
   onOpenPayBalance
@@ -193,6 +195,34 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       })
       .catch(() => {});
   }, [user.token, user.wardNumber]);
+
+  // Helper to re-fetch live sponsorships for automatic tab refresh
+  const refreshWardSponsorships = () => {
+    sponsorshipsApi.getSponsorships()
+      .then(spons => {
+        const filtered = user.wardNumber ? spons.filter(s => Number(s.wardNumber) === Number(user.wardNumber)) : spons;
+        setWardSponsorships(filtered);
+      })
+      .catch(() => {});
+  };
+
+  // Automatically refresh live receipts when switching to the receipts tab
+  useEffect(() => {
+    if (activeTab === 'transactions') {
+      refreshWardSponsorships();
+      donationsApi.getRecentDonations(user.role)
+        .then(donations => {
+          const wardTx = user.wardNumber ? donations.filter(d => Number(d.wardNumber) === Number(user.wardNumber)) : donations;
+          setWardDonations(wardTx.length > 0 ? wardTx : donations);
+        })
+        .catch(() => {});
+    }
+  }, [activeTab, user.role, user.wardNumber]);
+
+  const handleSponsorshipRecorded = (spon: SponsorshipRecord) => {
+    setWardSponsorships(prev => [spon, ...prev.filter(s => s.sponsorshipId !== spon.sponsorshipId)]);
+    refreshWardSponsorships();
+  };
 
   const handleCreateWardVolunteer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -490,7 +520,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
             color: activeTab === 'transactions' ? '#FFFFFF' : '#334155'
           }}
         >
-          <span>Receipts</span>
+          <span>Receipts ({wardDonations.length + wardSponsorships.length})</span>
         </button>
 
         <button
@@ -928,7 +958,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       {/* TAB 3: RECORD DONATION */}
       {activeTab === 'record' && (
         <DonationForm
-          kitPrice={1000}
+          kitPrice={kitPrice}
           onSuccess={(donation) => {
             setWardDonations(prev => [donation, ...prev]);
             setWardStats(prev => ({
@@ -937,6 +967,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
               collectedAmount: prev.collectedAmount + donation.totalAmount
             }));
           }}
+          onSponsorshipSuccess={handleSponsorshipRecorded}
         />
       )}
 
@@ -980,7 +1011,10 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                 <button
                   id="btn-receipts-sponsorships"
                   type="button"
-                  onClick={() => setReceiptsType('sponsorships')}
+                  onClick={() => {
+                    setReceiptsType('sponsorships');
+                    refreshWardSponsorships();
+                  }}
                   style={{
                     padding: '6px 12px',
                     borderRadius: 'var(--radius-sm)',
@@ -1047,7 +1081,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                         {tx.donorName}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                        Collector: {tx.collectedByName || 'Ward Member'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                        Collector: {tx.collectedByName || 'Ward Member'} • Receipt No: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
                       </div>
                     </div>
 
@@ -1107,7 +1141,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                       </div>
 
                       <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: 3 }}>
-                        {sp.itemName} ({sp.quantity} {sp.quantity === 1 ? 'pkg' : 'pkgs'}) • Token: <span style={{ color: '#2C82C9', fontWeight: 800 }}>{sp.receiptToken}</span>
+                        {sp.itemName} ({sp.quantity} {sp.quantity === 1 ? 'pkg' : 'pkgs'}) • Receipt No: <span style={{ color: '#2C82C9', fontWeight: 800 }}>{sp.receiptToken}</span>
                       </div>
 
                       {sp.contactPerson && (
@@ -1422,7 +1456,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                   Ward Relief Target
                 </span>
                 <div style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.98rem', marginTop: 2 }}>
-                  {wardStats.targetKits || 50} Kits (₹{((wardStats.targetKits || 50) * 1000).toLocaleString('en-IN')})
+                  {wardStats.targetKits || 50} Kits (₹{((wardStats.targetKits || 50) * kitPrice).toLocaleString('en-IN')})
                 </div>
               </div>
             </div>

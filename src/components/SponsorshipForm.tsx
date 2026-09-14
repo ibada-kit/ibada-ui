@@ -126,7 +126,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
         return;
       }
       if (initialAmountPaid >= totalAmount) {
-        setError(`Advance amount (₹${initialAmountPaid.toLocaleString('en-IN')}) cannot be equal to or greater than total (₹${totalAmount.toLocaleString('en-IN')}). Choose "PayFull" for full payment.`);
+        setError(`Advance amount (₹${initialAmountPaid.toLocaleString('en-IN')}) cannot be equal to or greater than total (₹${totalAmount.toLocaleString('en-IN')}). Choose "Pay Full" for full payment.`);
         return;
       }
     } else if (paymentOption === 'Book') {
@@ -267,7 +267,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
           <div>
             <span style={{ fontWeight: 800 }}>Sponsorship Registered!</span>
             <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
-              Receipt Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedRecord.receiptToken}</span>
+              Receipt No: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedRecord.receiptToken}</span>
               {' '}• Registered for {recordedRecord.donorName}.
             </div>
           </div>
@@ -411,7 +411,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               }}
             >
               {packages.length === 0 ? (
-                <option value="">Loading live packages...</option>
+                <option value="">Loading packages...</option>
               ) : (
                 packages.map((pkg) => (
                   <option key={pkg.itemId} value={pkg.itemId}>
@@ -427,7 +427,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             )}
           </div>
 
-          {/* Step 2: Sponsor Item Quantity (Spin Edit Stepper with direct integer entry, whole numbers only) */}
+          {/* Step 2: Quantity */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <label style={{
@@ -437,11 +437,8 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 letterSpacing: '0.05em',
                 color: '#334155'
               }}>
-                Item Quantity (Spin Edit / Direct Number) *
+                Quantity *
               </label>
-              <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
-                Whole integers only (no decimals)
-              </span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
@@ -475,7 +472,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
           </div>
         </div>
 
-        {/* Payment Terms Option (Highlighted as Different) */}
+        {/* Payment Terms Option */}
         <div style={{ marginBottom: 16 }}>
           <label style={{
             display: 'block',
@@ -486,11 +483,11 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             color: '#334155',
             marginBottom: 8
           }}>
-            Payment Terms Option (Highlighted Terms) *
+            Payment Option *
           </label>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {/* 1. PayFull (Highlighted Emerald Green) */}
+            {/* 1. PayFull */}
             <button
               type="button"
               onClick={() => handlePaymentOptionChange('PayFull')}
@@ -511,7 +508,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800, fontSize: '0.84rem' }}>
                 {paymentOption === 'PayFull' && <Check size={14} strokeWidth={3} />}
-                <span>PayFull</span>
+                <span>Pay Full</span>
               </div>
               <span style={{
                 fontSize: '0.66rem',
@@ -525,7 +522,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               </span>
             </button>
 
-            {/* 2. Advance (Highlighted Warm Amber) */}
+            {/* 2. Advance */}
             <button
               type="button"
               onClick={() => handlePaymentOptionChange('Advance')}
@@ -556,11 +553,11 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 padding: '2px 6px',
                 borderRadius: 'var(--radius-full)'
               }}>
-                Partial
+                Partial Payment
               </span>
             </button>
 
-            {/* 3. Book (Highlighted Sky Blue) */}
+            {/* 3. Book */}
             <button
               type="button"
               onClick={() => handlePaymentOptionChange('Book')}
@@ -591,7 +588,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 padding: '2px 6px',
                 borderRadius: 'var(--radius-full)'
               }}>
-                Token / ₹0
+                Pay Later
               </span>
             </button>
           </div>
@@ -620,7 +617,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 color: '#334155',
                 marginBottom: 6
               }}>
-                {paymentOption === 'Advance' ? 'Advance Paid Now (₹) *' : 'Initial Token Paid (₹)'}
+                {paymentOption === 'Advance' ? 'Advance Paid Now (₹) *' : 'Initial Paid Amount (₹)'}
               </label>
               <input
                 type="text"

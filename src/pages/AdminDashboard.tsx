@@ -73,6 +73,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Global Settings state
   const [tempKitPrice, setTempKitPrice] = useState<number>(kitPrice);
 
+  useEffect(() => {
+    setTempKitPrice(kitPrice);
+  }, [kitPrice]);
+
   // Leaderboards & Reports state
   const [volunteers, setVolunteers] = useState<LeaderboardEntry[]>([]);
   const [wards, setWards] = useState<WardLeaderboardEntry[]>([]);
