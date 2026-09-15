@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, SponsorshipRecord } from './types';
-import { getCurrentUser, setCurrentUser } from './services/api';
+import { getCurrentUser, setCurrentUser, getKitUnitPrice, setKitUnitPrice } from './services/api';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './pages/AuthScreen';
 import { VolunteerDashboard } from './pages/VolunteerDashboard';
@@ -23,8 +23,14 @@ export const App: React.FC = () => {
   const [activeReceipt, setActiveReceipt] = useState<Donation | null>(null);
   const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
   const [activePayBalanceSponsorship, setActivePayBalanceSponsorship] = useState<SponsorshipRecord | null>(null);
-  const [globalKitPrice, setGlobalKitPrice] = useState<number>(1000);
+  const [globalKitPrice, setGlobalKitPrice] = useState<number>(() => getKitUnitPrice());
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleUpdateKitPrice = (newPrice: number) => {
+    setGlobalKitPrice(newPrice);
+    setKitUnitPrice(newPrice);
+    setRefreshKey((prev) => prev + 1);
+  };
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -72,6 +78,7 @@ export const App: React.FC = () => {
               <VolunteerDashboard
                 key={refreshKey}
                 user={currentUser}
+                kitPrice={globalKitPrice}
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
@@ -82,6 +89,7 @@ export const App: React.FC = () => {
               <CoordinatorDashboard
                 key={refreshKey}
                 user={currentUser}
+                kitPrice={globalKitPrice}
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
@@ -92,6 +100,7 @@ export const App: React.FC = () => {
               <WardCoordinatorDashboard
                 key={refreshKey}
                 user={currentUser}
+                kitPrice={globalKitPrice}
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
@@ -103,7 +112,7 @@ export const App: React.FC = () => {
                 <AdminDashboard
                   currentUser={currentUser}
                   kitPrice={globalKitPrice}
-                  onUpdateKitPrice={(newPrice) => setGlobalKitPrice(newPrice)}
+                  onUpdateKitPrice={handleUpdateKitPrice}
                 />
               ) : (
                 <HomeScreen
@@ -118,6 +127,7 @@ export const App: React.FC = () => {
           {/* Record Donation Quick Modal (Global) */}
           {isRecordModalOpen && (
             <RecordDonationModal
+              kitPrice={globalKitPrice}
               onClose={() => setIsRecordModalOpen(false)}
               onDonationRecorded={handleDonationRecorded}
               onSponsorshipRecorded={(spon) => {

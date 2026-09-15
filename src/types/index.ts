@@ -56,6 +56,7 @@ export interface CreateDonationRequest {
   donorName: string;
   whatsAppNumber: string;
   kitCount: number;
+  totalAmount?: number;
 }
 
 export interface WeeklyMetrics {

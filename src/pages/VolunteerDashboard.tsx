@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, sponsorshipsApi, API_BASE_URL } from '../services/api';
+import { donationsApi, sponsorshipsApi, API_BASE_URL, getKitUnitPrice } from '../services/api';
 import { 
   Award, 
   TrendingUp, 
@@ -19,6 +19,7 @@ import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 
 interface VolunteerDashboardProps {
   user: User;
+  kitPrice?: number;
   onViewReceipt: (donation: Donation) => void;
   onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
@@ -26,6 +27,7 @@ interface VolunteerDashboardProps {
 
 export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   user,
+  kitPrice = getKitUnitPrice(),
   onViewReceipt,
   onViewSponsorshipReceipt,
   onOpenPayBalance
@@ -71,11 +73,12 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           d.collectedByName?.toLowerCase() === user.fullName.toLowerCase()
         );
         const totalMyKits = myDonations.reduce((acc, curr) => acc + (curr.kitCount || 0), 0);
+        const myAmount = myDonations.reduce((acc, curr) => acc + (curr.totalAmount || ((curr.kitCount || 0) * kitPrice)), 0);
         if (totalMyKits > 0) {
           setProgress(prev => ({
             ...prev,
             collectedKits: totalMyKits,
-            collectedAmount: totalMyKits * 1000,
+            collectedAmount: myAmount,
             achievementPercentage: prev.targetKits > 0 ? Math.min(100, Math.round((totalMyKits / prev.targetKits) * 100)) : 0
           }));
         }
@@ -114,6 +117,27 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
       .catch(() => {});
   }, [user.userId, user.token, user.fullName, user.wardNumber]);
 
+  // Helper to re-fetch live sponsorships for automatic tab refresh
+  const refreshVolunteerSponsorships = () => {
+    sponsorshipsApi.getSponsorships()
+      .then(spons => {
+        const wardSpons = spons.filter(s =>
+          s.collectedByUserId === user.userId ||
+          s.parentUserId === user.userId ||
+          (user.wardNumber && Number(s.wardNumber) === Number(user.wardNumber))
+        );
+        setSponsorshipHistory(wardSpons);
+      })
+      .catch(() => {});
+  };
+
+  // Re-fetch sponsorships automatically when switching to history tab
+  useEffect(() => {
+    if (activeTab === 'history') {
+      refreshVolunteerSponsorships();
+    }
+  }, [activeTab]);
+
   const handleDonationRecorded = (donation: Donation) => {
     setHistory(prev => [donation, ...prev]);
     setProgress(prev => {
@@ -126,6 +150,11 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
         achievementPercentage: Math.min(100, Math.round((newKits / (prev.targetKits || 1)) * 100))
       };
     });
+  };
+
+  const handleSponsorshipRecorded = (sponsorship: SponsorshipRecord) => {
+    setSponsorshipHistory(prev => [sponsorship, ...prev.filter(s => s.sponsorshipId !== sponsorship.sponsorshipId)]);
+    refreshVolunteerSponsorships();
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -291,7 +320,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           className={`tab-strip-btn ${activeTab === 'history' ? 'active' : ''}`}
         >
           <History size={14} />
-          <span>Receipts ({history.length})</span>
+          <span>Receipts ({history.length + sponsorshipHistory.length})</span>
         </button>
 
         <button
@@ -328,8 +357,9 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
       {/* TAB 1: RECORD DONATION */}
       {activeTab === 'record' && (
         <DonationForm
-          kitPrice={1000}
+          kitPrice={kitPrice}
           onSuccess={handleDonationRecorded}
+          onSponsorshipSuccess={handleSponsorshipRecorded}
         />
       )}
 
@@ -370,7 +400,10 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
 
               <button
                 type="button"
-                onClick={() => setReceiptsType('sponsorships')}
+                onClick={() => {
+                  setReceiptsType('sponsorships');
+                  refreshVolunteerSponsorships();
+                }}
                 style={{
                   padding: '6px 12px',
                   borderRadius: 'var(--radius-sm)',
@@ -417,7 +450,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
                         {item.donorName}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: 2 }}>
-                        Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{item.receiptToken}</span>
+                        Receipt No: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{item.receiptToken}</span>
                         {' '}• {item.whatsAppNumber}
                       </div>
                     </div>
@@ -478,7 +511,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
                       </div>
 
                       <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: 3 }}>
-                        {sp.itemName} ({sp.quantity} {sp.quantity === 1 ? 'pkg' : 'pkgs'}) • Token: <span style={{ color: '#2C82C9', fontWeight: 800 }}>{sp.receiptToken}</span>
+                        {sp.itemName} ({sp.quantity} {sp.quantity === 1 ? 'pkg' : 'pkgs'}) • Receipt No: <span style={{ color: '#2C82C9', fontWeight: 800 }}>{sp.receiptToken}</span>
                       </div>
                     </div>
 

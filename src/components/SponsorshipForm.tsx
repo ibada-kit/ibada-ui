@@ -1,8 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, User, CheckCircle, AlertCircle, RefreshCw, IndianRupee, Clock, Check } from 'lucide-react';
+import { Building2, User, CheckCircle, AlertCircle, RefreshCw, IndianRupee, Clock, Check, Plus, Minus, Layers } from 'lucide-react';
 import { sponsorshipsApi } from '../services/api';
 import type { SponsorshipItem, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
-import { SpinEditNumberInput } from './SpinEditNumberInput';
+
+const DEFAULT_CATALOG_ITEMS: SponsorshipItem[] = [
+  {
+    itemId: 'ITEM-001',
+    name: 'Family Food Relief Kit Pack',
+    itemPrice: 5000,
+    description: 'Provides essential food supplies and ration for a needy family for one month.',
+    isActive: true,
+    displayOrder: 1
+  },
+  {
+    itemId: 'ITEM-002',
+    name: 'Student Education & School Kit Pack',
+    itemPrice: 2500,
+    description: 'Includes school bag, books, uniform materials, and stationery for underprivileged students.',
+    isActive: true,
+    displayOrder: 2
+  },
+  {
+    itemId: 'ITEM-003',
+    name: 'Emergency Medical Care Support Pack',
+    itemPrice: 10000,
+    description: 'Supports life-saving medicines and treatment costs for chronically ill community members.',
+    isActive: true,
+    displayOrder: 3
+  },
+  {
+    itemId: 'ITEM-004',
+    name: 'Complete Ramadan / Eid Family Hamper',
+    itemPrice: 7500,
+    description: 'Full celebratory festive food, clothing assistance, and gift hamper for a vulnerable family.',
+    isActive: true,
+    displayOrder: 4
+  }
+];
 
 interface SponsorshipFormProps {
   onSuccess?: (sponsorship: SponsorshipRecord) => void;
@@ -15,15 +49,15 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   onCancel,
   hideHeader = false
 }) => {
-  // Catalog Packages (Loaded live from server)
+  // Catalog Packages (Loaded live from server with local defaults fallback)
   const [packages, setPackages] = useState<SponsorshipItem[]>([]);
-  const [selectedItemId, setSelectedItemId] = useState<string>('');
+  // Item Quantities Map: itemId -> quantity
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
 
   // Form Fields
   const [donorName, setDonorName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [quantity, setQuantity] = useState<number>(1);
   const [paymentOption, setPaymentOption] = useState<PaymentOption>('PayFull');
   const [initialAmountPaid, setInitialAmountPaid] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
@@ -33,50 +67,66 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   // Submission State
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recordedRecord, setRecordedRecord] = useState<SponsorshipRecord | null>(null);
+  const [recordedRecords, setRecordedRecords] = useState<SponsorshipRecord[]>([]);
 
   // Load active catalog items from API
   useEffect(() => {
     let isMounted = true;
     sponsorshipsApi.getItems()
       .then((items) => {
-        if (isMounted && items && items.length > 0) {
-          setPackages(items);
-          setSelectedItemId((prev) => items.find(i => i.itemId === prev) ? prev : items[0].itemId);
-          setInitialAmountPaid((prev) => prev > 0 ? prev : items[0].itemPrice);
+        if (isMounted) {
+          const activeItems = (items && items.length > 0) ? items : DEFAULT_CATALOG_ITEMS;
+          setPackages(activeItems);
+          setItemQuantities((prev) => {
+            if (Object.keys(prev).length > 0) return prev;
+            return { [activeItems[0].itemId]: 1 };
+          });
+          setInitialAmountPaid((prev) => prev > 0 ? prev : activeItems[0].itemPrice);
         }
       })
-      .catch((err) => console.warn('Could not load packages from server:', err));
+      .catch((err) => {
+        console.warn('Could not load packages from server, using default catalog:', err);
+        if (isMounted) {
+          setPackages(DEFAULT_CATALOG_ITEMS);
+          setItemQuantities((prev) => {
+            if (Object.keys(prev).length > 0) return prev;
+            return { [DEFAULT_CATALOG_ITEMS[0].itemId]: 1 };
+          });
+          setInitialAmountPaid((prev) => prev > 0 ? prev : DEFAULT_CATALOG_ITEMS[0].itemPrice);
+        }
+      });
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const selectedPackage = packages.find(p => p.itemId === selectedItemId) || packages[0] || null;
-  const unitPrice = selectedPackage?.itemPrice || 0;
-  const totalAmount = Math.max(0, quantity * unitPrice);
+  const selectedItems = packages.filter((p) => (itemQuantities[p.itemId] || 0) > 0);
+  const totalQuantity = selectedItems.reduce((sum, p) => sum + (itemQuantities[p.itemId] || 0), 0);
+  const totalAmount = selectedItems.reduce((sum, p) => sum + (itemQuantities[p.itemId] || 0) * p.itemPrice, 0);
 
-  const handleSelectPackage = (itemId: string) => {
-    setSelectedItemId(itemId);
-    const pkg = packages.find(p => p.itemId === itemId);
-    const price = pkg?.itemPrice || 5000;
-    const newTotal = quantity * price;
+  const handleSetItemQuantity = (itemId: string, newQty: number) => {
+    const clamped = Math.max(0, Math.min(2000, Math.floor(newQty || 0)));
+    const updated = { ...itemQuantities, [itemId]: clamped };
+    setItemQuantities(updated);
+
+    const newTotal = packages.reduce((sum, p) => sum + (updated[p.itemId] || 0) * p.itemPrice, 0);
     if (paymentOption === 'PayFull') {
       setInitialAmountPaid(newTotal);
-    } else if (paymentOption === 'Advance' && initialAmountPaid > newTotal) {
-      setInitialAmountPaid(Math.round(newTotal * 0.5));
+    } else if (paymentOption === 'Advance') {
+      if (initialAmountPaid > newTotal || initialAmountPaid === 0) {
+        setInitialAmountPaid(Math.round(newTotal * 0.5));
+      }
+    } else if (paymentOption === 'Book') {
+      if (initialAmountPaid > newTotal) {
+        setInitialAmountPaid(newTotal);
+      }
     }
   };
 
-  const handleQuantityChange = (newQty: number) => {
-    setQuantity(newQty);
-    const newTotal = newQty * unitPrice;
-    if (paymentOption === 'PayFull') {
-      setInitialAmountPaid(newTotal);
-    } else if (paymentOption === 'Advance' && initialAmountPaid > newTotal) {
-      setInitialAmountPaid(Math.round(newTotal * 0.5));
-    }
+  const handleToggleItem = (itemId: string) => {
+    const current = itemQuantities[itemId] || 0;
+    handleSetItemQuantity(itemId, current > 0 ? 0 : 1);
   };
 
   // Synchronize initial payment when payment option changes
@@ -96,7 +146,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setRecordedRecord(null);
+    setRecordedRecords([]);
 
     if (!donorName.trim()) {
       setError('Please enter the organization or firm name.');
@@ -109,13 +159,8 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       return;
     }
 
-    if (quantity < 1) {
-      setError('Please select at least 1 sponsorship item.');
-      return;
-    }
-
-    if (!selectedPackage) {
-      setError('Please select a valid sponsorship package item.');
+    if (selectedItems.length === 0 || totalQuantity < 1) {
+      setError('Please select at least one sponsor item and set quantity to 1 or more.');
       return;
     }
 
@@ -126,7 +171,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
         return;
       }
       if (initialAmountPaid >= totalAmount) {
-        setError(`Advance amount (₹${initialAmountPaid.toLocaleString('en-IN')}) cannot be equal to or greater than total (₹${totalAmount.toLocaleString('en-IN')}). Choose "PayFull" for full payment.`);
+        setError(`Advance amount (₹${initialAmountPaid.toLocaleString('en-IN')}) cannot be equal to or greater than total (₹${totalAmount.toLocaleString('en-IN')}). Choose "Pay Full" for full payment.`);
         return;
       }
     } else if (paymentOption === 'Book') {
@@ -138,28 +183,56 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
 
     try {
       setSubmitting(true);
-      const payload = {
-        donorName: donorName.trim(),
-        contactPerson: contactPerson.trim() || undefined,
-        mobileNumber: `+91${cleanPhone.slice(-10)}`,
-        itemId: selectedPackage.itemId,
-        quantity: Math.floor(quantity),
-        paymentOption,
-        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
-        paymentMode,
-        transactionReference: transactionReference.trim() || undefined,
-        notes: notes.trim() || undefined
-      };
+      const createdList: SponsorshipRecord[] = [];
+      let remainingAdvanceToAllocate = paymentOption === 'PayFull' ? totalAmount : initialAmountPaid;
 
-      const result = await sponsorshipsApi.acceptSponsorship(payload);
-      setRecordedRecord(result);
-      if (onSuccess) onSuccess(result);
+      for (let i = 0; i < selectedItems.length; i++) {
+        const item = selectedItems[i];
+        const qty = itemQuantities[item.itemId] || 1;
+        const itemTotal = qty * item.itemPrice;
+
+        let itemPaid = 0;
+        if (paymentOption === 'PayFull') {
+          itemPaid = itemTotal;
+        } else if (paymentOption === 'Book') {
+          itemPaid = 0;
+        } else if (paymentOption === 'Advance') {
+          if (i === selectedItems.length - 1) {
+            itemPaid = remainingAdvanceToAllocate;
+          } else {
+            const ratio = totalAmount > 0 ? itemTotal / totalAmount : 0;
+            itemPaid = Math.min(remainingAdvanceToAllocate, Math.round(initialAmountPaid * ratio));
+            remainingAdvanceToAllocate -= itemPaid;
+          }
+        }
+
+        const payload = {
+          donorName: donorName.trim(),
+          contactPerson: contactPerson.trim() || undefined,
+          mobileNumber: `+91${cleanPhone.slice(-10)}`,
+          itemId: item.itemId,
+          quantity: qty,
+          paymentOption,
+          initialAmountPaid: itemPaid,
+          paymentMode,
+          transactionReference: transactionReference.trim() || undefined,
+          notes: notes.trim() || undefined
+        };
+
+        const result = await sponsorshipsApi.acceptSponsorship(payload);
+        createdList.push(result);
+      }
+
+      setRecordedRecords(createdList);
+      if (onSuccess && createdList.length > 0) {
+        onSuccess(createdList[0]);
+      }
 
       // Reset form
       setDonorName('');
       setContactPerson('');
       setMobileNumber('');
-      setQuantity(1);
+      setItemQuantities(packages.length > 0 ? { [packages[0].itemId]: 1 } : {});
       setPaymentOption('PayFull');
       setTransactionReference('');
       setNotes('');
@@ -250,7 +323,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       )}
 
       {/* Success Notification */}
-      {recordedRecord && (
+      {recordedRecords.length > 0 && (
         <div style={{
           display: 'flex',
           alignItems: 'flex-start',
@@ -265,10 +338,17 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
         }}>
           <CheckCircle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
           <div>
-            <span style={{ fontWeight: 800 }}>Sponsorship Registered!</span>
+            <span style={{ fontWeight: 800 }}>
+              {recordedRecords.length > 1 ? `${recordedRecords.length} Sponsorships Registered!` : 'Sponsorship Registered!'}
+            </span>
             <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
-              Receipt Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedRecord.receiptToken}</span>
-              {' '}• Registered for {recordedRecord.donorName}.
+              Receipt Token{recordedRecords.length > 1 ? 's' : ''}:{' '}
+              {recordedRecords.map((rec, idx) => (
+                <span key={rec.sponsorshipId || idx} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E', marginRight: 6 }}>
+                  {rec.receiptToken}{idx < recordedRecords.length - 1 ? ',' : ''}
+                </span>
+              ))}
+              {' '}• Registered for {recordedRecords[0].donorName}.
             </div>
           </div>
         </div>
@@ -372,7 +452,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
           </div>
         </div>
 
-        {/* Sponsor Item Selection & Quantity (Spin Edit Stepper Control - Clean & Non-complex) */}
+        {/* Sponsor Item Selection List with Quantity Counter & Multi-Select */}
         <div style={{
           background: '#F8FAFC',
           border: '1px solid #E2E8F0',
@@ -380,9 +460,9 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
           padding: '14px 16px',
           marginBottom: 16
         }}>
-          {/* Step 1: Pick Package Item */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Layers size={16} color="#2C82C9" />
               <label style={{
                 fontSize: '0.76rem',
                 fontWeight: 700,
@@ -390,92 +470,284 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 letterSpacing: '0.05em',
                 color: '#334155'
               }}>
-                Select Sponsor Item *
+                Select Sponsor Items *
               </label>
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#008A2E' }}>
-                ₹{unitPrice.toLocaleString('en-IN')} / unit
-              </span>
             </div>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              color: totalQuantity > 0 ? '#008A2E' : '#64748B',
+              background: totalQuantity > 0 ? '#EBF7EE' : '#F1F5F9',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-full)',
+              border: `1px solid ${totalQuantity > 0 ? '#A5D6B8' : '#CBD5E1'}`
+            }}>
+              {selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'} selected ({totalQuantity} {totalQuantity === 1 ? 'unit' : 'units'})
+            </span>
+          </div>
 
-            <select
-              className="input-field"
-              value={selectedItemId}
-              onChange={(e) => handleSelectPackage(e.target.value)}
-              disabled={packages.length === 0}
-              style={{
-                fontSize: '0.92rem',
-                fontWeight: 700,
-                color: '#0F172A',
-                background: '#FFFFFF',
-                cursor: packages.length === 0 ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {packages.length === 0 ? (
-                <option value="">Loading live packages...</option>
-              ) : (
-                packages.map((pkg) => (
-                  <option key={pkg.itemId} value={pkg.itemId}>
-                    {pkg.name} — ₹{pkg.itemPrice.toLocaleString('en-IN')} per package
-                  </option>
-                ))
-              )}
-            </select>
-            {selectedPackage?.description && (
-              <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: 4 }}>
-                {selectedPackage.description}
-              </span>
+          {/* Interactive Item Cards List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {packages.length === 0 ? (
+              <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '0.85rem' }}>
+                Loading catalog items...
+              </div>
+            ) : (
+              packages.map((pkg) => {
+                const qty = itemQuantities[pkg.itemId] || 0;
+                const isSelected = qty > 0;
+                const itemSubtotal = qty * pkg.itemPrice;
+
+                return (
+                  <div
+                    key={pkg.itemId}
+                    style={{
+                      background: isSelected ? '#F0F7FF' : '#FFFFFF',
+                      border: isSelected ? '2px solid #2C82C9' : '1.5px solid #E2E8F0',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '12px 14px',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 2px 8px rgba(44, 130, 201, 0.10)' : 'none'
+                    }}
+                  >
+                    {/* Header Row: Checkbox + Name + Unit Price */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                      <div
+                        onClick={() => handleToggleItem(pkg.itemId)}
+                        style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', flex: 1 }}
+                      >
+                        {/* Custom Checkbox */}
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            border: isSelected ? '2px solid #2C82C9' : '2px solid #CBD5E1',
+                            background: isSelected ? '#2C82C9' : '#FFFFFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginTop: 1,
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {isSelected && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+                        </div>
+
+                        <div>
+                          <span style={{
+                            fontSize: '0.92rem',
+                            fontWeight: 800,
+                            color: isSelected ? '#0F172A' : '#334155',
+                            lineHeight: 1.3,
+                            display: 'block'
+                          }}>
+                            {pkg.name}
+                          </span>
+                          {pkg.description && (
+                            <span style={{
+                              fontSize: '0.74rem',
+                              color: '#64748B',
+                              display: 'block',
+                              marginTop: 3,
+                              lineHeight: 1.3
+                            }}>
+                              {pkg.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Price badge */}
+                      <span style={{
+                        fontSize: '0.78rem',
+                        fontWeight: 800,
+                        color: '#008A2E',
+                        background: '#EBF7EE',
+                        border: '1px solid #A5D6B8',
+                        padding: '3px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        ₹{pkg.itemPrice.toLocaleString('en-IN')} / unit
+                      </span>
+                    </div>
+
+                    {/* Stepper + Subtotal Controls Row */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: 10,
+                      paddingTop: 10,
+                      borderTop: '1px solid #E2E8F0',
+                      flexWrap: 'wrap',
+                      gap: 8
+                    }}>
+                      {/* Quantity Stepper */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+                          Quantity:
+                        </span>
+
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          border: isSelected ? '1.5px solid #2C82C9' : '1px solid #CBD5E1',
+                          borderRadius: 'var(--radius-md)',
+                          background: '#FFFFFF',
+                          overflow: 'hidden'
+                        }}>
+                          {/* Decrement Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleSetItemQuantity(pkg.itemId, qty - 1)}
+                            disabled={qty <= 0}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              border: 'none',
+                              background: qty > 0 ? '#F1F5F9' : '#F8FAFC',
+                              color: qty > 0 ? '#0F172A' : '#CBD5E1',
+                              cursor: qty > 0 ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'background 0.15s'
+                            }}
+                            title="Decrease quantity"
+                          >
+                            <Minus size={14} strokeWidth={2.5} />
+                          </button>
+
+                          {/* Numeric Input */}
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={qty}
+                            onChange={(e) => {
+                              const clean = e.target.value.replace(/\D/g, '');
+                              handleSetItemQuantity(pkg.itemId, clean === '' ? 0 : parseInt(clean, 10));
+                            }}
+                            onKeyDown={(e) => {
+                              if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            style={{
+                              width: 46,
+                              height: 32,
+                              border: 'none',
+                              borderLeft: '1px solid #E2E8F0',
+                              borderRight: '1px solid #E2E8F0',
+                              textAlign: 'center',
+                              fontWeight: 800,
+                              fontSize: '0.9rem',
+                              color: '#0F172A',
+                              padding: 0,
+                              outline: 'none',
+                              background: '#FFFFFF'
+                            }}
+                          />
+
+                          {/* Increment Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleSetItemQuantity(pkg.itemId, qty + 1)}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              border: 'none',
+                              background: '#2C82C9',
+                              color: '#FFFFFF',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'background 0.15s'
+                            }}
+                            title="Increase quantity"
+                          >
+                            <Plus size={14} strokeWidth={2.5} />
+                          </button>
+                        </div>
+
+                        {/* Quick +5 button */}
+                        <button
+                          type="button"
+                          onClick={() => handleSetItemQuantity(pkg.itemId, qty + 5)}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid #CBD5E1',
+                            background: '#F8FAFC',
+                            color: '#475569',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                          title="Add 5 units"
+                        >
+                          +5
+                        </button>
+                      </div>
+
+                      {/* Item Subtotal */}
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 600, display: 'block', textTransform: 'uppercase' }}>
+                          Item Subtotal
+                        </span>
+                        <span style={{
+                          fontSize: '0.94rem',
+                          fontWeight: 900,
+                          color: isSelected ? '#008A2E' : '#94A3B8'
+                        }}>
+                          {isSelected ? `₹${itemSubtotal.toLocaleString('en-IN')}` : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* Step 2: Sponsor Item Quantity (Spin Edit Stepper with direct integer entry, whole numbers only) */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <label style={{
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: '#334155'
-              }}>
-                Item Quantity (Spin Edit / Direct Number) *
-              </label>
-              <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>
-                Whole integers only (no decimals)
+          {/* Committed Total Summary Bar */}
+          <div style={{
+            marginTop: 12,
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            border: '1px solid #CBD5E1',
+            flexWrap: 'wrap',
+            gap: 8
+          }}>
+            <div>
+              <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+                Total Committed Items
               </span>
+              <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#334155' }}>
+                {totalQuantity} {totalQuantity === 1 ? 'unit' : 'units'} across {selectedItems.length} {selectedItems.length === 1 ? 'item' : 'items'}
+              </div>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <SpinEditNumberInput
-                value={quantity}
-                onChange={handleQuantityChange}
-                min={1}
-                max={2000}
-                step={1}
-                quickValues={[1, 2, 5, 10]}
-                unitLabel={quantity === 1 ? 'pkg' : 'pkgs'}
-              />
-
-              <div style={{
-                fontSize: '0.95rem',
-                fontWeight: 800,
-                color: '#0F172A',
-                background: '#FFFFFF',
-                padding: '8px 14px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid #CBD5E1',
-                flexGrow: 1,
-                textAlign: 'right'
-              }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600, display: 'block' }}>
-                  Total Committed
-                </span>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+                Total Commitment
+              </span>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
                 ₹{totalAmount.toLocaleString('en-IN')}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Payment Terms Option (Highlighted as Different) */}
+        {/* Payment Terms Option */}
         <div style={{ marginBottom: 16 }}>
           <label style={{
             display: 'block',
@@ -486,11 +758,11 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             color: '#334155',
             marginBottom: 8
           }}>
-            Payment Terms Option (Highlighted Terms) *
+            Payment Option *
           </label>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {/* 1. PayFull (Highlighted Emerald Green) */}
+            {/* 1. PayFull */}
             <button
               type="button"
               onClick={() => handlePaymentOptionChange('PayFull')}
@@ -511,7 +783,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800, fontSize: '0.84rem' }}>
                 {paymentOption === 'PayFull' && <Check size={14} strokeWidth={3} />}
-                <span>PayFull</span>
+                <span>Pay Full</span>
               </div>
               <span style={{
                 fontSize: '0.66rem',
@@ -525,7 +797,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               </span>
             </button>
 
-            {/* 2. Advance (Highlighted Warm Amber) */}
+            {/* 2. Advance */}
             <button
               type="button"
               onClick={() => handlePaymentOptionChange('Advance')}
@@ -556,11 +828,11 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 padding: '2px 6px',
                 borderRadius: 'var(--radius-full)'
               }}>
-                Partial
+                Partial Payment
               </span>
             </button>
 
-            {/* 3. Book (Highlighted Sky Blue) */}
+            {/* 3. Book */}
             <button
               type="button"
               onClick={() => handlePaymentOptionChange('Book')}
@@ -591,7 +863,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 padding: '2px 6px',
                 borderRadius: 'var(--radius-full)'
               }}>
-                Token / ₹0
+                Pay Later
               </span>
             </button>
           </div>
@@ -620,7 +892,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 color: '#334155',
                 marginBottom: 6
               }}>
-                {paymentOption === 'Advance' ? 'Advance Paid Now (₹) *' : 'Initial Token Paid (₹)'}
+                {paymentOption === 'Advance' ? 'Advance Paid Now (₹) *' : 'Initial Paid Amount (₹)'}
               </label>
               <input
                 type="text"

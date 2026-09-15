@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, Donation, LeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, analyticsApi, coordinatorApi, sponsorshipsApi, API_BASE_URL, generateRandomPassword, type UserProgress } from '../services/api';
+import { donationsApi, analyticsApi, coordinatorApi, sponsorshipsApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice, type UserProgress } from '../services/api';
 import { 
   Users, 
   TrendingUp, 
@@ -29,6 +29,7 @@ import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
 interface CoordinatorDashboardProps {
   user: User;
+  kitPrice?: number;
   onViewReceipt: (donation: Donation) => void;
   onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
@@ -36,6 +37,7 @@ interface CoordinatorDashboardProps {
 
 export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   user,
+  kitPrice = getKitUnitPrice(),
   onViewReceipt,
   onViewSponsorshipReceipt,
   onOpenPayBalance
@@ -835,7 +837,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
       {/* TAB 3: RECORD DONATION */}
       {activeTab === 'record' && (
         <DonationForm
-          kitPrice={1000}
+          kitPrice={kitPrice}
           onSuccess={(donation) => {
             setRecentTransactions(prev => [donation, ...prev]);
             setProgress((prev: UserProgress) => ({

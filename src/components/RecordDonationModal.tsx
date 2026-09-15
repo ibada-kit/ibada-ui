@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import type { Donation, SponsorshipRecord } from '../types';
-import { donationsApi, KIT_UNIT_RATE } from '../services/api';
+import { donationsApi, getKitUnitPrice } from '../services/api';
 import confetti from 'canvas-confetti';
 import { X, Heart, RefreshCw, AlertCircle, Sparkles, Building2 } from 'lucide-react';
 import { SponsorshipForm } from './SponsorshipForm';
 
 interface RecordDonationModalProps {
+  kitPrice?: number;
   onClose: () => void;
   onDonationRecorded: (donation: Donation) => void;
   onSponsorshipRecorded?: (sponsorship: SponsorshipRecord) => void;
 }
 
 export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
+  kitPrice = getKitUnitPrice(),
   onClose,
   onDonationRecorded,
   onSponsorshipRecorded
@@ -23,7 +25,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalAmount = kitCount * KIT_UNIT_RATE;
+  const totalAmount = kitCount * kitPrice;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +52,8 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
       const newDonation = await donationsApi.recordDonation({
         donorName: donorName.trim(),
         whatsAppNumber: `+91 ${cleanPhone.slice(-10)}`,
-        kitCount
+        kitCount,
+        totalAmount
       });
 
       // Celebration Confetti
@@ -305,7 +308,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
                 onChange={(e) => setKitCount(Math.max(1, parseInt(e.target.value) || 1))}
               />
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                @ ₹500 each
+                @ ₹{kitPrice.toLocaleString('en-IN')} each
               </span>
             </div>
           </div>

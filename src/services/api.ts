@@ -18,7 +18,32 @@ import type {
 
 // Live Azure API Base URL (uses Vite proxy in DEV to eliminate local CORS restrictions)
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api');
-export const KIT_UNIT_RATE = 1000;
+
+// Storage key and helpers for Admin-configured Campaign Kit Price
+const STORAGE_KIT_PRICE = 'charity_kit_price';
+
+export function getKitUnitPrice(): number {
+  try {
+    const saved = localStorage.getItem(STORAGE_KIT_PRICE);
+    if (saved) {
+      const parsed = Number(saved);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return 1000;
+}
+
+export function setKitUnitPrice(price: number): void {
+  try {
+    if (price > 0) {
+      localStorage.setItem(STORAGE_KIT_PRICE, price.toString());
+    }
+  } catch {}
+}
+
+export const KIT_UNIT_RATE = getKitUnitPrice();
 
 // Local Storage Keys (Auth Session only)
 const STORAGE_USER = 'charity_user';
@@ -236,7 +261,7 @@ export const donationsApi = {
           || topVols.reduce((acc, v) => acc + (v.totalAmount || 0), 0);
 
         const targetKits = topWards.reduce((acc, w) => acc + (w.targetKits || 0), 0);
-        const targetAmount = targetKits * 1000;
+        const targetAmount = targetKits * getKitUnitPrice();
         const donorsCount = topWards.reduce((acc, w) => acc + (w.donationsCount || 0), 0)
           || topVols.reduce((acc, v) => acc + (v.donationsCount || 0), 0);
 
@@ -370,7 +395,7 @@ export const donationsApi = {
             wardName: w.name || `Ward ${wardNum}`,
             kitsCollected: kits,
             targetKits: target,
-            totalAmount: w.totalAmount || (kits * 1000),
+            totalAmount: w.totalAmount || (kits * getKitUnitPrice()),
             progressPercentage: target > 0 ? Math.min(100, Math.round((kits / target) * 100)) : 0,
             volunteerCount: w.volunteerCount || 0,
             rank: w.position || idx + 1
@@ -401,7 +426,7 @@ export const donationsApi = {
               donorName: d.donorName,
               whatsAppNumber: d.whatsAppNumber || '',
               kitCount: d.kitCount,
-              kitUnitRate: 1000,
+              kitUnitRate: (d.kitCount && d.totalAmount) ? Math.round(d.totalAmount / d.kitCount) : getKitUnitPrice(),
               totalAmount: d.totalAmount,
               panchayath: d.panchayath || 'Madavoor',
               wardNumber: d.wardNumber,
@@ -436,7 +461,8 @@ export const donationsApi = {
       body: JSON.stringify({
         donorName: request.donorName.trim(),
         whatsAppNumber: formattedPhone,
-        kitCount: Number(request.kitCount)
+        kitCount: Number(request.kitCount),
+        totalAmount: request.totalAmount !== undefined ? Number(request.totalAmount) : (Number(request.kitCount) * getKitUnitPrice())
       })
     });
 
@@ -446,14 +472,15 @@ export const donationsApi = {
     }
 
     const data = await res.json();
+    const effectiveKitPrice = request.totalAmount && request.kitCount ? Math.round(request.totalAmount / request.kitCount) : getKitUnitPrice();
     const newDonation: Donation = {
       donationId: data.donationId || `don-${Date.now()}`,
       receiptToken: data.receiptToken,
       donorName: data.donorName,
       whatsAppNumber: formattedPhone,
       kitCount: data.kitCount,
-      kitUnitRate: 1000,
-      totalAmount: data.totalAmount,
+      kitUnitRate: effectiveKitPrice,
+      totalAmount: data.totalAmount || (request.totalAmount ?? Number(data.kitCount) * effectiveKitPrice),
       panchayath: data.panchayath || currentUser?.panchayath || 'Madavoor',
       wardNumber: data.wardNumber || currentUser?.wardNumber || 4,
       collectedByUserId: currentUser?.userId || 'usr-guest',
@@ -471,14 +498,16 @@ export const donationsApi = {
       const res = await fetch(`${API_BASE_URL}/Donations/receipt/${encodeURIComponent(token)}?panchayath=${encodeURIComponent(panchayath)}`);
       if (res.ok) {
         const d = await res.json();
+        const rawKitCount = Number(d.kitCount || d.KitCount || 1);
+        const rawTotalAmount = Number(d.totalAmount || d.TotalAmount || (rawKitCount * getKitUnitPrice()));
         return {
           donationId: d.donationId || d.rowKey || d.RowKey,
           receiptToken: d.receiptToken || d.rowKey || d.RowKey,
           donorName: d.donorName || d.DonorName,
           whatsAppNumber: d.whatsAppNumber || d.WhatsAppNumber || '',
-          kitCount: d.kitCount || d.KitCount || 1,
-          kitUnitRate: 1000,
-          totalAmount: d.totalAmount || d.TotalAmount || 1000,
+          kitCount: rawKitCount,
+          kitUnitRate: (rawKitCount > 0 && rawTotalAmount > 0) ? Math.round(rawTotalAmount / rawKitCount) : getKitUnitPrice(),
+          totalAmount: rawTotalAmount,
           panchayath: d.panchayath || d.partitionKey || d.PartitionKey || 'Madavoor',
           wardNumber: d.wardNumber || d.WardNumber || 0,
           collectedByUserId: d.userId || d.UserId || '',
@@ -578,22 +607,17 @@ export const adminApi = {
   getManagedUsers: async (): Promise<ManagedUser[]> => {
     const user = getCurrentUser();
     const token = user?.token;
-    console.log('[adminApi.getManagedUsers] Initiating call. User:', user?.fullName, '| Role:', user?.role, '| Token:', token ? `${token.substring(0, 15)}...` : 'NONE');
 
     const res = await fetch(`${API_BASE_URL}/Users/coordinators`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
 
-    console.log('[adminApi.getManagedUsers] HTTP Status:', res.status, res.statusText);
-
     if (!res.ok) {
       const msg = await extractErrorMessage(res, 'Failed to load coordinators');
-      console.error('[adminApi.getManagedUsers] Request failed:', msg);
       throw new Error(msg);
     }
 
     const data: any[] = await res.json();
-    console.log('[adminApi.getManagedUsers] Successfully loaded coordinators count:', data?.length, data);
 
     return data.map((u) => ({
       userId: u.userId,
@@ -772,27 +796,21 @@ export const analyticsApi = {
   // Get personal / team progress (GET /api/Analytics/my-progress)
   getMyProgress: async (tokenOverride?: string): Promise<UserProgress> => {
     const token = tokenOverride || getCurrentUser()?.token;
-    console.log('[analyticsApi.getMyProgress] Calling GET /Analytics/my-progress. Token present:', !!token);
-    console.log(token);
     const res = await fetch(`${API_BASE_URL}/Analytics/my-progress`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
 
-    console.log('[analyticsApi.getMyProgress] HTTP Status:', res.status, res.statusText);
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}: Failed to load progress` }));
-      console.error('[analyticsApi.getMyProgress] Error:', err);
       throw new Error(err.message || err.Message || `HTTP ${res.status}: Failed to load progress`);
     }
 
     const data = await res.json();
-    console.log('[analyticsApi.getMyProgress] Received data:', data);
 
     const targetKits = Number(data.targetKits ?? data.TargetKits ?? 0);
     const collectedKits = Number(data.collectedKits ?? data.CollectedKits ?? 0);
     const collectedAmount = Number(data.collectedAmount ?? data.CollectedAmount ?? 0);
-    const targetAmount = Number(data.targetAmount ?? data.TargetAmount ?? (targetKits * 1000));
+    const targetAmount = Number(data.targetAmount ?? data.TargetAmount ?? (targetKits * getKitUnitPrice()));
     const rawPct = data.achievementPercentage ?? data.AchievementPercentage;
     const achievementPercentage = rawPct !== undefined 
       ? Number(rawPct) 
@@ -816,22 +834,17 @@ export const coordinatorApi = {
   getMyVolunteers: async (tokenOverride?: string): Promise<any[]> => {
     const token = tokenOverride || getCurrentUser()?.token;
     try {
-      console.log('[coordinatorApi.getMyVolunteers] Calling GET /Users/volunteers. Token present:', !!token);
       const res = await fetch(`${API_BASE_URL}/Users/volunteers`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
-      console.log('[coordinatorApi.getMyVolunteers] Status:', res.status, res.statusText);
-
       if (!res.ok) {
-        console.warn('[coordinatorApi.getMyVolunteers] Request rejected with status:', res.status);
         return [];
       }
 
       const data = await res.json();
       return Array.isArray(data) ? data : [];
-    } catch (err) {
-      console.warn('[coordinatorApi.getMyVolunteers] Fetch failed (network or server error):', err);
+    } catch {
       return [];
     }
   }

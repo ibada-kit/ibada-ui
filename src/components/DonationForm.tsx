@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2 } from 'lucide-react';
-import { donationsApi } from '../services/api';
+import { donationsApi, getKitUnitPrice } from '../services/api';
 import type { Donation, SponsorshipRecord } from '../types';
 import { SponsorshipForm } from './SponsorshipForm';
 import { SponsorshipReceiptModal } from './SponsorshipReceiptModal';
@@ -14,7 +14,7 @@ interface DonationFormProps {
 }
 
 export const DonationForm: React.FC<DonationFormProps> = ({
-  kitPrice = 1000,
+  kitPrice = getKitUnitPrice(),
   initialMode = 'kit',
   onSuccess,
   onSponsorshipSuccess,
@@ -53,7 +53,8 @@ export const DonationForm: React.FC<DonationFormProps> = ({
       const donation = await donationsApi.recordDonation({
         donorName: donorName.trim(),
         whatsAppNumber: `+91${cleanPhone.slice(-10)}`,
-        kitCount: Number(kitCount)
+        kitCount: Number(kitCount),
+        totalAmount
       });
 
       setRecordedDonation(donation);

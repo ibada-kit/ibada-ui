@@ -86,7 +86,7 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
                 Collect Outstanding Balance
               </h3>
               <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                Token: <strong style={{ fontFamily: 'monospace' }}>{sponsorship.receiptToken}</strong>
+                Receipt No: <strong style={{ fontFamily: 'monospace' }}>{sponsorship.receiptToken}</strong>
               </span>
             </div>
           </div>
