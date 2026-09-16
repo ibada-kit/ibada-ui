@@ -21,8 +21,8 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const cleanPhone = sponsorship.mobileNumber.replace(/\D/g, '');
-  const parsedItems = sponsorship.items || (() => {
+  const cleanPhone = (sponsorship.mobileNumber || '').replace(/\D/g, '');
+  const rawItems = sponsorship.items || (() => {
     if (sponsorship.itemsJson) {
       try {
         return JSON.parse(sponsorship.itemsJson);
@@ -33,8 +33,18 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
     return null;
   })();
 
-  const itemsDescription = parsedItems && parsedItems.length > 1
-    ? parsedItems.map((it: any) => `${it.quantity}x ${it.name}`).join(', ')
+  const parsedItems = Array.isArray(rawItems) && rawItems.length > 0
+    ? rawItems.map((it: any) => ({
+        itemId: it.itemId || it.ItemId || '',
+        name: it.name || it.Name || 'Sponsored Package',
+        unitPrice: Number(it.unitPrice ?? it.UnitPrice) || 0,
+        quantity: Number(it.quantity ?? it.Quantity) || 1,
+        subtotal: Number(it.subtotal ?? it.Subtotal) || ((Number(it.quantity ?? it.Quantity) || 1) * (Number(it.unitPrice ?? it.UnitPrice) || 0))
+      }))
+    : null;
+
+  const itemsDescription = parsedItems && parsedItems.length > 0
+    ? parsedItems.map((it) => `${it.quantity}x ${it.name}`).join(', ')
     : `${sponsorship.quantity}x ${sponsorship.itemName}`;
 
   const shareMessage = `*Madavoor Relief Drive — Sponsorship Receipt*%0A%0A` +
@@ -219,10 +229,10 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             padding: '14px 0',
             marginBottom: 16
           }}>
-            {parsedItems && parsedItems.length > 1 ? (
+            {parsedItems && parsedItems.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Sponsored Items ({parsedItems.length} items • {sponsorship.quantity} total units)
+                  Sponsored Items ({parsedItems.length} {parsedItems.length === 1 ? 'item' : 'items'} • {sponsorship.quantity} total units)
                 </span>
                 {parsedItems.map((item: any, idx: number) => (
                   <div key={item.itemId || idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

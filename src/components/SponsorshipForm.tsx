@@ -202,9 +202,33 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       };
 
       const result = await sponsorshipsApi.acceptSponsorship(payload);
-      setRecordedRecord(result);
+
+      // Construct item details from selected items
+      const selectedItemDetails = selectedItems.map((item) => {
+        const qty = itemQuantities[item.itemId] || 1;
+        return {
+          itemId: item.itemId,
+          name: item.name,
+          unitPrice: item.itemPrice,
+          quantity: qty,
+          subtotal: qty * item.itemPrice
+        };
+      });
+
+      const combinedName = selectedItemDetails.length === 1
+        ? selectedItemDetails[0].name
+        : selectedItemDetails.map((i) => `${i.quantity}x ${i.name}`).join(', ');
+
+      const enrichedRecord: SponsorshipRecord = {
+        ...result,
+        items: (result.items && result.items.length > 0) ? result.items : selectedItemDetails,
+        itemsJson: result.itemsJson || JSON.stringify(selectedItemDetails),
+        itemName: (result.items && result.items.length > 0) ? result.itemName : combinedName
+      };
+
+      setRecordedRecord(enrichedRecord);
       if (onSuccess) {
-        onSuccess(result);
+        onSuccess(enrichedRecord);
       }
 
       // Reset form
@@ -651,7 +675,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                         </div>
 
                         {/* Quick +5 button */}
-                        <button
+                        {/* <button
                           type="button"
                           onClick={() => handleSetItemQuantity(pkg.itemId, qty + 5)}
                           style={{
@@ -667,7 +691,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                           title="Add 5 units"
                         >
                           +5
-                        </button>
+                        </button> */}
                       </div>
 
                       {/* Item Subtotal */}

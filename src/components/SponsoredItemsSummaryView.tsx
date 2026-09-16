@@ -56,26 +56,71 @@ export const SponsoredItemsSummaryView: React.FC<SponsoredItemsSummaryViewProps>
 
     // 2. Aggregate actual recorded sponsorships
     sponsorships.forEach(s => {
-      const key = (s.itemName || 'Custom Item').toLowerCase().trim();
-      const existing = map.get(key) || {
-        itemId: s.itemId,
-        itemName: s.itemName || 'Custom Item',
-        itemPrice: s.itemPrice || (s.quantity > 0 ? s.totalAmount / s.quantity : s.totalAmount),
-        description: '',
-        quantitySponsored: 0,
-        totalCommitted: 0,
-        totalPaid: 0,
-        totalBalance: 0,
-        sponsors: []
-      };
+      const rawItems = s.items || (() => {
+        if (s.itemsJson) {
+          try { return JSON.parse(s.itemsJson); } catch { return null; }
+        }
+        return null;
+      })();
 
-      existing.quantitySponsored += Number(s.quantity) || 1;
-      existing.totalCommitted += Number(s.totalAmount) || 0;
-      existing.totalPaid += Number(s.amountPaid) || 0;
-      existing.totalBalance += Number(s.balanceAmount) || 0;
-      existing.sponsors.push(s);
+      if (Array.isArray(rawItems) && rawItems.length > 0) {
+        rawItems.forEach((it: any) => {
+          const name = it.name || it.Name || s.itemName || 'Custom Item';
+          const key = name.toLowerCase().trim();
+          const qty = Number(it.quantity ?? it.Quantity) || 1;
+          const unitPrice = Number(it.unitPrice ?? it.UnitPrice) || 0;
+          const subtotal = Number(it.subtotal ?? it.Subtotal) || (qty * unitPrice);
 
-      map.set(key, existing);
+          const existing = map.get(key) || {
+            itemId: it.itemId || it.ItemId || '',
+            itemName: name,
+            itemPrice: unitPrice,
+            description: '',
+            quantitySponsored: 0,
+            totalCommitted: 0,
+            totalPaid: 0,
+            totalBalance: 0,
+            sponsors: [] as SponsorshipRecord[]
+          };
+
+          const ratio = s.totalAmount > 0 ? (subtotal / s.totalAmount) : (1 / rawItems.length);
+          const paidPart = Math.round(s.amountPaid * ratio);
+          const balPart = Math.max(0, subtotal - paidPart);
+
+          existing.quantitySponsored += qty;
+          existing.totalCommitted += subtotal;
+          existing.totalPaid += paidPart;
+          existing.totalBalance += balPart;
+          if (!existing.sponsors.some(sp => (sp.receiptToken || sp.sponsorshipId) === (s.receiptToken || s.sponsorshipId))) {
+            existing.sponsors.push(s);
+          }
+
+          map.set(key, existing);
+        });
+      } else {
+        const key = (s.itemName || 'Custom Item').toLowerCase().trim();
+        const existing = map.get(key) || {
+          itemId: s.itemId,
+          itemName: s.itemName || 'Custom Item',
+          itemPrice: s.itemPrice || (s.quantity > 0 ? s.totalAmount / s.quantity : s.totalAmount),
+          description: '',
+          quantitySponsored: 0,
+          totalCommitted: 0,
+          totalPaid: 0,
+          totalBalance: 0,
+          sponsors: [] as SponsorshipRecord[]
+        };
+
+        existing.quantitySponsored += Number(s.quantity) || 1;
+        existing.totalCommitted += Number(s.totalAmount) || 0;
+        existing.totalPaid += Number(s.amountPaid) || 0;
+        existing.totalBalance += Number(s.balanceAmount) || 0;
+        if (!existing.sponsors.some(sp => (sp.receiptToken || sp.sponsorshipId) === (s.receiptToken || s.sponsorshipId))) {
+          existing.sponsors.push(s);
+        }
+
+        map.set(key, existing);
+      }
     });
 
     return Array.from(map.values()).sort((a, b) => b.quantitySponsored - a.quantitySponsored || b.totalPaid - a.totalPaid);
