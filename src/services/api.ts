@@ -879,24 +879,30 @@ export const sponsorshipsApi = {
     const cleanPhone = payload.mobileNumber.replace(/\D/g, '');
     const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
 
+    const requestBody: any = {
+      donorName: payload.donorName.trim(),
+      contactPerson: payload.contactPerson?.trim() || '',
+      mobileNumber: formattedPhone,
+      itemId: payload.itemId || (payload.items && payload.items.length > 0 ? payload.items[0].itemId : ''),
+      quantity: Math.max(1, Math.floor(Number(payload.quantity) || 1)),
+      paymentOption: payload.paymentOption,
+      initialAmountPaid: payload.initialAmountPaid !== undefined ? Number(payload.initialAmountPaid) : undefined,
+      paymentMode: payload.paymentMode || 'Cash',
+      transactionReference: payload.transactionReference?.trim() || '',
+      notes: payload.notes?.trim() || ''
+    };
+
+    if (payload.items && payload.items.length > 0) {
+      requestBody.items = payload.items;
+    }
+
     const res = await fetch(`${API_BASE_URL}/Sponsorships`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({
-        donorName: payload.donorName.trim(),
-        contactPerson: payload.contactPerson?.trim() || '',
-        mobileNumber: formattedPhone,
-        itemId: payload.itemId,
-        quantity: Math.max(1, Math.floor(Number(payload.quantity) || 1)),
-        paymentOption: payload.paymentOption,
-        initialAmountPaid: payload.initialAmountPaid !== undefined ? Number(payload.initialAmountPaid) : undefined,
-        paymentMode: payload.paymentMode || 'Cash',
-        transactionReference: payload.transactionReference?.trim() || '',
-        notes: payload.notes?.trim() || ''
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!res.ok) {
