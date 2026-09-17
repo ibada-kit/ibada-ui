@@ -100,6 +100,12 @@ export interface WardLeaderboardEntry {
   rank: number;
 }
 
+export interface WardOption {
+  wardNumber: number;
+  wardName: string;
+  panchayath: string;
+}
+
 export type ManagedUserRole = 'WardCommittee' | 'Coordinator';
 
 export interface ManagedUser {

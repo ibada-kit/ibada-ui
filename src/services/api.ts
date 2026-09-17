@@ -6,6 +6,7 @@ import type {
   WeeklyMetrics,
   LeaderboardEntry,
   WardLeaderboardEntry,
+  WardOption,
   ManagedUser,
   CreateManagedUserRequest,
   UpdateManagedUserRequest,
@@ -407,6 +408,38 @@ export const donationsApi = {
     }
 
     return [];
+  },
+
+  // Get Wards list for a panchayath (GET /api/Wards)
+  getWards: async (panchayath = 'Madavoor'): Promise<WardOption[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Wards?panchayath=${encodeURIComponent(panchayath)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((w: any) => ({
+            wardNumber: Number(w.wardNumber),
+            wardName: w.wardName || `Ward ${w.wardNumber}`,
+            panchayath: w.panchayath || panchayath
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch wards from API, using fallback:', err);
+    }
+
+    const defaultNames: Record<number, string> = {
+      1: 'Ankathayi', 2: 'Eravannur North', 3: 'Eravannur South', 4: 'Nariyachal',
+      5: 'Pullaloor', 6: 'Eranhukunnu', 7: 'Rampoyil', 8: 'Madavoor',
+      9: 'Madavoormukku', 10: 'Paimbalassery', 11: 'Kottakkavayal', 12: 'Arambram'
+    };
+
+    // Graceful fallback if API fails or offline
+    return Array.from({ length: 12 }, (_, i) => ({
+      wardNumber: i + 1,
+      wardName: defaultNames[i + 1] || `Ward ${i + 1}`,
+      panchayath
+    }));
   },
 
   // Get Recent Donations from backend server stream

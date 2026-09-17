@@ -24,6 +24,7 @@ import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPas
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV } from '../utils/exportCsv';
+import { useWards } from '../hooks/useWards';
 
 interface AdminDashboardProps {
   currentUser: User;
@@ -36,6 +37,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   kitPrice,
   onUpdateKitPrice
 }) => {
+  const { wards: wardOptions } = useWards();
   const [activeTab, setActiveTab] = useState<'users' | 'targets' | 'reports' | 'sponsorships' | 'settings'>('users');
   
   const [coordinators, setCoordinators] = useState<ManagedUser[]>([]);
@@ -555,15 +557,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {newRole === 'WardCommittee' && (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                      Ward Number
+                      Ward Name
                     </label>
                     <select
                       className="input-field"
                       value={newWard}
                       onChange={(e) => setNewWard(Number(e.target.value))}
                     >
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(w => (
-                        <option key={w} value={w}>Ward {w}</option>
+                      {wardOptions.map((w) => (
+                        <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} ({w.wardNumber})</option>
                       ))}
                     </select>
                   </div>
@@ -701,15 +703,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {editRole === 'WardCommittee' && (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                      Ward Number
+                      Ward Name
                     </label>
                     <select
                       className="input-field"
                       value={editWard}
                       onChange={(e) => setEditWard(Number(e.target.value))}
                     >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((w) => (
-                        <option key={w} value={w}>Ward {w}</option>
+                      {wardOptions.map((w) => (
+                        <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} ({w.wardNumber})</option>
                       ))}
                     </select>
                   </div>

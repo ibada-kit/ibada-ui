@@ -26,6 +26,7 @@ import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboard
 import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV } from '../utils/exportCsv';
+import { useWards } from '../hooks/useWards';
 
 interface CoordinatorDashboardProps {
   user: User;
@@ -42,6 +43,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   onViewSponsorshipReceipt,
   onOpenPayBalance
 }) => {
+  const { wards } = useWards();
   const [activeTab, setActiveTab] = useState<'progress' | 'record' | 'team' | 'transactions' | 'leaderboard' | 'sponsored-items'>('progress');
   const [leaderboardMode, setLeaderboardMode] = useState<'individual' | 'sponsorship'>('individual');
   const [receiptsType, setReceiptsType] = useState<'donations' | 'sponsorships'>('donations');
@@ -717,15 +719,15 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                    Ward Number
+                    Ward Name
                   </label>
                   <select
                     className="input-field"
                     value={volWard}
                     onChange={(e) => setVolWard(Number(e.target.value))}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(w => (
-                      <option key={w} value={w}>Ward {w}</option>
+                    {wards.map((w) => (
+                      <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} ({w.wardNumber})</option>
                     ))}
                   </select>
                 </div>

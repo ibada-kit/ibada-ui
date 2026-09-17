@@ -19,6 +19,7 @@ import {
 import { DailyCollectionsChart } from '../components/DailyCollectionsChart';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
+import { useWards } from '../hooks/useWards';
 
 interface HomeScreenProps {
   user: User | null;
@@ -31,6 +32,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenRecordModal,
   onViewReceipt
 }) => {
+  const { wards: wardOptions } = useWards();
   const [metrics, setMetrics] = useState<WeeklyMetrics | null>(null);
   const [volunteers, setVolunteers] = useState<LeaderboardEntry[]>([]);
   const [wards, setWards] = useState<WardLeaderboardEntry[]>([]);
@@ -774,8 +776,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   onChange={(e) => setSelectedWard(e.target.value)}
                 >
                   <option value="all">All Wards</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((w) => (
-                    <option key={w} value={w.toString()}>Ward {w}</option>
+                  {wardOptions.map((w) => (
+                    <option key={w.wardNumber} value={w.wardNumber.toString()}>{w.wardName} ({w.wardNumber})</option>
                   ))}
                 </select>
               </div>
@@ -991,8 +993,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   onChange={(e) => setSelectedWard(e.target.value)}
                 >
                   <option value="all">All Wards</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((w) => (
-                    <option key={w} value={w.toString()}>Ward {w}</option>
+                  {wardOptions.map((w) => (
+                    <option key={w.wardNumber} value={w.wardNumber.toString()}>{w.wardName} ({w.wardNumber})</option>
                   ))}
                 </select>
               </div>

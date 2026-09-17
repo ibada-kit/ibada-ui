@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, ManagedUser, ManagedUserRole, CreateManagedUserRequest } from '../types';
 import { adminApi } from '../services/api';
+import { useWards } from '../hooks/useWards';
 import {
   ShieldCheck,
   UserPlus,
@@ -26,6 +27,7 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, onNavigateHome }) => {
+  const { wards } = useWards();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -543,8 +545,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, onNavigateH
               onChange={(e) => setWardFilter(e.target.value)}
             >
               <option value="all">All Wards</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((w) => (
-                <option key={w} value={w.toString()}>Ward {w}</option>
+              {wards.map((w) => (
+                <option key={w.wardNumber} value={w.wardNumber.toString()}>{w.wardName} ({w.wardNumber})</option>
               ))}
             </select>
           </div>
@@ -933,7 +935,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, onNavigateH
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                    Assigned Ward *
+                    Ward Name *
                   </label>
                   <select
                     id="modal-select-ward"
@@ -941,8 +943,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, onNavigateH
                     value={newWard}
                     onChange={(e) => setNewWard(Number(e.target.value))}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                      <option key={num} value={num}>Ward {num}</option>
+                    {wards.map((w) => (
+                      <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} ({w.wardNumber})</option>
                     ))}
                   </select>
                 </div>
