@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2 } from 'lucide-react';
+import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2, Share2 } from 'lucide-react';
 import { donationsApi, getKitUnitPrice } from '../services/api';
 import type { Donation, SponsorshipRecord } from '../types';
 import { SponsorshipForm } from './SponsorshipForm';
 import { SponsorshipReceiptModal } from './SponsorshipReceiptModal';
+import { ReceiptModal } from './ReceiptModal';
 
 interface DonationFormProps {
   kitPrice?: number;
@@ -22,6 +23,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
 }) => {
   const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>(initialMode);
   const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
+  const [activeDonationReceipt, setActiveDonationReceipt] = useState<Donation | null>(null);
 
   const [donorName, setDonorName] = useState('');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
@@ -58,6 +60,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
       });
 
       setRecordedDonation(donation);
+      setActiveDonationReceipt(donation);
       if (onSuccess) onSuccess(donation);
 
       // Reset form
@@ -212,24 +215,45 @@ export const DonationForm: React.FC<DonationFormProps> = ({
       {recordedDonation && (
         <div style={{
           display: 'flex',
-          alignItems: 'flex-start',
-          gap: 10,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
           padding: '14px 16px',
           borderRadius: 'var(--radius-md)',
           background: '#EBF7EE',
           border: '1px solid #A5D6B8',
-          color: '#008A2E',
-          fontSize: '0.86rem',
           marginBottom: 18
         }}>
-          <CheckCircle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <span style={{ fontWeight: 800 }}>Donation Registered Successfully!</span>
-            <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
-              Receipt Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedDonation.receiptToken}</span>
-              {' '}• WhatsApp receipt triggered for {recordedDonation.whatsAppNumber}.
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <CheckCircle size={20} style={{ color: '#008A2E', flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <span style={{ fontWeight: 800, color: '#008A2E' }}>Donation Registered Successfully!</span>
+              <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
+                Receipt Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedDonation.receiptToken}</span>
+                {' '}• Automated WhatsApp receipt triggered.
+              </div>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setActiveDonationReceipt(recordedDonation)}
+            className="btn-primary"
+            style={{
+              padding: '8px 14px',
+              fontSize: '0.8rem',
+              background: '#25D366',
+              borderColor: '#20BA5C',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            <Share2 size={14} />
+            <span>Share Receipt</span>
+          </button>
         </div>
       )}
 
@@ -425,6 +449,14 @@ export const DonationForm: React.FC<DonationFormProps> = ({
         </div>
       </form>
         </div>
+      )}
+
+      {/* Kit Donation Receipt Modal */}
+      {activeDonationReceipt && (
+        <ReceiptModal
+          donation={activeDonationReceipt}
+          onClose={() => setActiveDonationReceipt(null)}
+        />
       )}
 
       {/* Corporate Sponsorship Receipt Modal */}
