@@ -165,12 +165,26 @@ export type PaymentOption = 'PayFull' | 'Book' | 'Advance';
 export type PaymentStatus = 'Completed' | 'Partial' | 'Booked';
 export type PaymentMode = 'Cash' | 'UPI' | 'BankTransfer' | 'Cheque';
 
+export interface SponsorshipItemSelection {
+  itemId: string;
+  quantity: number;
+}
+
+export interface SponsorshipItemDetail {
+  itemId: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
+}
+
 export interface CreateSponsorshipPayload {
   donorName: string;            // Name of firm / organization
   contactPerson?: string;       // Representative name
   mobileNumber: string;         // WhatsApp / Phone
-  itemId: string;               // Selected catalog item
-  quantity: number;             // Stepper integer >= 1
+  itemId?: string;              // Primary / fallback item
+  quantity?: number;            // Total units
+  items?: SponsorshipItemSelection[]; // Multi-item selection for single receipt
   paymentOption: PaymentOption; // 'PayFull' | 'Book' | 'Advance'
   initialAmountPaid?: number;   // Required if 'Advance', optional if 'Book'
   paymentMode?: PaymentMode;    // Default: 'Cash'
@@ -189,6 +203,8 @@ export interface SponsorshipRecord {
   itemPrice: number;
   quantity: number;
   totalAmount: number;
+  itemsJson?: string;
+  items?: SponsorshipItemDetail[];
   paymentOption: PaymentOption;
   amountPaid: number;
   balanceAmount: number;

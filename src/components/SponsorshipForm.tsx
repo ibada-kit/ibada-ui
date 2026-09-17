@@ -67,7 +67,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   // Submission State
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recordedRecords, setRecordedRecords] = useState<SponsorshipRecord[]>([]);
+  const [recordedRecord, setRecordedRecord] = useState<SponsorshipRecord | null>(null);
 
   // Load active catalog items from API
   useEffect(() => {
@@ -146,7 +146,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setRecordedRecords([]);
+    setRecordedRecord(null);
 
     if (!donorName.trim()) {
       setError('Please enter the organization or firm name.');
@@ -183,49 +183,52 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
 
     try {
       setSubmitting(true);
-      const createdList: SponsorshipRecord[] = [];
-      let remainingAdvanceToAllocate = paymentOption === 'PayFull' ? totalAmount : initialAmountPaid;
 
-      for (let i = 0; i < selectedItems.length; i++) {
-        const item = selectedItems[i];
-        const qty = itemQuantities[item.itemId] || 1;
-        const itemTotal = qty * item.itemPrice;
-
-        let itemPaid = 0;
-        if (paymentOption === 'PayFull') {
-          itemPaid = itemTotal;
-        } else if (paymentOption === 'Book') {
-          itemPaid = 0;
-        } else if (paymentOption === 'Advance') {
-          if (i === selectedItems.length - 1) {
-            itemPaid = remainingAdvanceToAllocate;
-          } else {
-            const ratio = totalAmount > 0 ? itemTotal / totalAmount : 0;
-            itemPaid = Math.min(remainingAdvanceToAllocate, Math.round(initialAmountPaid * ratio));
-            remainingAdvanceToAllocate -= itemPaid;
-          }
-        }
-
-        const payload = {
-          donorName: donorName.trim(),
-          contactPerson: contactPerson.trim() || undefined,
-          mobileNumber: `+91${cleanPhone.slice(-10)}`,
+      const payload = {
+        donorName: donorName.trim(),
+        contactPerson: contactPerson.trim() || undefined,
+        mobileNumber: `+91${cleanPhone.slice(-10)}`,
+        itemId: selectedItems[0].itemId,
+        quantity: totalQuantity,
+        items: selectedItems.map((item) => ({
           itemId: item.itemId,
+          quantity: itemQuantities[item.itemId] || 1
+        })),
+        paymentOption,
+        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
+        paymentMode,
+        transactionReference: transactionReference.trim() || undefined,
+        notes: notes.trim() || undefined
+      };
+
+      const result = await sponsorshipsApi.acceptSponsorship(payload);
+
+      // Construct item details from selected items
+      const selectedItemDetails = selectedItems.map((item) => {
+        const qty = itemQuantities[item.itemId] || 1;
+        return {
+          itemId: item.itemId,
+          name: item.name,
+          unitPrice: item.itemPrice,
           quantity: qty,
-          paymentOption,
-          initialAmountPaid: itemPaid,
-          paymentMode,
-          transactionReference: transactionReference.trim() || undefined,
-          notes: notes.trim() || undefined
+          subtotal: qty * item.itemPrice
         };
+      });
 
-        const result = await sponsorshipsApi.acceptSponsorship(payload);
-        createdList.push(result);
-      }
+      const combinedName = selectedItemDetails.length === 1
+        ? selectedItemDetails[0].name
+        : selectedItemDetails.map((i) => `${i.quantity}x ${i.name}`).join(', ');
 
-      setRecordedRecords(createdList);
-      if (onSuccess && createdList.length > 0) {
-        onSuccess(createdList[0]);
+      const enrichedRecord: SponsorshipRecord = {
+        ...result,
+        items: (result.items && result.items.length > 0) ? result.items : selectedItemDetails,
+        itemsJson: result.itemsJson || JSON.stringify(selectedItemDetails),
+        itemName: (result.items && result.items.length > 0) ? result.itemName : combinedName
+      };
+
+      setRecordedRecord(enrichedRecord);
+      if (onSuccess) {
+        onSuccess(enrichedRecord);
       }
 
       // Reset form
@@ -323,7 +326,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       )}
 
       {/* Success Notification */}
-      {recordedRecords.length > 0 && (
+      {recordedRecord && (
         <div style={{
           display: 'flex',
           alignItems: 'flex-start',
@@ -338,17 +341,13 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
         }}>
           <CheckCircle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
           <div>
-            <span style={{ fontWeight: 800 }}>
-              {recordedRecords.length > 1 ? `${recordedRecords.length} Sponsorships Registered!` : 'Sponsorship Registered!'}
-            </span>
+            <span style={{ fontWeight: 800 }}>Sponsorship Registered!</span>
             <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
-              Receipt Token{recordedRecords.length > 1 ? 's' : ''}:{' '}
-              {recordedRecords.map((rec, idx) => (
-                <span key={rec.sponsorshipId || idx} style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E', marginRight: 6 }}>
-                  {rec.receiptToken}{idx < recordedRecords.length - 1 ? ',' : ''}
-                </span>
-              ))}
-              {' '}• Registered for {recordedRecords[0].donorName}.
+              Receipt Token:{' '}
+              <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#008A2E', marginRight: 6 }}>
+                {recordedRecord.receiptToken}
+              </span>
+              • Registered for {recordedRecord.donorName} ({recordedRecord.quantity} units, ₹{recordedRecord.totalAmount.toLocaleString('en-IN')}).
             </div>
           </div>
         </div>
@@ -676,7 +675,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                         </div>
 
                         {/* Quick +5 button */}
-                        <button
+                        {/* <button
                           type="button"
                           onClick={() => handleSetItemQuantity(pkg.itemId, qty + 5)}
                           style={{
@@ -692,7 +691,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                           title="Add 5 units"
                         >
                           +5
-                        </button>
+                        </button> */}
                       </div>
 
                       {/* Item Subtotal */}

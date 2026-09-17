@@ -21,10 +21,35 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const cleanPhone = sponsorship.mobileNumber.replace(/\D/g, '');
+  const cleanPhone = (sponsorship.mobileNumber || '').replace(/\D/g, '');
+  const rawItems = sponsorship.items || (() => {
+    if (sponsorship.itemsJson) {
+      try {
+        return JSON.parse(sponsorship.itemsJson);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  })();
+
+  const parsedItems = Array.isArray(rawItems) && rawItems.length > 0
+    ? rawItems.map((it: any) => ({
+        itemId: it.itemId || it.ItemId || '',
+        name: it.name || it.Name || 'Sponsored Package',
+        unitPrice: Number(it.unitPrice ?? it.UnitPrice) || 0,
+        quantity: Number(it.quantity ?? it.Quantity) || 1,
+        subtotal: Number(it.subtotal ?? it.Subtotal) || ((Number(it.quantity ?? it.Quantity) || 1) * (Number(it.unitPrice ?? it.UnitPrice) || 0))
+      }))
+    : null;
+
+  const itemsDescription = parsedItems && parsedItems.length > 0
+    ? parsedItems.map((it) => `${it.quantity}x ${it.name}`).join(', ')
+    : `${sponsorship.quantity}x ${sponsorship.itemName}`;
+
   const shareMessage = `*Madavoor Relief Drive — Sponsorship Receipt*%0A%0A` +
     `Dear *${sponsorship.donorName}*,%0A` +
-    `Thank you for your generous sponsorship of *${sponsorship.quantity}x ${sponsorship.itemName}*.%0A%0A` +
+    `Thank you for your generous sponsorship of *${itemsDescription}*.%0A%0A` +
     `• *Receipt Token:* ${sponsorship.receiptToken}%0A` +
     `• *Total Committed:* ₹${sponsorship.totalAmount.toLocaleString('en-IN')}%0A` +
     `• *Amount Paid:* ₹${sponsorship.amountPaid.toLocaleString('en-IN')}%0A` +
@@ -197,26 +222,53 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             </div>
           </div>
 
-          {/* Line Item Box */}
+          {/* Line Items Box */}
           <div style={{
             borderTop: '1px solid #E2E8F0',
             borderBottom: '1px solid #E2E8F0',
             padding: '14px 0',
             marginBottom: 16
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div>
-                <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
-                  {sponsorship.itemName}
+            {parsedItems && parsedItems.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Sponsored Items ({parsedItems.length} {parsedItems.length === 1 ? 'item' : 'items'} • {sponsorship.quantity} total units)
                 </span>
-                <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block' }}>
-                  Quantity: {sponsorship.quantity} × ₹{sponsorship.itemPrice.toLocaleString('en-IN')}
+                {parsedItems.map((item: any, idx: number) => (
+                  <div key={item.itemId || idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.88rem', display: 'block' }}>
+                        {item.name}
+                      </span>
+                      <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                        {item.quantity} {item.quantity === 1 ? 'unit' : 'units'} × ₹{item.unitPrice.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
+                      ₹{item.subtotal.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px dashed #CBD5E1', marginTop: 4 }}>
+                  <span style={{ fontWeight: 800, color: '#334155', fontSize: '0.86rem' }}>Total Committed:</span>
+                  <span style={{ fontWeight: 900, color: '#0F172A', fontSize: '1.05rem' }}>₹{sponsorship.totalAmount.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div>
+                  <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                    {sponsorship.itemName}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block' }}>
+                    Quantity: {sponsorship.quantity} × ₹{sponsorship.itemPrice.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <span style={{ fontWeight: 900, color: '#0F172A', fontSize: '1.05rem' }}>
+                  ₹{sponsorship.totalAmount.toLocaleString('en-IN')}
                 </span>
               </div>
-              <span style={{ fontWeight: 900, color: '#0F172A', fontSize: '1.05rem' }}>
-                ₹{sponsorship.totalAmount.toLocaleString('en-IN')}
-              </span>
-            </div>
+            )}
 
             {/* Financial summary breakdown */}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginTop: 10, color: '#475569' }}>
