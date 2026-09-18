@@ -20,6 +20,50 @@ import type {
 // Live Azure API Base URL (uses Vite proxy in DEV to eliminate local CORS restrictions)
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api');
 
+// Azure API Key configuration (supports APIKEY, API_KEY, VITE_APIKEY, VITE_API_KEY, VITE_AZURE_API_KEY, AZURE_API_KEY)
+export const AZURE_API_KEY: string =
+  (import.meta.env.APIKEY as string) ||
+  (import.meta.env.API_KEY as string) ||
+  (import.meta.env.VITE_APIKEY as string) ||
+  (import.meta.env.VITE_API_KEY as string) ||
+  (import.meta.env.VITE_AZURE_API_KEY as string) ||
+  (import.meta.env.AZURE_API_KEY as string) ||
+  '';
+
+/**
+ * Returns standard HTTP headers for backend Azure requests.
+ * Automatically injects:
+ * - Content-Type: application/json (when isJson is true)
+ * - Authorization: Bearer <token> (when JWT is provided)
+ * - x-api-key and Ocp-Apim-Subscription-Key (when AZURE_API_KEY is configured in Vercel or .env)
+ */
+export function getAuthHeaders(
+  token?: string,
+  isJson: boolean = true,
+  customHeaders?: Record<string, string>
+): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (isJson) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  if (AZURE_API_KEY) {
+    headers['x-api-key'] = AZURE_API_KEY;
+    headers['Ocp-Apim-Subscription-Key'] = AZURE_API_KEY;
+  }
+
+  if (customHeaders) {
+    Object.assign(headers, customHeaders);
+  }
+
+  return headers;
+}
+
 // Storage key and helpers for Admin-configured Campaign Kit Price
 const STORAGE_KIT_PRICE = 'charity_kit_price';
 
@@ -172,7 +216,7 @@ export const authApi = {
 
     const res = await fetch(`${API_BASE_URL}/Auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         phoneNumber: formattedPhone,
         password
@@ -211,10 +255,7 @@ export const authApi = {
     const token = getCurrentUser()?.token;
     const res = await fetch(`${API_BASE_URL}/Auth/change-password`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers: getAuthHeaders(token),
       body: JSON.stringify({ oldPassword, newPassword })
     });
 
@@ -248,7 +289,7 @@ export const donationsApi = {
 
     try {
       const res = await fetch(`${API_BASE_URL}/Leaderboards`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: getAuthHeaders(token, false)
       });
 
       if (res.ok) {
@@ -280,7 +321,7 @@ export const donationsApi = {
         let liveDonations: any[] = [];
         try {
           const donRes = await fetch(`${API_BASE_URL}/Donations`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {}
+            headers: getAuthHeaders(token, false)
           });
           if (donRes.ok) {
             const donData = await donRes.json();
@@ -347,7 +388,7 @@ export const donationsApi = {
     const token = getCurrentUser()?.token;
     try {
       const res = await fetch(`${API_BASE_URL}/Leaderboards`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: getAuthHeaders(token, false)
       });
 
       if (res.ok) {
@@ -379,7 +420,7 @@ export const donationsApi = {
     const token = getCurrentUser()?.token;
     try {
       const res = await fetch(`${API_BASE_URL}/Leaderboards`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: getAuthHeaders(token, false)
       });
 
       if (res.ok) {
@@ -413,7 +454,9 @@ export const donationsApi = {
   // Get Wards list for a panchayath (GET /api/Wards)
   getWards: async (panchayath = 'Madavoor'): Promise<WardOption[]> => {
     try {
-      const res = await fetch(`${API_BASE_URL}/Wards?panchayath=${encodeURIComponent(panchayath)}`);
+      const res = await fetch(`${API_BASE_URL}/Wards?panchayath=${encodeURIComponent(panchayath)}`, {
+        headers: getAuthHeaders(undefined, false)
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -448,7 +491,7 @@ export const donationsApi = {
     if (token) {
       try {
         const res = await fetch(`${API_BASE_URL}/Donations`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: getAuthHeaders(token, false)
         });
         if (res.ok) {
           const data: any[] = await res.json();
@@ -487,10 +530,7 @@ export const donationsApi = {
 
     const res = await fetch(`${API_BASE_URL}/Donations`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers: getAuthHeaders(token),
       body: JSON.stringify({
         donorName: request.donorName.trim(),
         whatsAppNumber: formattedPhone,
@@ -528,7 +568,9 @@ export const donationsApi = {
   // Public Receipt Viewer (fetches live from API with local fallback)
   getPublicReceipt: async (token: string, panchayath = 'Madavoor'): Promise<Donation | null> => {
     try {
-      const res = await fetch(`${API_BASE_URL}/Donations/receipt/${encodeURIComponent(token)}?panchayath=${encodeURIComponent(panchayath)}`);
+      const res = await fetch(`${API_BASE_URL}/Donations/receipt/${encodeURIComponent(token)}?panchayath=${encodeURIComponent(panchayath)}`, {
+        headers: getAuthHeaders(undefined, false)
+      });
       if (res.ok) {
         const d = await res.json();
         const rawKitCount = Number(d.kitCount || d.KitCount || 1);
@@ -569,10 +611,7 @@ export const usersApi = {
     try {
       const res = await fetch(`${API_BASE_URL}/Users/${encodeURIComponent(userIdOrPhone)}/reset-password`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
+        headers: getAuthHeaders(token),
         body: JSON.stringify({ newPassword: finalPassword })
       });
 
@@ -588,10 +627,7 @@ export const usersApi = {
       if ((res.status === 403 || res.status === 404) && user?.role === 'Admin') {
         const putRes = await fetch(`${API_BASE_URL}/Users/${encodeURIComponent(userIdOrPhone)}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
+          headers: getAuthHeaders(token),
           body: JSON.stringify({ newPassword: finalPassword })
         });
 
@@ -611,10 +647,7 @@ export const usersApi = {
         try {
           const putRes = await fetch(`${API_BASE_URL}/Users/${encodeURIComponent(userIdOrPhone)}`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {})
-            },
+            headers: getAuthHeaders(token),
             body: JSON.stringify({ newPassword: finalPassword })
           });
 
@@ -642,7 +675,7 @@ export const adminApi = {
     const token = user?.token;
 
     const res = await fetch(`${API_BASE_URL}/Users/coordinators`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
+      headers: getAuthHeaders(token, false)
     });
 
     if (!res.ok) {
@@ -677,10 +710,7 @@ export const adminApi = {
 
     const res = await fetch(`${API_BASE_URL}/Users`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers: getAuthHeaders(token),
       body: JSON.stringify({
         fullName: data.fullName.trim(),
         phoneNumber: formattedPhone,
@@ -721,10 +751,7 @@ export const adminApi = {
     const token = getCurrentUser()?.token;
     const res = await fetch(`${API_BASE_URL}/Users/${userId}/target`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers: getAuthHeaders(token),
       body: JSON.stringify({ targetKits: Number(targetKits) })
     });
 
@@ -758,10 +785,7 @@ export const adminApi = {
 
     const res = await fetch(`${API_BASE_URL}/Users/${userId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers: getAuthHeaders(token),
       body: JSON.stringify(payload)
     });
 
@@ -802,7 +826,7 @@ export const adminApi = {
     const token = getCurrentUser()?.token;
     const res = await fetch(`${API_BASE_URL}/Users/${userId}`, {
       method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
+      headers: getAuthHeaders(token, false)
     });
 
     if (!res.ok) {
@@ -830,7 +854,7 @@ export const analyticsApi = {
   getMyProgress: async (tokenOverride?: string): Promise<UserProgress> => {
     const token = tokenOverride || getCurrentUser()?.token;
     const res = await fetch(`${API_BASE_URL}/Analytics/my-progress`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
+      headers: getAuthHeaders(token, false)
     });
 
     if (!res.ok) {
@@ -868,7 +892,7 @@ export const coordinatorApi = {
     const token = tokenOverride || getCurrentUser()?.token;
     try {
       const res = await fetch(`${API_BASE_URL}/Users/volunteers`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: getAuthHeaders(token, false)
       });
 
       if (!res.ok) {
@@ -891,7 +915,9 @@ export const sponsorshipsApi = {
   // 1. Get Catalog Items (GET /api/Sponsorships/items)
   getItems: async (panchayath = 'Madavoor'): Promise<SponsorshipItem[]> => {
     try {
-      const res = await fetch(`${API_BASE_URL}/Sponsorships/items?panchayath=${encodeURIComponent(panchayath)}`);
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/items?panchayath=${encodeURIComponent(panchayath)}`, {
+        headers: getAuthHeaders(undefined, false)
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -931,10 +957,7 @@ export const sponsorshipsApi = {
 
     const res = await fetch(`${API_BASE_URL}/Sponsorships`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers: getAuthHeaders(token),
       body: JSON.stringify(requestBody)
     });
 
@@ -956,7 +979,7 @@ export const sponsorshipsApi = {
           ? `${API_BASE_URL}/Sponsorships?status=${encodeURIComponent(status)}`
           : `${API_BASE_URL}/Sponsorships`;
         const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: getAuthHeaders(token, false)
         });
         if (res.ok) {
           const data = await res.json();
@@ -982,10 +1005,7 @@ export const sponsorshipsApi = {
 
     const res = await fetch(`${API_BASE_URL}/Sponsorships/${encodeURIComponent(receiptToken)}/payments?panchayath=${encodeURIComponent(panchayath)}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers: getAuthHeaders(token),
       body: JSON.stringify({
         amountToPay: Number(payload.amountToPay),
         paymentMode: payload.paymentMode || 'Cash',
@@ -1008,7 +1028,7 @@ export const sponsorshipsApi = {
     const token = getCurrentUser()?.token;
     try {
       const res = await fetch(`${API_BASE_URL}/Sponsorships/leaderboard`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: getAuthHeaders(token, false)
       });
 
       if (res.ok) {
@@ -1039,7 +1059,9 @@ export const sponsorshipsApi = {
   // 6. Get Single Sponsorship Receipt by Token (GET /api/Sponsorships/{receiptToken})
   getSponsorshipByToken: async (receiptToken: string, panchayath = 'Madavoor'): Promise<SponsorshipRecord | null> => {
     try {
-      const res = await fetch(`${API_BASE_URL}/Sponsorships/${encodeURIComponent(receiptToken)}?panchayath=${encodeURIComponent(panchayath)}`);
+      const res = await fetch(`${API_BASE_URL}/Sponsorships/${encodeURIComponent(receiptToken)}?panchayath=${encodeURIComponent(panchayath)}`, {
+        headers: getAuthHeaders(undefined, false)
+      });
       if (res.ok) {
         return await res.json();
       }

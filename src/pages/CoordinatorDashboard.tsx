@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, Donation, LeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, analyticsApi, coordinatorApi, sponsorshipsApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice, type UserProgress } from '../services/api';
+import { donationsApi, analyticsApi, coordinatorApi, sponsorshipsApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice, getAuthHeaders, type UserProgress } from '../services/api';
 import { 
   Users, 
   TrendingUp, 
@@ -169,10 +169,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
       setCreatingVol(true);
       const res = await fetch(`${API_BASE_URL}/Users`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(user.token ? { Authorization: `Bearer ${user.token}` } : {})
-        },
+        headers: getAuthHeaders(user.token),
         body: JSON.stringify({
           fullName: volFullName.trim(),
           phoneNumber: `+91${cleanPhone.slice(-10)}`,

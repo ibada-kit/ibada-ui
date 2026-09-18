@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, sponsorshipsApi, authApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice } from '../services/api';
+import { donationsApi, sponsorshipsApi, authApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice, getAuthHeaders } from '../services/api';
 import { 
   MapPin, 
   Users, 
@@ -171,7 +171,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
     // 2. Fetch volunteers tied to this ward
     if (user.token) {
       fetch(`${API_BASE_URL}/Users/volunteers`, {
-        headers: { Authorization: `Bearer ${user.token}` }
+        headers: getAuthHeaders(user.token, false)
       })
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -239,10 +239,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       setSubmitting(true);
       const res = await fetch(`${API_BASE_URL}/Users`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(user.token ? { Authorization: `Bearer ${user.token}` } : {})
-        },
+        headers: getAuthHeaders(user.token),
         body: JSON.stringify({
           fullName: volName.trim(),
           phoneNumber: `+91${cleanPhone.slice(-10)}`,

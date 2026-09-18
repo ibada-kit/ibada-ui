@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, sponsorshipsApi, API_BASE_URL, getKitUnitPrice } from '../services/api';
+import { donationsApi, sponsorshipsApi, API_BASE_URL, getKitUnitPrice, getAuthHeaders } from '../services/api';
 import { 
   Award, 
   TrendingUp, 
@@ -85,10 +85,9 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
       })
       .catch((err) => console.warn('Could not load volunteer dashboard data', err));
 
-    // Try fetching from backend analytics if token exists
     if (user.token) {
       fetch(`${API_BASE_URL}/Analytics/my-progress`, {
-        headers: { Authorization: `Bearer ${user.token}` }
+        headers: getAuthHeaders(user.token, false)
       })
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -169,10 +168,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
       if (user.token) {
         const res = await fetch(`${API_BASE_URL}/Auth/change-password`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.token}`
-          },
+          headers: getAuthHeaders(user.token),
           body: JSON.stringify({ oldPassword, newPassword })
         });
         if (!res.ok) {
