@@ -108,24 +108,28 @@ The frontend application uses environment variables to switch between offline du
 
 | Variable Name | Alternative Keys Supported | Description | Default / Production Value |
 |---|---|---|---|
-| `VITE_API_BASE_URL` | - | Hosted .NET 8 Web API endpoint | `https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api` |
+| `VITE_API_BASE_URL` | `API_BASE_URL`, `VITE_API_URL`, `API_URL`, `VITE_BACKEND_URL`, `BACKEND_URL` | Live backend API base endpoint (automatically appends `/api` if omitted) | `https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api` |
 | `APIKEY` | `API_KEY`, `VITE_APIKEY`, `VITE_AZURE_API_KEY`, `AZURE_API_KEY` | Azure API Key / APIM Subscription Key attached as `x-api-key` & `Ocp-Apim-Subscription-Key` headers | *(Your secret Azure API Key)* |
 
-### Adding `APIKEY` on Vercel
+### Adding Environment Variables on Vercel
 
 1. Open your project on the **Vercel Dashboard** (`https://vercel.com`).
 2. Go to **Settings** > **Environment Variables**.
-3. Add the following variable:
-   - **Key**: `APIKEY` *(or `VITE_AZURE_API_KEY` / `API_KEY`)*
-   - **Value**: `<Your secret API Key value>`
+3. Add the following variables:
+   - **Backend URL**:
+     - **Key**: `API_BASE_URL` (or `VITE_API_BASE_URL` / `API_URL`)
+     - **Value**: Your live API URL (e.g. `https://mlcharityapiclientapi.azure-api.net/api` or your Azure App Service URL)
+   - **API Key**:
+     - **Key**: `APIKEY` (or `VITE_AZURE_API_KEY` / `API_KEY`)
+     - **Value**: `<Your secret API Key value>`
 4. Under **Environments**, select **Production**, **Preview**, and **Development**.
 5. Click **Save**.
 6. ⚠️ **CRITICAL STEP (Redeploy)**:
-   Because Vite compiles and bundles environment variables **at build time**, updating environment variables in Vercel does not automatically apply to an already-built deployment. You **MUST trigger a Redeploy**:
+   Because Vite compiles and bundles environment variables into static JS **at build time**, updating environment variables in Vercel does not automatically apply to an already-built deployment. You **MUST trigger a Redeploy**:
    - Go to the **Deployments** tab on Vercel.
    - Click the three dots (`...`) icon on the latest deployment.
    - Click **Redeploy**.
-   - Your application will now build with the new `APIKEY` baked in!
+   - Your application will now build with the new endpoint and `APIKEY` baked in!
 
 ---
 

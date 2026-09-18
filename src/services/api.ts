@@ -17,8 +17,37 @@ import type {
   SponsorshipLeaderboardResponse
 } from '../types';
 
-// Live Azure API Base URL (uses Vite proxy in DEV to eliminate local CORS restrictions)
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api');
+// Live API Base URL: checks Vercel/env variables (VITE_API_BASE_URL, API_BASE_URL, VITE_API_URL, API_URL, BACKEND_URL, etc.)
+function resolveApiBaseUrl(): string {
+  const envUrl =
+    (import.meta.env.VITE_API_BASE_URL as string) ||
+    (import.meta.env.API_BASE_URL as string) ||
+    (import.meta.env.VITE_API_URL as string) ||
+    (import.meta.env.API_URL as string) ||
+    (import.meta.env.VITE_BACKEND_URL as string) ||
+    (import.meta.env.BACKEND_URL as string) ||
+    (import.meta.env.VITE_API_ENDPOINT as string) ||
+    (import.meta.env.API_ENDPOINT as string) ||
+    '';
+
+  if (envUrl) {
+    let clean = envUrl.trim().replace(/\/+$/, '');
+    if (!clean.endsWith('/api') && clean !== '/api') {
+      clean = `${clean}/api`;
+    }
+    return clean;
+  }
+
+  // In local development, default to Vite '/api' proxy to eliminate CORS restrictions
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+
+  // Production fallback (overridden by Vercel environment variables)
+  return 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api';
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 // Azure API Key configuration (supports APIKEY, API_KEY, VITE_APIKEY, VITE_API_KEY, VITE_AZURE_API_KEY, AZURE_API_KEY)
 export const AZURE_API_KEY: string =
