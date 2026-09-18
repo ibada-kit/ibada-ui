@@ -691,7 +691,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               onClick={() => {
-                const creds = `Muslim League | Madavoor Relief Campaign\nVolunteer Login Credentials:\nName: ${createdVolunteer.fullName}\nPhone: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\nPortal: ${window.location.origin}`;
+                const creds = `Muslim League | Ibada Kit Challenge\nVolunteer Login Credentials:\nName: ${createdVolunteer.fullName}\nPhone: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\nPortal: ${window.location.origin}`;
                 navigator.clipboard.writeText(creds);
                 setCopiedCreds(true);
                 setTimeout(() => setCopiedCreds(false), 2000);
@@ -704,7 +704,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
             </button>
 
             <a
-              href={`https://wa.me/${createdVolunteer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Salam ${createdVolunteer.fullName},\n\nHere are your login credentials for the Madavoor Relief Campaign:\nMobile: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\n\nLogin: ${window.location.origin}`)}`}
+              href={`https://wa.me/${createdVolunteer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Salam ${createdVolunteer.fullName},\n\nHere are your login credentials for the Ibada Kit Challenge:\nMobile: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\n\nLogin: ${window.location.origin}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-secondary"

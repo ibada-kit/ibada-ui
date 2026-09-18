@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                Madavoor Relief
+                Ibada Kit Challenge
               </h1>
               <span className="badge badge-emerald" style={{ fontSize: '0.6rem', padding: '2px 6px', background: '#EBF7EE', color: '#008A2E', border: '1px solid #A5D6B8' }}>
                 Live
@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis'
             }}>
-              Relief Campaign
+              Charity Campaign
             </p>
           </div>
         </div>

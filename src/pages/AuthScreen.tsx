@@ -81,7 +81,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
             <Heart size={28} color="#ffffff" fill="#ffffff" />
           </div>
           <h1 style={{ fontSize: '1.65rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: 4, color: '#0F172A' }}>
-            Madavoor Relief Drive
+            Ibada Kit Challenge
           </h1>
           <p style={{ color: '#2C82C9', fontSize: '0.88rem', fontWeight: 700 }}>
             Volunteer & Community Coordinator Portal
@@ -279,7 +279,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
           color: '#64748B',
           marginTop: 20
         }}>
-          Muslim League | Madavoor Relief Campaign
+          Muslim League | Ibada Kit Challenge
         </p>
       </div>
     </div>

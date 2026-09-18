@@ -265,7 +265,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `madavoor_relief_report_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `ibada_kit_challenge_report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

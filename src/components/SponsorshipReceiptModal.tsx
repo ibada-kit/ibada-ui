@@ -49,9 +49,9 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
 
   const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(sponsorship.receiptToken)}&name=${encodeURIComponent(sponsorship.donorName)}&type=sponsorship&item=${encodeURIComponent(itemsDescription)}&amount=${sponsorship.totalAmount}&status=${encodeURIComponent(sponsorship.paymentStatus)}&panchayath=${encodeURIComponent(sponsorship.panchayath || 'Madavoor')}`;
 
-  const shareMessage = `*Madavoor Relief Drive — Sponsorship Receipt*%0A%0A` +
+  const shareMessage = `*Ibada Kit Challenge — Sponsorship Receipt*%0A%0A` +
     `Dear *${sponsorship.donorName}*,%0A` +
-    `Thank you for your generous sponsorship of *${itemsDescription}*.%0A%0A` +
+    `Thank you for your generous sponsorship of *${itemsDescription}* to the Ibada Kit Challenge.%0A%0A` +
     `• *Receipt Token:* ${sponsorship.receiptToken}%0A` +
     `• *Total Committed:* ₹${sponsorship.totalAmount.toLocaleString('en-IN')}%0A` +
     `• *Amount Paid:* ₹${sponsorship.amountPaid.toLocaleString('en-IN')}%0A` +
@@ -153,7 +153,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <Building2 size={24} />
             <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, opacity: 0.9 }}>
-              Official Sponsorship Receipt
+              Ibada Kit Challenge • Official Sponsorship Receipt
             </span>
           </div>
 

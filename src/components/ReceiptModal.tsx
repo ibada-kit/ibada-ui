@@ -26,9 +26,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
   const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${encodeURIComponent(donation.wardNumber?.toString() || '')}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}`;
 
   const shareMessage =
-    `*Madavoor Relief Drive — Kit Donation Receipt*%0A%0A` +
+    `*Ibada Kit Challenge — Kit Donation Receipt*%0A%0A` +
     `Assalamu Alaikum *${donation.donorName}*,%0A` +
-    `Thank you for your generous contribution of *${donation.kitCount} ${donation.kitCount === 1 ? 'Relief Kit' : 'Relief Kits'}* to the Madavoor Relief Campaign! 🤲%0A%0A` +
+    `Thank you for your generous contribution of *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* to the Ibada Kit Challenge! 🤲%0A%0A` +
     `• *Receipt Token:* ${donation.receiptToken}%0A` +
     `• *Kits Contributed:* ${donation.kitCount}%0A` +
     `• *Total Amount:* ₹${donation.totalAmount.toLocaleString('en-IN')}%0A` +
@@ -89,6 +89,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               <CheckCircle size={28} color="#008A2E" />
             </div>
 
+            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#008A2E', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+              Ibada Kit Challenge
+            </div>
             <span className="badge badge-emerald" style={{ marginBottom: 12 }}>
               Verified Donation Receipt
             </span>

@@ -92,7 +92,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   const cleanPhone = targetUser.phone.replace(/\D/g, '');
   const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
   const waText = encodeURIComponent(
-    `Salam ${targetUser.name},\n\nYour login password for the Madavoor Relief Campaign has been reset:\n📱 Mobile: ${targetUser.phone}\n🔑 Password: ${resultPassword}\n${targetUser.wardNumber ? `📍 Ward: ${targetUser.wardNumber}\n` : ''}\n🌐 Login Portal: ${window.location.origin}`
+    `Salam ${targetUser.name},\n\nYour login password for the Ibada Kit Challenge has been reset:\n📱 Mobile: ${targetUser.phone}\n🔑 Password: ${resultPassword}\n${targetUser.wardNumber ? `📍 Ward: ${targetUser.wardNumber}\n` : ''}\n🌐 Login Portal: ${window.location.origin}`
   );
 
   return (

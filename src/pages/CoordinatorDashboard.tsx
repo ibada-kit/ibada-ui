@@ -649,7 +649,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <a
-                  href={`https://wa.me/${createdVolunteer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Salam ${createdVolunteer.fullName},\n\nHere are your login credentials for the Madavoor Relief Campaign:\nMobile: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\n\nLogin: ${window.location.origin}`)}`}
+                  href={`https://wa.me/${createdVolunteer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Salam ${createdVolunteer.fullName},\n\nHere are your login credentials for the Ibada Kit Challenge:\nMobile: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\n\nLogin: ${window.location.origin}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary"

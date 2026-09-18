@@ -89,7 +89,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '900 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('MADAVOOR RELIEF DRIVE', 540, 120);
+    ctx.fillText('IBADA KIT CHALLENGE', 540, 120);
 
     // Sub-header badge
     ctx.fillStyle = '#FBBF24';
@@ -197,7 +197,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     // 9. Footer Tagline
     ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
     ctx.font = '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('100% Direct Relief Distribution • Stand With Us', 540, 990);
+    ctx.fillText('100% Direct Kit Distribution • Stand With Us', 540, 990);
 
     return canvas;
   };
@@ -208,7 +208,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       setIsDownloading(true);
       const canvas = await generatePosterCanvas();
       const safeName = (params.name || 'supporter').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const filename = `madavoor-relief-supporter-${safeName}.png`;
+      const filename = `ibada-kit-challenge-supporter-${safeName}.png`;
 
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
@@ -234,10 +234,10 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       canvas.toBlob(async (blob) => {
         if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], 'supporter-poster.png', { type: 'image/png' })] })) {
           try {
-            const file = new File([blob], `${safeName}-madavoor-supporter.png`, { type: 'image/png' });
+            const file = new File([blob], `${safeName}-ibada-kit-supporter.png`, { type: 'image/png' });
             await navigator.share({
-              title: 'Madavoor Relief Drive Supporter',
-              text: `I proudly supported the Madavoor Relief Drive! 🤲\nJoin me in making a difference: ${window.location.origin}`,
+              title: 'Ibada Kit Challenge Supporter',
+              text: `I proudly supported the Ibada Kit Challenge! 🤲\nJoin me in making a difference: ${window.location.origin}`,
               files: [file]
             });
             return;
@@ -248,7 +248,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
 
         // Fallback: Open WhatsApp with text & current poster link
         const shareText = encodeURIComponent(
-          `*I proudly contributed to the Madavoor Relief Drive!* 🤲%0A%0A` +
+          `*I proudly contributed to the Ibada Kit Challenge!* 🤲%0A%0A` +
           `• *Donor:* ${safeName}%0A` +
           `• *Contribution:* ${getContributionText()}%0A` +
           `• *Receipt Token:* ${params.token}%0A%0A` +
@@ -306,7 +306,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
           </div>
           <div>
             <h1 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
-              Madavoor Relief Drive
+              Ibada Kit Challenge
             </h1>
             <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
               Supporter Poster
@@ -374,7 +374,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
               letterSpacing: '0.04em',
               textTransform: 'uppercase'
             }}>
-              Madavoor Relief Drive
+              Ibada Kit Challenge
             </div>
             <div style={{
               fontSize: 'clamp(0.68rem, 2.5vw, 0.78rem)',
@@ -527,7 +527,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
             letterSpacing: '0.04em',
             textTransform: 'uppercase'
           }}>
-            100% Direct Relief Distribution
+            100% Direct Kit Distribution
           </div>
         </div>
 

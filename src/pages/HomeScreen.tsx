@@ -184,7 +184,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="badge badge-emerald">Madavoor Relief Drive</span>
+              <span className="badge badge-emerald">Ibada Kit Challenge</span>
               <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {metrics ? `${metrics.startDate} – ${metrics.endDate}` : 'Current Week'}
               </span>
