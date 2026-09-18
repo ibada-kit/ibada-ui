@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Donation } from '../types';
-import { CheckCircle, Share2, X, ShieldCheck, Copy, Check } from 'lucide-react';
+import { CheckCircle, Share2, X, ShieldCheck, Copy, Check, Sparkles } from 'lucide-react';
 
 interface ReceiptModalProps {
   donation: Donation | null;
@@ -23,6 +23,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
   const rawPhone = (donation.whatsAppNumber || '').replace(/\D/g, '');
   const cleanPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
 
+  const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${encodeURIComponent(donation.wardNumber?.toString() || '')}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}`;
+
   const shareMessage =
     `*Madavoor Relief Drive — Kit Donation Receipt*%0A%0A` +
     `Assalamu Alaikum *${donation.donorName}*,%0A` +
@@ -33,6 +35,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
     `• *Location:* Ward ${donation.wardNumber}, ${donation.panchayath}%0A` +
     `• *Collected By:* ${donation.collectedByName || 'Volunteer'} (${donation.collectedByRole || 'Volunteer'})%0A` +
     `• *Date:* ${new Date(donation.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}%0A%0A` +
+    `📸 *Create Your Supporter Poster:*%0A${posterUrl}%0A%0A` +
     `_May Allah reward your contribution manifold!_`;
 
   const waUrl = cleanPhone
@@ -203,6 +206,33 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               Close
             </button>
           </div>
+
+          {/* Direct link to Create Supporter Poster */}
+          <a
+            href={posterUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              marginTop: 10,
+              width: '100%',
+              padding: '10px 14px',
+              background: '#F0FDF4',
+              color: '#008A2E',
+              border: '1px solid #A5D6B8',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              textDecoration: 'none',
+              fontWeight: 700,
+              fontSize: '0.84rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Sparkles size={16} color="#D97706" />
+            <span>Create Donor Supporter Poster</span>
+          </a>
         </div>
       </div>
     </div>

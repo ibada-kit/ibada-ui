@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Share2, Building2, CheckCircle2, Clock, Bookmark, CreditCard } from 'lucide-react';
+import { X, Copy, Check, Share2, Building2, CheckCircle2, Clock, Bookmark, CreditCard, Sparkles } from 'lucide-react';
 import type { SponsorshipRecord } from '../types';
 
 interface SponsorshipReceiptModalProps {
@@ -47,6 +47,8 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
     ? parsedItems.map((it) => `${it.quantity}x ${it.name}`).join(', ')
     : `${sponsorship.quantity}x ${sponsorship.itemName}`;
 
+  const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(sponsorship.receiptToken)}&name=${encodeURIComponent(sponsorship.donorName)}&type=sponsorship&item=${encodeURIComponent(itemsDescription)}&amount=${sponsorship.totalAmount}&status=${encodeURIComponent(sponsorship.paymentStatus)}&panchayath=${encodeURIComponent(sponsorship.panchayath || 'Madavoor')}`;
+
   const shareMessage = `*Madavoor Relief Drive — Sponsorship Receipt*%0A%0A` +
     `Dear *${sponsorship.donorName}*,%0A` +
     `Thank you for your generous sponsorship of *${itemsDescription}*.%0A%0A` +
@@ -56,6 +58,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
     `• *Balance Remaining:* ₹${sponsorship.balanceAmount.toLocaleString('en-IN')}%0A` +
     `• *Status:* ${sponsorship.paymentStatus}%0A` +
     `• *Collected By:* ${sponsorship.collectedByName || 'Field Coordinator'}%0A%0A` +
+    `📸 *Create Your Supporter Poster:*%0A${posterUrl}%0A%0A` +
     `_May Allah reward your contribution manifold!_`;
 
   const waUrl = `https://wa.me/${cleanPhone}?text=${shareMessage}`;
@@ -347,6 +350,33 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
               Close
             </button>
           </div>
+
+          {/* Direct link to Create Supporter Poster */}
+          <a
+            href={posterUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              marginTop: 10,
+              width: '100%',
+              padding: '10px 14px',
+              background: '#EDF4FA',
+              color: '#2C82C9',
+              border: '1px solid #B8D4EE',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              textDecoration: 'none',
+              fontWeight: 700,
+              fontSize: '0.84rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Sparkles size={16} color="#D97706" />
+            <span>Create Sponsor Supporter Poster</span>
+          </a>
         </div>
       </div>
     </div>

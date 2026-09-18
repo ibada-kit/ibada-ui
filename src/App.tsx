@@ -12,9 +12,15 @@ import { RecordDonationModal } from './components/RecordDonationModal';
 import { ReceiptModal } from './components/ReceiptModal';
 import { SponsorshipReceiptModal } from './components/SponsorshipReceiptModal';
 import { CollectBalanceModal } from './components/CollectBalanceModal';
+import { DonorPosterGenerator } from './components/DonorPosterGenerator';
 
 export const App: React.FC = () => {
   const [currentUser, setCurUser] = useState<User | null>(() => getCurrentUser());
+  const [isPosterView, setIsPosterView] = useState<boolean>(() => {
+    const path = window.location.pathname.toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    return path.startsWith('/poster') || params.get('view') === 'poster' || params.has('poster');
+  });
   const [activeAdminView, setActiveAdminView] = useState<'home' | 'admin'>(() => {
     const user = getCurrentUser();
     return user?.role === 'Admin' ? 'admin' : 'home';
@@ -40,6 +46,14 @@ export const App: React.FC = () => {
         setActiveAdminView('admin');
       }
     }
+
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      setIsPosterView(path.startsWith('/poster') || params.get('view') === 'poster' || params.has('poster'));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const handleAuthSuccess = (user: User) => {
@@ -58,6 +72,18 @@ export const App: React.FC = () => {
     setActiveReceipt(donation);
     setRefreshKey((prev) => prev + 1);
   };
+
+  // Public Donor Poster Generator view (no auth required)
+  if (isPosterView) {
+    return (
+      <DonorPosterGenerator
+        onBackToApp={() => {
+          window.history.pushState({}, '', window.location.origin + '/');
+          setIsPosterView(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#F4F9FD' }}>
