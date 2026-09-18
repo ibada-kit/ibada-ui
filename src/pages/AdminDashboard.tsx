@@ -276,7 +276,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       setLoading(true);
       const allSpons = await sponsorshipsApi.getSponsorships();
-      exportSponsorshipsToCSV(allSpons, 'madavoor_campaign_sponsorships_detailed_report');
+      exportSponsorshipsToCSV(allSpons, 'ibada_kit_sponsorships_detailed_report');
     } catch {
       alert('Failed to retrieve full campaign sponsorships list.');
     } finally {
@@ -327,7 +327,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               }}>
                 SUPER ADMIN
               </span>
-              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Madavoor Central Administration</span>
+              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Ibada Kit Central Administration</span>
             </div>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#0F172A', marginTop: 2 }}>
               Campaign Control Center

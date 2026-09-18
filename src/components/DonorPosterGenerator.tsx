@@ -167,7 +167,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     // 7. Location & Panchayath
     const locationText = params.ward
       ? `Ward ${params.ward} • ${params.panchayath || 'Madavoor'}`
-      : `${params.panchayath || 'Madavoor'} Relief Committee`;
+      : `${params.panchayath || 'Madavoor'} Campaign Committee`;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillText(locationText, 540, 855);
