@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
   const backendTarget =
     rawApiUrl
       ? rawApiUrl.trim().replace(/\/+$/, '').replace(/\/api$/, '')
-      : (env.VITE_BACKEND_URL || process.env.VITE_BACKEND_URL || 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net')
+      : (env.VITE_BACKEND_URL || process.env.VITE_BACKEND_URL || 'https://ibadakitchallengeapi-b7gghfe3eggfhpaj.southindia-01.azurewebsites.net')
 
   const azureApiKey =
     env.APIKEY ||

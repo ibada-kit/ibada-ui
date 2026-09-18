@@ -108,7 +108,7 @@ The frontend application uses environment variables to switch between offline du
 
 | Variable Name | Alternative Keys Supported | Description | Default / Production Value |
 |---|---|---|---|
-| `VITE_API_BASE_URL` | `API_BASE_URL`, `VITE_API_URL`, `API_URL`, `VITE_BACKEND_URL`, `BACKEND_URL` | Live backend API base endpoint (automatically appends `/api` if omitted) | `https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api` |
+| `VITE_API_BASE_URL` | `API_BASE_URL`, `VITE_API_URL`, `API_URL`, `VITE_BACKEND_URL`, `BACKEND_URL` | Live backend API base endpoint (automatically appends `/api` if omitted) | `https://ibadakitchallengeapi-b7gghfe3eggfhpaj.southindia-01.azurewebsites.net/api` |
 | `APIKEY` | `API_KEY`, `VITE_APIKEY`, `VITE_AZURE_API_KEY`, `AZURE_API_KEY` | Azure API Key / APIM Subscription Key attached as `x-api-key` & `Ocp-Apim-Subscription-Key` headers | *(Your secret Azure API Key)* |
 
 ### Adding Environment Variables on Vercel

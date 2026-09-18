@@ -44,7 +44,7 @@ function resolveApiBaseUrl(): string {
   }
 
   // Production fallback (overridden by Vercel environment variables)
-  return 'https://mlcharitywebapi-g6evcsavaqf6drej.centralindia-01.azurewebsites.net/api';
+  return 'https://ibadakitchallengeapi-b7gghfe3eggfhpaj.southindia-01.azurewebsites.net/api';
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();
