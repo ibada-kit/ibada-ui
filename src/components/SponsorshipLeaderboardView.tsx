@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Award, MapPin, RefreshCw, PlusCircle, ShieldCheck } from 'lucide-react';
+import { Building2, Award, MapPin, RefreshCw, PlusCircle, ShieldCheck, Package, CheckCircle2, Clock, Bookmark } from 'lucide-react';
 import { sponsorshipsApi, getCurrentUser } from '../services/api';
 import type { SponsorshipLeaderboardResponse, User } from '../types';
 import { ScrollableTabStrip } from './ScrollableTabStrip';
@@ -16,10 +16,14 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
   const effectiveUser = user ?? getCurrentUser();
   const isAuthenticated = !!effectiveUser;
   const isAdmin = effectiveUser?.role === 'Admin';
+  const isWardCommittee = effectiveUser?.role === 'WardCommittee';
+  const isGeneralCoordinator = effectiveUser?.role === 'Coordinator' && (!effectiveUser?.wardNumber || Number(effectiveUser?.wardNumber) === 0);
+  const isCoordinator = effectiveUser?.role === 'Coordinator';
+  const canViewItemBreakdown = isAdmin || isWardCommittee || isGeneralCoordinator || isCoordinator;
 
   const [data, setData] = useState<SponsorshipLeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'collectors' | 'wards' | 'firms'>('collectors');
+  const [activeSubTab, setActiveSubTab] = useState<'collectors' | 'wards' | 'firms' | 'items'>('collectors');
 
   const loadLeaderboard = async () => {
     try {
@@ -39,6 +43,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
 
   const summary = data?.summary || {
     totalSponsorships: 0,
+    totalIndividualItems: 0,
     totalCommittedAmount: 0,
     totalPaidAmount: 0,
     totalPendingBalance: 0,
@@ -47,9 +52,13 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
     bookedCount: 0
   };
 
+  const itemBreakdown = data?.itemBreakdown || [];
+  const totalIndividualItems = summary.totalIndividualItems || itemBreakdown.reduce((sum, it) => sum + (it.totalQuantity || 0), 0);
+
   const hasSponsorships = summary.totalSponsorships > 0 ||
     (data?.topCollectors && data.topCollectors.length > 0) ||
-    (data?.topSponsoringFirms && data.topSponsoringFirms.length > 0);
+    (data?.topSponsoringFirms && data.topSponsoringFirms.length > 0) ||
+    itemBreakdown.length > 0;
 
   const getRankBadgeIcon = (rank: number) => {
     if (rank === 1) return '🥇';
@@ -107,7 +116,8 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
             ₹{summary.totalCommittedAmount.toLocaleString('en-IN')}
           </div>
           <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: 2 }}>
-            Across {summary.totalSponsorships} packages
+            Across {summary.totalSponsorships} {summary.totalSponsorships === 1 ? 'package' : 'packages'}
+            {canViewItemBreakdown && totalIndividualItems > 0 ? ` • ${totalIndividualItems} Total Items` : ''}
           </span>
         </div>
 
@@ -182,6 +192,105 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
           </div>
         </div>
       </div>
+
+      {/* Privileged Overview: Individual Sponsor Items & Counts Banner */}
+      {canViewItemBreakdown && itemBreakdown.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #F8FAFC 0%, #EDF4FA 100%)',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid #B8D4EE',
+          padding: '12px 16px',
+          marginBottom: 20,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              background: '#2C82C9',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Package size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0F172A' }}>
+                Total Individual Items: <span style={{ color: '#008A2E', fontWeight: 900 }}>{totalIndividualItems} Units</span> across {itemBreakdown.length} package types
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                {isAdmin
+                  ? 'All campaign sponsorships'
+                  : isGeneralCoordinator
+                  ? 'Campaign-wide coordinator scope'
+                  : `Ward ${effectiveUser?.wardNumber || ''} scope`}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {itemBreakdown.slice(0, 3).map((it, idx) => (
+                <span
+                  key={it.itemId || idx}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: 'var(--radius-full)',
+                    padding: '3px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    color: '#334155',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5
+                  }}
+                >
+                  <span style={{ color: '#2C82C9', fontWeight: 800 }}>{it.totalQuantity}x</span>
+                  <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {it.itemName}
+                  </span>
+                </span>
+              ))}
+              {itemBreakdown.length > 3 && (
+                <span style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: 'var(--radius-full)',
+                  padding: '3px 8px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#64748B'
+                }}>
+                  +{itemBreakdown.length - 3} more
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={() => setActiveSubTab('items')}
+              className="btn-secondary"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                background: activeSubTab === 'items' ? '#2C82C9' : '#FFFFFF',
+                color: activeSubTab === 'items' ? '#FFFFFF' : '#2C82C9',
+                borderColor: '#B8D4EE'
+              }}
+            >
+              {activeSubTab === 'items' ? 'Viewing Items' : 'View Items'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Conditional Rendering: Zero State vs Populated Leaderboard */}
       {!hasSponsorships ? (
@@ -281,7 +390,22 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     }}
                   >
                     <Building2 size={15} />
-                    <span>{isAdmin ? 'All Sponsoring Firms' : `Ward ${effectiveUser?.wardNumber || ''} Sponsoring Firms`} ({data?.topSponsoringFirms?.length || 0})</span>
+                    <span>{isAdmin ? 'All Sponsoring Firms' : isGeneralCoordinator ? 'Campaign Sponsoring Firms' : `Ward ${effectiveUser?.wardNumber || ''} Sponsoring Firms`} ({data?.topSponsoringFirms?.length || 0})</span>
+                  </button>
+                )}
+
+                {canViewItemBreakdown && (
+                  <button
+                    onClick={() => setActiveSubTab('items')}
+                    className={`tab-strip-btn ${activeSubTab === 'items' ? 'active' : ''}`}
+                    style={{
+                      background: activeSubTab === 'items' ? '#2C82C9' : 'transparent',
+                      color: activeSubTab === 'items' ? '#FFFFFF' : '#64748B',
+                      fontWeight: 700
+                    }}
+                  >
+                    <Package size={15} />
+                    <span>Item Breakdown ({itemBreakdown.length} items • {totalIndividualItems} units)</span>
                   </button>
                 )}
               </ScrollableTabStrip>
@@ -478,10 +602,29 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                       <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0, overflowWrap: 'break-word' }}>
                         {firm.firmName}
                       </h4>
-                      <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '2px 0 0 0' }}>
-                        {firm.quantity}x {firm.itemName} • Collected by <strong>{firm.collectedByName || 'Field Lead'}</strong>
-                        {firm.contactPerson && <> • Contact: {firm.contactPerson}</>}
-                      </p>
+                      <div style={{ fontSize: '0.76rem', color: '#64748B', margin: '2px 0 0 0' }}>
+                        {firm.itemName.includes('x ') ? (
+                          <>
+                            <span style={{
+                              background: '#EDF4FA',
+                              color: '#2C82C9',
+                              border: '1px solid #B8D4EE',
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              fontSize: '0.7rem',
+                              fontWeight: 800,
+                              marginRight: 6
+                            }}>
+                              {firm.quantity} Total Items
+                            </span>
+                            <span>{firm.itemName}</span>
+                          </>
+                        ) : (
+                          <span>{firm.quantity}x {firm.itemName}</span>
+                        )}
+                        <span> • Collected by <strong>{firm.collectedByName || 'Field Lead'}</strong></span>
+                        {firm.contactPerson && <span> • Contact: {firm.contactPerson}</span>}
+                      </div>
                     </div>
                   </div>
 
@@ -522,6 +665,198 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     : `No firm sponsorships recorded yet for Ward ${effectiveUser?.wardNumber || ''}.`}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* SUB-TAB 4: INDIVIDUAL SPONSOR ITEMS & COUNTS BREAKDOWN */}
+          {activeSubTab === 'items' && (
+            <div>
+              {/* Scope & Role Header Banner */}
+              <div style={{
+                background: '#F0FDF4',
+                border: '1px solid #BBF7D0',
+                borderRadius: 'var(--radius-lg)',
+                padding: '14px 18px',
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 10
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>
+                  <ShieldCheck size={18} color="#16A34A" />
+                  {isAdmin ? (
+                    <span>Super Administrator View: Full breakdown of every individual sponsored item & kit count across all campaign wards.</span>
+                  ) : isGeneralCoordinator ? (
+                    <span>Campaign Coordinator View: Full breakdown of every individual sponsored item across the entire campaign.</span>
+                  ) : (
+                    <span>Ward Committee Lead View: Showing individual sponsored items and unit counts for Ward {effectiveUser?.wardNumber || ''}.</span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 800 }}>
+                  Total: {totalIndividualItems} units ({summary.totalSponsorships} packages)
+                </div>
+              </div>
+
+              {/* Items List Grid */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {itemBreakdown.map((item, idx) => (
+                  <div
+                    key={item.itemId || idx}
+                    className="glass-card"
+                    style={{
+                      padding: '18px 20px',
+                      background: '#FFFFFF',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--border-subtle)',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 14,
+                      marginBottom: 12
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                        <div style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          background: '#EBF7EE',
+                          border: '1px solid #A5D6B8',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#008A2E',
+                          flexShrink: 0
+                        }}>
+                          <Package size={22} />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                              {item.itemName}
+                            </h4>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              color: '#64748B',
+                              background: '#F1F5F9',
+                              padding: '2px 8px',
+                              borderRadius: 9999
+                            }}>
+                              ₹{item.unitPrice.toLocaleString('en-IN')} / unit
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: 3 }}>
+                            Included in {item.sponsorshipsCount} {item.sponsorshipsCount === 1 ? 'sponsorship package' : 'sponsorship packages'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontSize: 'clamp(1.2rem, 3.5vw, 1.45rem)',
+                          fontWeight: 900,
+                          color: '#008A2E'
+                        }}>
+                          {item.totalQuantity} <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#64748B' }}>{item.totalQuantity === 1 ? 'unit' : 'units'}</span>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0F172A' }}>
+                          ₹{item.totalAmount.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Pill Badges Row */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      paddingTop: 10,
+                      borderTop: '1px solid #F1F5F9',
+                      fontSize: '0.76rem'
+                    }}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{
+                          background: '#EBF7EE',
+                          color: '#008A2E',
+                          border: '1px solid #A5D6B8',
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}>
+                          <CheckCircle2 size={12} /> {item.completedQuantity} Fully Paid
+                        </span>
+
+                        {item.partialQuantity > 0 && (
+                          <span style={{
+                            background: '#FEF3C7',
+                            color: '#B45309',
+                            border: '1px solid #FDE68A',
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Clock size={12} /> {item.partialQuantity} Advance Paid
+                          </span>
+                        )}
+
+                        {item.bookedQuantity > 0 && (
+                          <span style={{
+                            background: '#EDF4FA',
+                            color: '#2C82C9',
+                            border: '1px solid #B8D4EE',
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Bookmark size={12} /> {item.bookedQuantity} Booked
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ color: '#64748B', fontWeight: 600 }}>
+                        Realized: <strong style={{ color: '#008A2E' }}>₹{item.amountPaid.toLocaleString('en-IN')}</strong>
+                        {item.balanceAmount > 0 && (
+                          <span style={{ marginLeft: 6, color: '#B91C1C' }}>
+                            • Pending: <strong>₹{item.balanceAmount.toLocaleString('en-IN')}</strong>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {itemBreakdown.length === 0 && (
+                  <div style={{
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    background: '#FFFFFF',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px dashed #CBD5E1',
+                    color: '#64748B'
+                  }}>
+                    <Package size={32} style={{ margin: '0 auto 10px auto', opacity: 0.6 }} />
+                    <p style={{ margin: 0, fontWeight: 700 }}>No individual sponsor items recorded in this scope yet.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

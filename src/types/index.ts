@@ -275,8 +275,23 @@ export interface TopSponsoringFirm {
   date: string;
 }
 
+export interface SponsoredItemBreakdown {
+  itemId: string;
+  itemName: string;
+  unitPrice: number;
+  totalQuantity: number;
+  totalAmount: number;
+  amountPaid: number;
+  balanceAmount: number;
+  completedQuantity: number;
+  partialQuantity: number;
+  bookedQuantity: number;
+  sponsorshipsCount: number;
+}
+
 export interface SponsorshipSummaryStats {
   totalSponsorships: number;
+  totalIndividualItems?: number;
   totalCommittedAmount: number;
   totalPaidAmount: number;
   totalPendingBalance: number;
@@ -289,6 +304,7 @@ export interface SponsorshipLeaderboardResponse {
   topCollectors: SponsorshipCollectorRank[];
   topWards: SponsorshipWardRank[];
   topSponsoringFirms: TopSponsoringFirm[];
+  itemBreakdown?: SponsoredItemBreakdown[];
   summary: SponsorshipSummaryStats;
   generatedAt: string;
 }
