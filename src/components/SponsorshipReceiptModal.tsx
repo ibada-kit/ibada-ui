@@ -124,14 +124,24 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 'min(540px, 95vw)', width: '100%', margin: '0 auto', padding: 0, overflow: 'hidden' }}
+        style={{
+          maxWidth: 'min(540px, 95vw)',
+          width: '100%',
+          margin: '0 auto',
+          padding: 0,
+          maxHeight: 'min(90dvh, 850px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
       >
-        {/* Header Ribbon */}
+        {/* Header Ribbon (Pinned) */}
         <div style={{
           background: 'linear-gradient(135deg, #008A2E 0%, #2C82C9 100%)',
           color: '#FFFFFF',
-          padding: '20px clamp(16px, 4vw, 24px)',
-          position: 'relative'
+          padding: '18px clamp(16px, 4vw, 24px)',
+          position: 'relative',
+          flexShrink: 0
         }}>
           <button
             onClick={onClose}
@@ -167,8 +177,14 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
           )}
         </div>
 
-        {/* Receipt Content */}
-        <div style={{ padding: '22px 24px' }}>
+        {/* Receipt Content (Scrollable Container) */}
+        <div style={{
+          padding: '18px clamp(14px, 4vw, 24px) max(20px, env(safe-area-inset-bottom))',
+          overflowY: 'auto',
+          flex: 1,
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}>
           {/* Token Card */}
           <div style={{
             background: '#F8FAFC',
@@ -297,25 +313,29 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
             <a
               href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary"
               style={{
-                flex: 1,
-                padding: '12px',
+                flex: '1 1 180px',
+                minHeight: 44,
+                padding: '12px 16px',
                 background: '#25D366',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
                 textDecoration: 'none',
-                fontWeight: 800
+                fontWeight: 800,
+                fontSize: '0.92rem',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)'
               }}
             >
-              <Share2 size={16} />
+              <Share2 size={18} />
               <span>Share via WhatsApp</span>
             </a>
 
@@ -327,17 +347,21 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
                 }}
                 className="btn-primary"
                 style={{
-                  flex: 1,
-                  padding: '12px',
+                  flex: '1 1 140px',
+                  minHeight: 44,
+                  padding: '12px 16px',
                   background: '#2C82C9',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 8,
-                  fontWeight: 800
+                  fontWeight: 800,
+                  fontSize: '0.92rem',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: '0 2px 6px rgba(44, 130, 201, 0.25)'
                 }}
               >
-                <CreditCard size={16} />
+                <CreditCard size={18} />
                 <span>Pay Balance</span>
               </button>
             )}
@@ -345,7 +369,14 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             <button
               onClick={onClose}
               className="btn-secondary"
-              style={{ padding: '12px 18px' }}
+              style={{
+                flex: '0 0 auto',
+                minHeight: 44,
+                padding: '12px 20px',
+                fontWeight: 700,
+                fontSize: '0.92rem',
+                borderRadius: 'var(--radius-md)'
+              }}
             >
               Close
             </button>
@@ -359,6 +390,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             style={{
               marginTop: 10,
               width: '100%',
+              minHeight: 42,
               padding: '10px 14px',
               background: '#EDF4FA',
               color: '#2C82C9',
@@ -370,8 +402,9 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
               gap: 8,
               textDecoration: 'none',
               fontWeight: 700,
-              fontSize: '0.84rem',
-              transition: 'all 0.15s ease'
+              fontSize: '0.86rem',
+              transition: 'all 0.15s ease',
+              boxSizing: 'border-box'
             }}
           >
             <Sparkles size={16} color="#D97706" />

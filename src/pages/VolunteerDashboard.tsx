@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, sponsorshipsApi, API_BASE_URL, getKitUnitPrice, getAuthHeaders } from '../services/api';
+import { donationsApi, analyticsApi, sponsorshipsApi, API_BASE_URL, getKitUnitPrice, getAuthHeaders } from '../services/api';
 import { 
   Award, 
   TrendingUp, 
@@ -39,7 +39,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   
   // Progress & collection state
   const [progress, setProgress] = useState({
-    targetKits: 0,
+    targetKits: user.targetKits || 0,
     collectedKits: 0,
     achievementPercentage: 0,
     collectedAmount: 0
@@ -74,33 +74,52 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
         );
         const totalMyKits = myDonations.reduce((acc, curr) => acc + (curr.kitCount || 0), 0);
         const myAmount = myDonations.reduce((acc, curr) => acc + (curr.totalAmount || ((curr.kitCount || 0) * kitPrice)), 0);
-        if (totalMyKits > 0) {
-          setProgress(prev => ({
+
+        // Check if user has an entry in volunteer leaderboard
+        const myVBoard = vBoard.find(v => 
+          v.id === user.userId || 
+          v.name.toLowerCase() === user.fullName.toLowerCase()
+        );
+        const resolvedTarget = myVBoard?.targetKits || user.targetKits || 0;
+
+        setProgress(prev => {
+          const effectiveTarget = resolvedTarget || prev.targetKits || user.targetKits || 0;
+          return {
             ...prev,
+            targetKits: effectiveTarget,
             collectedKits: totalMyKits,
             collectedAmount: myAmount,
-            achievementPercentage: prev.targetKits > 0 ? Math.min(100, Math.round((totalMyKits / prev.targetKits) * 100)) : 0
-          }));
-        }
+            achievementPercentage: effectiveTarget > 0 
+              ? Math.min(100, Math.round((totalMyKits / effectiveTarget) * 100)) 
+              : 0
+          };
+        });
       })
       .catch((err) => console.warn('Could not load volunteer dashboard data', err));
 
+    // 2. Fetch live progress from Analytics API
     if (user.token) {
-      fetch(`${API_BASE_URL}/Analytics/my-progress`, {
-        headers: getAuthHeaders(user.token, false)
-      })
-        .then(res => res.ok ? res.json() : null)
+      analyticsApi.getMyProgress(user.token)
         .then(data => {
           if (data) {
-            setProgress({
-              targetKits: data.targetKits || 0,
-              collectedKits: data.collectedKits || 0,
-              achievementPercentage: data.achievementPercentage || 0,
-              collectedAmount: data.collectedAmount || 0
+            setProgress(prev => {
+              const effectiveTarget = data.targetKits > 0 
+                ? data.targetKits 
+                : (prev.targetKits || user.targetKits || 0);
+              const effCollectedKits = data.collectedKits !== undefined ? data.collectedKits : prev.collectedKits;
+              const effCollectedAmount = data.collectedAmount !== undefined ? data.collectedAmount : prev.collectedAmount;
+              return {
+                targetKits: effectiveTarget,
+                collectedKits: effCollectedKits,
+                achievementPercentage: effectiveTarget > 0 
+                  ? Math.min(100, Math.round((effCollectedKits / effectiveTarget) * 100)) 
+                  : (data.achievementPercentage || 0),
+                collectedAmount: effCollectedAmount
+              };
             });
           }
         })
-        .catch(() => {});
+        .catch((err) => console.warn('Could not fetch volunteer progress from analytics:', err));
     }
 
     // Fetch volunteer and same-ward sponsorships (himself, all of his ward members, and parent)
@@ -114,7 +133,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
         setSponsorshipHistory(wardSpons);
       })
       .catch(() => {});
-  }, [user.userId, user.token, user.fullName, user.wardNumber]);
+  }, [user.userId, user.token, user.fullName, user.wardNumber, user.targetKits, kitPrice]);
 
   // Helper to re-fetch live sponsorships for automatic tab refresh
   const refreshVolunteerSponsorships = () => {
@@ -140,13 +159,15 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   const handleDonationRecorded = (donation: Donation) => {
     setHistory(prev => [donation, ...prev]);
     setProgress(prev => {
-      const newKits = prev.collectedKits + donation.kitCount;
-      const newAmt = prev.collectedAmount + donation.totalAmount;
+      const newKits = prev.collectedKits + (donation.kitCount || 0);
+      const newAmt = prev.collectedAmount + (donation.totalAmount || ((donation.kitCount || 0) * kitPrice));
+      const effectiveTarget = prev.targetKits || user.targetKits || 0;
       return {
         ...prev,
+        targetKits: effectiveTarget,
         collectedKits: newKits,
         collectedAmount: newAmt,
-        achievementPercentage: Math.min(100, Math.round((newKits / (prev.targetKits || 1)) * 100))
+        achievementPercentage: effectiveTarget > 0 ? Math.min(100, Math.round((newKits / effectiveTarget) * 100)) : 0
       };
     });
   };
@@ -268,7 +289,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
                 My Campaign Target
               </span>
               <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.25rem)', fontWeight: 900, color: '#0F172A' }}>
-                {progress.collectedKits} / {progress.targetKits} Kits
+                {progress.collectedKits} / {progress.targetKits || user.targetKits || 0} Kits
               </div>
             </div>
           </div>
@@ -297,7 +318,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748B', fontWeight: 600, flexWrap: 'wrap', gap: 4 }}>
           <span>₹{progress.collectedAmount.toLocaleString('en-IN')} Raised</span>
-          <span>{Math.max(0, progress.targetKits - progress.collectedKits)} kits to goal</span>
+          <span>{Math.max(0, (progress.targetKits || user.targetKits || 0) - progress.collectedKits)} kits to goal</span>
         </div>
       </div>
 
@@ -777,6 +798,12 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
             <div>
               <span style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Ward</span>
               <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>Ward {user.wardNumber}</div>
+            </div>
+            <div>
+              <span style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Assigned Target</span>
+              <div style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.92rem' }}>
+                {progress.targetKits || user.targetKits || 0} Kits (₹{((progress.targetKits || user.targetKits || 0) * kitPrice).toLocaleString('en-IN')})
+              </div>
             </div>
           </div>
 

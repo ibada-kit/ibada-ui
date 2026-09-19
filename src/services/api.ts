@@ -215,6 +215,9 @@ export const getCurrentUser = (): User | null => {
           localStorage.removeItem(STORAGE_USER);
           return null;
         }
+        if ((!user.targetKits || user.targetKits === 0) && (claims.TargetKits || claims.targetKits)) {
+          user.targetKits = Number(claims.TargetKits || claims.targetKits);
+        }
       }
       return user;
     } catch {
@@ -263,14 +266,19 @@ export const authApi = {
     const rawSub = Array.isArray(claims.sub) ? claims.sub[0] : claims.sub;
     const rawRole = data.role || (Array.isArray(claims.role) ? claims.role[0] : claims.role) || claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 'Volunteer';
 
+    const parsedTargetKits = Number(data.targetKits ?? data.TargetKits ?? claims.TargetKits ?? claims.targetKits ?? 0);
+    const parsedTargetAmount = Number(data.targetAmount ?? data.TargetAmount ?? (parsedTargetKits * getKitUnitPrice()));
+
     const user: User = {
-      userId: rawSub || claims.UserId || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || `usr-${Date.now()}`,
+      userId: data.userId || rawSub || claims.UserId || claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || `usr-${Date.now()}`,
       fullName: data.fullName || claims.name || 'Community Member',
       phoneNumber: formattedPhone,
       role: rawRole,
-      panchayath: claims.Panchayath || 'Madavoor',
-      wardNumber: claims.WardNumber ? parseInt(claims.WardNumber, 10) : 4,
+      panchayath: data.panchayath || claims.Panchayath || 'Madavoor',
+      wardNumber: data.wardNumber ? Number(data.wardNumber) : (claims.WardNumber ? parseInt(claims.WardNumber, 10) : 4),
       district: claims.District || 'Kozhikode',
+      targetKits: parsedTargetKits > 0 ? parsedTargetKits : undefined,
+      targetAmount: parsedTargetAmount > 0 ? parsedTargetAmount : undefined,
       token: data.token,
       expiresAt: data.expiresAt
     };

@@ -8,6 +8,8 @@ export interface User {
   panchayath: string;
   wardNumber: number;
   district?: string;
+  targetKits?: number;
+  targetAmount?: number;
   token?: string;
   expiresAt?: string;
 }
@@ -31,8 +33,12 @@ export interface LoginResponse {
   token: string;
   role: UserRole;
   fullName: string;
-  panchayath: string;
-  wardNumber: number;
+  userId?: string;
+  phoneNumber?: string;
+  panchayath?: string;
+  wardNumber?: number;
+  targetKits?: number;
+  targetAmount?: number;
   expiresAt: string;
 }
 
