@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Share2, Building2, CheckCircle2, Clock, Bookmark, CreditCard, Sparkles } from 'lucide-react';
+import { X, Copy, Check, Share2, Building2, CheckCircle2, Clock, Bookmark, CreditCard, Sparkles, Download } from 'lucide-react';
 import type { SponsorshipRecord } from '../types';
+import { shareReceiptToWhatsApp, downloadReceiptPoster, type ReceiptPosterData } from '../utils/posterShare';
 
 interface SponsorshipReceiptModalProps {
   sponsorship: SponsorshipRecord;
@@ -14,6 +15,8 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
   onOpenPayBalance
 }) => {
   const [copied, setCopied] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   const handleCopyToken = () => {
     navigator.clipboard.writeText(sponsorship.receiptToken);
@@ -22,6 +25,8 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
   };
 
   const cleanPhone = (sponsorship.mobileNumber || '').replace(/\D/g, '');
+  const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
   const rawItems = sponsorship.items || (() => {
     if (sponsorship.itemsJson) {
       try {
@@ -49,19 +54,66 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
 
   const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(sponsorship.receiptToken)}&name=${encodeURIComponent(sponsorship.donorName)}&type=sponsorship&item=${encodeURIComponent(itemsDescription)}&amount=${sponsorship.totalAmount}&status=${encodeURIComponent(sponsorship.paymentStatus)}&panchayath=${encodeURIComponent(sponsorship.panchayath || 'Madavoor')}`;
 
-  const shareMessage = `*Ibada Kit Challenge — Sponsorship Receipt*%0A%0A` +
-    `Dear *${sponsorship.donorName}*,%0A` +
-    `Thank you for your generous sponsorship of *${itemsDescription}* to the Ibada Kit Challenge.%0A%0A` +
-    `• *Receipt Token:* ${sponsorship.receiptToken}%0A` +
-    `• *Total Committed:* ₹${sponsorship.totalAmount.toLocaleString('en-IN')}%0A` +
-    `• *Amount Paid:* ₹${sponsorship.amountPaid.toLocaleString('en-IN')}%0A` +
-    `• *Balance Remaining:* ₹${sponsorship.balanceAmount.toLocaleString('en-IN')}%0A` +
-    `• *Status:* ${sponsorship.paymentStatus}%0A` +
-    `• *Collected By:* ${sponsorship.collectedByName || 'Field Coordinator'}%0A%0A` +
-    `📸 *Create Your Supporter Poster:*%0A${posterUrl}%0A%0A` +
+  const messageText =
+    `*Ibada Kit Challenge — Sponsorship Receipt*\n\n` +
+    `Dear *${sponsorship.donorName}*,\n` +
+    `Thank you for your generous sponsorship of *${itemsDescription}* to the Ibada Kit Challenge. 🤲\n\n` +
+    `• *Receipt Token:* ${sponsorship.receiptToken}\n` +
+    `• *Total Committed:* ₹${sponsorship.totalAmount.toLocaleString('en-IN')}\n` +
+    `• *Amount Paid:* ₹${sponsorship.amountPaid.toLocaleString('en-IN')}\n` +
+    `• *Balance Remaining:* ₹${sponsorship.balanceAmount.toLocaleString('en-IN')}\n` +
+    `• *Payment Status:* ${sponsorship.paymentStatus}\n` +
+    `• *Collected By:* ${sponsorship.collectedByName || 'Field Coordinator'}\n` +
+    `• *Location:* Ward ${sponsorship.wardNumber || ''}, ${sponsorship.panchayath || 'Madavoor'}\n\n` +
+    `📸 *Create Your Personalized Supporter Poster:*\n${posterUrl}\n\n` +
     `_May Allah reward your contribution manifold!_`;
 
-  const waUrl = `https://wa.me/${cleanPhone}?text=${shareMessage}`;
+  const waUrl = formattedPhone
+    ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
+
+  const posterData: ReceiptPosterData = {
+    token: sponsorship.receiptToken,
+    donorName: sponsorship.donorName,
+    type: 'sponsorship',
+    itemsDescription: itemsDescription,
+    amount: sponsorship.totalAmount,
+    amountPaid: sponsorship.amountPaid,
+    balanceAmount: sponsorship.balanceAmount,
+    paymentStatus: sponsorship.paymentStatus,
+    wardNumber: sponsorship.wardNumber,
+    panchayath: sponsorship.panchayath || 'Madavoor',
+    collectedByName: sponsorship.collectedByName
+  };
+
+  const handleShareWhatsApp = async () => {
+    try {
+      setIsSharing(true);
+      setShareFeedback(null);
+      const res = await shareReceiptToWhatsApp(posterData, messageText, formattedPhone);
+      if (res.method === 'download_and_whatsapp') {
+        setShareFeedback('Receipt poster image downloaded! Opening WhatsApp chat...');
+        setTimeout(() => setShareFeedback(null), 4000);
+      }
+    } catch {
+      window.open(waUrl, '_blank');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleDownloadPoster = async () => {
+    try {
+      setIsSharing(true);
+      await downloadReceiptPoster(posterData);
+      setShareFeedback('Official Receipt Poster downloaded successfully!');
+      setTimeout(() => setShareFeedback(null), 3500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   const getStatusBadge = () => {
     switch (sponsorship.paymentStatus) {
@@ -312,35 +364,81 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             <div>Panchayath: {sponsorship.panchayath} • Ward {sponsorship.wardNumber}</div>
           </div>
 
+          {/* Action Feedback if downloaded */}
+          {shareFeedback && (
+            <div style={{
+              background: '#EBF7EE',
+              color: '#008A2E',
+              border: '1px solid #A5D6B8',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 12px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginBottom: 12,
+              textAlign: 'center'
+            }}>
+              {shareFeedback}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
-            <a
-              href={waUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              disabled={isSharing}
               className="btn-primary"
               style={{
                 flex: '1 1 180px',
                 minHeight: 44,
                 padding: '12px 16px',
                 background: '#25D366',
+                border: 'none',
+                cursor: isSharing ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                textDecoration: 'none',
                 fontWeight: 800,
                 fontSize: '0.92rem',
                 borderRadius: 'var(--radius-md)',
-                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)'
+                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)',
+                color: '#FFFFFF'
               }}
             >
               <Share2 size={18} />
-              <span>Share via WhatsApp</span>
-            </a>
+              <span>{isSharing ? 'Preparing...' : 'Share via WhatsApp'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadPoster}
+              disabled={isSharing}
+              title="Download Receipt & Supporter Poster Image"
+              style={{
+                flex: '0 0 auto',
+                minHeight: 44,
+                padding: '12px 16px',
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                fontWeight: 700,
+                fontSize: '0.86rem',
+                color: '#334155',
+                cursor: isSharing ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <Download size={17} color="#008A2E" />
+              <span>Poster Image</span>
+            </button>
 
             {sponsorship.balanceAmount > 0 && onOpenPayBalance && (
               <button
+                type="button"
                 onClick={() => {
                   onClose();
                   onOpenPayBalance(sponsorship);
@@ -367,6 +465,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             )}
 
             <button
+              type="button"
               onClick={onClose}
               className="btn-secondary"
               style={{

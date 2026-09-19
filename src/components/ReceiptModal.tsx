@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Donation } from '../types';
-import { CheckCircle, Share2, X, ShieldCheck, Copy, Check, Sparkles } from 'lucide-react';
+import { CheckCircle, Share2, X, ShieldCheck, Copy, Check, Sparkles, Download } from 'lucide-react';
+import { shareReceiptToWhatsApp, downloadReceiptPoster, type ReceiptPosterData } from '../utils/posterShare';
 
 interface ReceiptModalProps {
   donation: Donation | null;
@@ -11,6 +12,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
   if (!donation) return null;
 
   const [copied, setCopied] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   const handleCopyToken = () => {
     if (donation.receiptToken) {
@@ -25,26 +28,82 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
 
   const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${encodeURIComponent(donation.wardNumber?.toString() || '')}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}`;
 
-  const shareMessage =
-    `*Ibada Kit Challenge — Kit Donation Receipt*%0A%0A` +
-    `Assalamu Alaikum *${donation.donorName}*,%0A` +
-    `Thank you for your generous contribution of *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* to the Ibada Kit Challenge! 🤲%0A%0A` +
-    `• *Receipt Token:* ${donation.receiptToken}%0A` +
-    `• *Kits Contributed:* ${donation.kitCount}%0A` +
-    `• *Total Amount:* ₹${donation.totalAmount.toLocaleString('en-IN')}%0A` +
-    `• *Location:* Ward ${donation.wardNumber}, ${donation.panchayath}%0A` +
-    `• *Collected By:* ${donation.collectedByName || 'Volunteer'} (${donation.collectedByRole || 'Volunteer'})%0A` +
-    `• *Date:* ${new Date(donation.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}%0A%0A` +
-    `📸 *Create Your Supporter Poster:*%0A${posterUrl}%0A%0A` +
+  const messageText =
+    `*Ibada Kit Challenge — Kit Donation Receipt*\n\n` +
+    `Assalamu Alaikum *${donation.donorName}*,\n` +
+    `Thank you for your generous contribution of *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* to the Ibada Kit Challenge! 🤲\n\n` +
+    `• *Receipt Token:* ${donation.receiptToken}\n` +
+    `• *Kits Contributed:* ${donation.kitCount}\n` +
+    `• *Total Amount:* ₹${donation.totalAmount.toLocaleString('en-IN')}\n` +
+    `• *Location:* Ward ${donation.wardNumber}, ${donation.panchayath}\n` +
+    `• *Collected By:* ${donation.collectedByName || 'Volunteer'} (${donation.collectedByRole || 'Volunteer'})\n` +
+    `• *Date:* ${new Date(donation.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n` +
+    `📸 *Create Your Supporter Poster:*\n${posterUrl}\n\n` +
     `_May Allah reward your contribution manifold!_`;
 
   const waUrl = cleanPhone
-    ? `https://wa.me/${cleanPhone}?text=${shareMessage}`
-    : `https://api.whatsapp.com/send?text=${shareMessage}`;
+    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
+
+  const posterData: ReceiptPosterData = {
+    token: donation.receiptToken,
+    donorName: donation.donorName,
+    type: 'kit',
+    itemsDescription: `${donation.kitCount} ${donation.kitCount === 1 ? 'Ibada Kit' : 'Ibada Kits'}`,
+    amount: donation.totalAmount,
+    amountPaid: donation.totalAmount,
+    balanceAmount: 0,
+    paymentStatus: 'Completed',
+    wardNumber: donation.wardNumber,
+    panchayath: donation.panchayath || 'Madavoor',
+    collectedByName: donation.collectedByName
+  };
+
+  const handleShareWhatsApp = async () => {
+    try {
+      setIsSharing(true);
+      setShareFeedback(null);
+      const res = await shareReceiptToWhatsApp(posterData, messageText, cleanPhone);
+      if (res.method === 'download_and_whatsapp') {
+        setShareFeedback('Receipt poster image downloaded! Opening WhatsApp chat...');
+        setTimeout(() => setShareFeedback(null), 4000);
+      }
+    } catch {
+      window.open(waUrl, '_blank');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleDownloadPoster = async () => {
+    try {
+      setIsSharing(true);
+      await downloadReceiptPoster(posterData);
+      setShareFeedback('Official Receipt Poster downloaded successfully!');
+      setTimeout(() => setShareFeedback(null), 3500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: 'min(480px, 95vw)',
+          width: '100%',
+          margin: '0 auto',
+          padding: 0,
+          maxHeight: 'min(90dvh, 850px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
         {/* Modal Header */}
         <div style={{
           padding: '18px 24px',
@@ -64,8 +123,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
           </button>
         </div>
 
-        {/* Badge Card Container */}
-        <div style={{ padding: '24px' }}>
+        {/* Badge Card Container (Scrollable) */}
+        <div style={{
+          padding: '20px clamp(16px, 4vw, 24px) max(20px, env(safe-area-inset-bottom))',
+          overflowY: 'auto',
+          flex: 1,
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}>
           <div style={{
             background: '#FFFFFF',
             border: '2px solid #A5D6B8',
@@ -181,31 +246,89 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
             </div>
           </div>
 
-          {/* Action Buttons: WhatsApp Share & Close (Same as Sponsorship) */}
-          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-            <a
-              href={waUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+          {/* Action Feedback if downloaded */}
+          {shareFeedback && (
+            <div style={{
+              background: '#EBF7EE',
+              color: '#008A2E',
+              border: '1px solid #A5D6B8',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 12px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginTop: 12,
+              textAlign: 'center'
+            }}>
+              {shareFeedback}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              disabled={isSharing}
               className="btn-primary"
               style={{
-                flex: 1,
-                padding: '12px',
+                flex: '1 1 180px',
+                minHeight: 44,
+                padding: '12px 16px',
                 background: '#25D366',
-                borderColor: '#20BA5C',
+                border: 'none',
+                cursor: isSharing ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                textDecoration: 'none',
                 fontWeight: 800,
-                color: '#FFFFFF'
+                color: '#FFFFFF',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)'
               }}
             >
-              <Share2 size={16} />
-              <span>Share via WhatsApp</span>
-            </a>
-            <button onClick={onClose} className="btn-secondary" style={{ padding: '12px 18px' }}>
+              <Share2 size={18} />
+              <span>{isSharing ? 'Preparing...' : 'Share via WhatsApp'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadPoster}
+              disabled={isSharing}
+              title="Download Receipt & Supporter Poster Image"
+              style={{
+                flex: '0 0 auto',
+                minHeight: 44,
+                padding: '12px 16px',
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                fontWeight: 700,
+                fontSize: '0.86rem',
+                color: '#334155',
+                cursor: isSharing ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <Download size={17} color="#008A2E" />
+              <span>Poster Image</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+              style={{
+                flex: '0 0 auto',
+                minHeight: 44,
+                padding: '12px 18px',
+                fontWeight: 700,
+                borderRadius: 'var(--radius-md)'
+              }}
+            >
               Close
             </button>
           </div>
@@ -218,6 +341,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
             style={{
               marginTop: 10,
               width: '100%',
+              minHeight: 42,
               padding: '10px 14px',
               background: '#F0FDF4',
               color: '#008A2E',
@@ -230,7 +354,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               textDecoration: 'none',
               fontWeight: 700,
               fontSize: '0.84rem',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              boxSizing: 'border-box'
             }}
           >
             <Sparkles size={16} color="#D97706" />
