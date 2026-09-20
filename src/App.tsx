@@ -67,10 +67,60 @@ export const App: React.FC = () => {
       }
     }
 
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('receipt') === 'sample' || params.has('sample-receipt')) {
+      setActiveReceipt({
+        donationId: 'sample-preview',
+        receiptToken: 'MDV-2026-8491',
+        serialNumber: 10058,
+        donorName: 'അബ്ദുൽ റഹ്‌മാൻ (Abdul Rahman)',
+        kitCount: 5,
+        kitUnitRate: 1000,
+        totalAmount: 5000,
+        wardNumber: 4,
+        panchayath: 'Madavoor',
+        collectedByUserId: 'usr-123',
+        collectedByName: 'Safwan M (Lead)',
+        collectedByRole: 'Coordinator',
+        whatsAppNumber: '9846012345',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (params.get('receipt') === 'sponsor' || params.has('sponsor-sample') || params.get('sponsor') === 'sample') {
+      setActiveSponsorshipReceipt({
+        sponsorshipId: 'spon-sample-preview',
+        receiptToken: 'SPON-2026-7821',
+        donorName: 'അൽ മദീന ഹൈപ്പർമാർക്കറ്റ് (Al Madeena)',
+        contactPerson: 'K.P. അബ്ദുള്ള ഹാജി',
+        mobileNumber: '9847123456',
+        itemId: 'item-1',
+        itemName: 'Sponsorship Contribution',
+        itemPrice: 50000,
+        quantity: 1,
+        totalAmount: 50000,
+        paymentOption: 'PayFull',
+        amountPaid: 50000,
+        balanceAmount: 0,
+        paymentStatus: 'Completed',
+        paymentMode: 'BankTransfer',
+        transactionReference: 'NEFT98231',
+        panchayath: 'Madavoor',
+        wardNumber: 4,
+        collectedByUserId: 'usr-123',
+        collectedByName: 'Safwan M (Lead)',
+        collectedByRole: 'Coordinator',
+        notes: 'Annual sponsorship',
+        createdDate: new Date().toISOString(),
+        updateDate: new Date().toISOString(),
+        updatedBy: 'usr-123'
+      });
+    }
+
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
-      const params = new URLSearchParams(window.location.search);
-      setIsPosterView(path.startsWith('/poster') || params.get('view') === 'poster' || params.has('poster'));
+      const p = new URLSearchParams(window.location.search);
+      setIsPosterView(path.startsWith('/poster') || p.get('view') === 'poster' || p.has('poster'));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
