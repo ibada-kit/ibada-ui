@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
 import { DonationForm } from '../components/DonationForm';
-import { donationsApi, sponsorshipsApi, authApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice, getAuthHeaders } from '../services/api';
+import { donationsApi, sponsorshipsApi, authApi, analyticsApi, adminApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice, getAuthHeaders } from '../services/api';
 import { 
   MapPin, 
   Users, 
@@ -24,7 +24,9 @@ import {
   Building2,
   Award,
   Package,
-  Download
+  Download,
+  Target,
+  Edit3
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
@@ -66,7 +68,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   const [wardStats, setWardStats] = useState({
     wardNumber: user.wardNumber || 0,
     wardName: user.wardNumber ? `Ward ${user.wardNumber}` : 'My Ward',
-    targetKits: 0,
+    targetKits: user.targetKits || 0,
     collectedKits: 0,
     collectedAmount: 0,
     progressPercentage: 0
@@ -77,11 +79,30 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   const [allWards, setAllWards] = useState<WardLeaderboardEntry[]>([]);
   const [volunteersBoard, setVolunteersBoard] = useState<LeaderboardEntry[]>([]);
 
+  // Target allocation breakdown (Ward target is divided among volunteers, never accumulated)
+  const volunteerAllocatedTarget = useMemo(() => {
+    return wardVolunteers.reduce((sum, v) => sum + (Number(v.targetKits) || 0), 0);
+  }, [wardVolunteers]);
+
+  const unallocatedTarget = useMemo(() => {
+    const total = wardStats.targetKits || user.targetKits || 0;
+    return Math.max(0, total - volunteerAllocatedTarget);
+  }, [wardStats.targetKits, user.targetKits, volunteerAllocatedTarget]);
+
+  // Edit volunteer target modal state
+  const [editingVolunteer, setEditingVolunteer] = useState<{
+    id: string;
+    name: string;
+    targetKits: number;
+  } | null>(null);
+  const [editTargetValue, setEditTargetValue] = useState<number>(0);
+  const [updatingTarget, setUpdatingTarget] = useState(false);
+
   // Add Volunteer form
   const [showAddVol, setShowAddVol] = useState(false);
   const [volName, setVolName] = useState('');
   const [volPhone, setVolPhone] = useState('');
-  const [volTarget, setVolTarget] = useState(40);
+  const [volTarget, setVolTarget] = useState(20);
   const [submitting, setSubmitting] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -140,27 +161,36 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   };
 
   useEffect(() => {
-    // 1. Fetch live donations and leaderboards
+    // 1. Fetch live donations, leaderboards, and coordinator progress
     Promise.all([
       donationsApi.getRecentDonations(user.role),
       donationsApi.getWardLeaderboard(),
-      donationsApi.getVolunteerLeaderboard(user.role)
+      donationsApi.getVolunteerLeaderboard(user.role),
+      user.token ? analyticsApi.getMyProgress(user.token).catch(() => null) : Promise.resolve(null)
     ])
-      .then(([donations, wards, vols]) => {
+      .then(([donations, wards, vols, progressData]) => {
         setAllWards(wards);
         setVolunteersBoard(vols);
 
         const currentWard = wards.find(w => w.wardNumber === user.wardNumber);
-        if (currentWard) {
-          setWardStats({
-            wardNumber: currentWard.wardNumber,
-            wardName: currentWard.wardName,
-            targetKits: currentWard.targetKits,
-            collectedKits: currentWard.kitsCollected,
-            collectedAmount: currentWard.totalAmount,
-            progressPercentage: currentWard.progressPercentage
-          });
-        }
+        const resolvedTarget = (progressData && progressData.targetKits > 0)
+          ? progressData.targetKits
+          : (user.targetKits && user.targetKits > 0)
+            ? user.targetKits
+            : (currentWard?.targetKits || 0);
+
+        const kits = progressData?.collectedKits ?? (currentWard?.kitsCollected || 0);
+        const amt = progressData?.collectedAmount ?? (currentWard?.totalAmount || (kits * (kitPrice || 1000)));
+        const pct = resolvedTarget > 0 ? Math.min(100, Math.round((kits / resolvedTarget) * 100)) : 0;
+
+        setWardStats({
+          wardNumber: user.wardNumber || (currentWard ? currentWard.wardNumber : 0),
+          wardName: currentWard ? currentWard.wardName : (user.wardNumber ? `Ward ${user.wardNumber}` : 'My Ward'),
+          targetKits: resolvedTarget,
+          collectedKits: kits,
+          collectedAmount: amt,
+          progressPercentage: pct
+        });
 
         // Donations are scoped by backend for this ward/user
         const wardTx = user.wardNumber ? donations.filter(d => Number(d.wardNumber) === Number(user.wardNumber)) : donations;
@@ -250,16 +280,16 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         })
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to save volunteer to database.');
-      }
+      const resData = await res.json().catch(() => ({}));
+      const createdId = resData.userId || resData.UserId || `vol-${Date.now()}`;
 
       const newVol = {
+        userId: createdId,
+        id: createdId,
         fullName: volName.trim(),
         phoneNumber: `+91${cleanPhone.slice(-10)}`,
         wardNumber: user.wardNumber,
-        targetKits: volTarget
+        targetKits: Number(volTarget)
       };
       setWardVolunteers(prev => [newVol, ...prev]);
       setCreatedVolunteer({
@@ -275,6 +305,27 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       setStatusMsg({ text: err.message || 'Failed to save volunteer to database. Please try again.', isError: true });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdateVolunteerTarget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVolunteer) return;
+    try {
+      setUpdatingTarget(true);
+      await adminApi.updateUserTarget(editingVolunteer.id, editTargetValue);
+      setWardVolunteers(prev =>
+        prev.map(v => (v.userId === editingVolunteer.id || v.id === editingVolunteer.id || v.phoneNumber === editingVolunteer.id)
+          ? { ...v, targetKits: editTargetValue }
+          : v
+        )
+      );
+      setStatusMsg({ text: `Target for ${editingVolunteer.name} updated to ${editTargetValue} kits!`, isError: false });
+      setEditingVolunteer(null);
+    } catch (err: any) {
+      setStatusMsg({ text: err.message || 'Failed to update volunteer target.', isError: true });
+    } finally {
+      setUpdatingTarget(false);
     }
   };
 
@@ -809,6 +860,84 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
             </button>
           </div>
 
+          {/* Target Distribution Summary Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #F0FDF4 0%, #F8FAFC 100%)',
+            border: '1px solid #BBF7D0',
+            borderRadius: 'var(--radius-lg)',
+            padding: '16px 18px',
+            marginBottom: 20
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Target size={18} color="#008A2E" />
+                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0F172A' }}>
+                  Ward {user.wardNumber} Target Sharing & Distribution
+                </span>
+              </div>
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: '#15803D',
+                background: '#DCFCE7',
+                padding: '3px 8px',
+                borderRadius: 9999
+              }}>
+                Fixed Ward Goal: {wardStats.targetKits || user.targetKits || 50} Kits
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+              <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>
+                  Admin Set Ward Target
+                </span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A' }}>
+                  {wardStats.targetKits || user.targetKits || 50} Kits
+                </span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                  Fixed goal assigned to Lead
+                </span>
+              </div>
+
+              <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>
+                  Assigned to Volunteers
+                </span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#008A2E' }}>
+                  {volunteerAllocatedTarget} Kits
+                </span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                  {wardVolunteers.length} {wardVolunteers.length === 1 ? 'volunteer' : 'volunteers'}
+                </span>
+              </div>
+
+              <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>
+                  {volunteerAllocatedTarget > (wardStats.targetKits || user.targetKits || 50) ? 'Exceeding Ward Goal' : 'Unallocated / Direct'}
+                </span>
+                <span style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 900,
+                  color: volunteerAllocatedTarget > (wardStats.targetKits || user.targetKits || 50) ? '#008A2E' : unallocatedTarget > 0 ? '#2563EB' : '#64748B'
+                }}>
+                  {volunteerAllocatedTarget > (wardStats.targetKits || user.targetKits || 50)
+                    ? `+${volunteerAllocatedTarget - (wardStats.targetKits || user.targetKits || 50)} Kits`
+                    : `${unallocatedTarget} Kits`}
+                </span>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', display: 'block' }}>
+                  {volunteerAllocatedTarget > (wardStats.targetKits || user.targetKits || 50)
+                    ? 'Above baseline target'
+                    : unallocatedTarget > 0 ? 'Remaining from goal' : '100% Allocated'}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.74rem', color: '#475569', marginTop: 10, marginBottom: 0, lineHeight: 1.4 }}>
+              💡 <em>The Ward Committee Lead's target remains fixed at <strong>{wardStats.targetKits || user.targetKits || 50} Kits</strong> (what Admin set). You can assign any target to your volunteers without limits — including more than {wardStats.targetKits || user.targetKits || 50} kits (e.g. 15 volunteers × 10 kits = 150 kits).</em>
+            </p>
+          </div>
+
           {showAddVol && (
             <form onSubmit={handleCreateWardVolunteer} style={{
               background: '#F4F9FD',
@@ -851,15 +980,18 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                    Target Kits
+                    Volunteer Target Kits
                   </label>
                   <input
                     type="number"
-                    min={5}
+                    min={1}
                     className="input-field"
                     value={volTarget}
                     onChange={(e) => setVolTarget(Number(e.target.value))}
                   />
+                  <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'block', marginTop: 3 }}>
+                    No limit. You can assign any kit target to each volunteer.
+                  </span>
                 </div>
               </div>
 
@@ -913,8 +1045,39 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                       padding: '4px 10px',
                       borderRadius: 'var(--radius-full)'
                     }}>
-                      Target: {v.targetKits || 40} Kits
+                      Target: {v.targetKits || 20} Kits
                     </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const vId = v.userId || v.id || v.phoneNumber;
+                        setEditingVolunteer({
+                          id: vId,
+                          name: v.fullName,
+                          targetKits: Number(v.targetKits) || 20
+                        });
+                        setEditTargetValue(Number(v.targetKits) || 20);
+                      }}
+                      className="btn-secondary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer'
+                      }}
+                      title="Adjust volunteer target share"
+                    >
+                      <Edit3 size={13} color="#2563EB" />
+                      <span>Target</span>
+                    </button>
 
                     <button
                       type="button"
@@ -1611,6 +1774,72 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         onClose={() => setResetVolunteerUser(null)}
         targetUser={resetVolunteerUser}
       />
+
+      {/* ADJUST VOLUNTEER TARGET MODAL */}
+      {editingVolunteer && (
+        <div className="modal-overlay" onClick={() => setEditingVolunteer(null)} style={{ zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420, width: '100%', padding: 0, overflow: 'hidden' }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#F8FAFC'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Target size={18} color="#008A2E" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  Adjust Volunteer Target Share
+                </h3>
+              </div>
+              <button onClick={() => setEditingVolunteer(null)} className="btn-icon" style={{ width: 28, height: 28 }}>
+                <X size={15} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateVolunteerTarget} style={{ padding: '20px' }}>
+              <p style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 16, lineHeight: 1.4 }}>
+                Set kit target for <strong>{editingVolunteer.name}</strong>. You can assign any amount without restrictions. Your Ward goal set by Admin remains constant at <strong>{wardStats.targetKits || user.targetKits || 50} Kits</strong>.
+              </p>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                  Volunteer Target Kits
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  required
+                  className="input-field"
+                  value={editTargetValue}
+                  onChange={(e) => setEditTargetValue(Number(e.target.value))}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="submit"
+                  disabled={updatingTarget}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '10px 16px', background: '#008A2E', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  {updatingTarget ? <RefreshCw size={15} className="animate-spin" /> : <Check size={16} />}
+                  <span>{updatingTarget ? 'Saving...' : 'Save Target'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingVolunteer(null)}
+                  className="btn-secondary"
+                  style={{ padding: '10px 16px' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
