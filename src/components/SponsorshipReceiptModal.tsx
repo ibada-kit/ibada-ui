@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Share2, Building2, CheckCircle2, Clock, Bookmark, CreditCard, Sparkles, Download } from 'lucide-react';
+import { X, Copy, Check, Share2, Building2, CheckCircle2, Clock, Bookmark, CreditCard } from 'lucide-react';
 import type { SponsorshipRecord } from '../types';
-import { shareReceiptToWhatsApp, downloadReceiptPoster, type ReceiptPosterData } from '../utils/posterShare';
+import { shareReceiptToWhatsApp, type ReceiptPosterData } from '../utils/posterShare';
 
 interface SponsorshipReceiptModalProps {
   sponsorship: SponsorshipRecord;
@@ -102,18 +102,6 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
     }
   };
 
-  const handleDownloadPoster = async () => {
-    try {
-      setIsSharing(true);
-      await downloadReceiptPoster(posterData);
-      setShareFeedback('Official Receipt Poster downloaded successfully!');
-      setTimeout(() => setShareFeedback(null), 3500);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSharing(false);
-    }
-  };
 
   const getStatusBadge = () => {
     switch (sponsorship.paymentStatus) {
@@ -410,31 +398,6 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
               <span>{isSharing ? 'Preparing...' : 'Share via WhatsApp'}</span>
             </button>
 
-            {/* <button
-              type="button"
-              onClick={handleDownloadPoster}
-              disabled={isSharing}
-              title="Download Receipt & Supporter Poster Image"
-              style={{
-                flex: '0 0 auto',
-                minHeight: 44,
-                padding: '12px 16px',
-                background: '#FFFFFF',
-                border: '1px solid #CBD5E1',
-                borderRadius: 'var(--radius-md)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                fontWeight: 700,
-                fontSize: '0.86rem',
-                color: '#334155',
-                cursor: isSharing ? 'not-allowed' : 'pointer'
-              }}
-            >
-              <Download size={17} color="#008A2E" />
-              <span>Poster Image</span>
-            </button> */}
 
             {sponsorship.balanceAmount > 0 && onOpenPayBalance && (
               <button
@@ -481,34 +444,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             </button>
           </div>
 
-          {/* Direct link to Create Supporter Poster */}
-          {/* <a
-            href={posterUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              marginTop: 10,
-              width: '100%',
-              minHeight: 42,
-              padding: '10px 14px',
-              background: '#EDF4FA',
-              color: '#2C82C9',
-              border: '1px solid #B8D4EE',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              textDecoration: 'none',
-              fontWeight: 700,
-              fontSize: '0.86rem',
-              transition: 'all 0.15s ease',
-              boxSizing: 'border-box'
-            }}
-          >
-            <Sparkles size={16} color="#D97706" />
-            <span>Create Sponsor Supporter Poster</span>
-          </a> */}
+
         </div>
       </div>
     </div>
