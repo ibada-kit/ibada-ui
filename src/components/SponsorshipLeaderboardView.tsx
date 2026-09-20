@@ -363,7 +363,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                   }}
                 >
                   <Award size={15} />
-                  <span>Top Collectors ({data?.topCollectors?.length || 0})</span>
+                  <span>Top Collectors</span>
                 </button>
 
                 <button
@@ -376,7 +376,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                   }}
                 >
                   <MapPin size={15} />
-                  <span>Top Wards ({data?.topWards?.length || 0})</span>
+                  <span>Top Wards</span>
                 </button>
 
                 {isAuthenticated && (
@@ -390,7 +390,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     }}
                   >
                     <Building2 size={15} />
-                    <span>{isAdmin ? 'All Sponsoring Firms' : isGeneralCoordinator ? 'Campaign Sponsoring Firms' : `Ward ${effectiveUser?.wardNumber || ''} Sponsoring Firms`} ({data?.topSponsoringFirms?.length || 0})</span>
+                    <span>Sponsoring Firms</span>
                   </button>
                 )}
 
@@ -405,7 +405,7 @@ export const SponsorshipLeaderboardView: React.FC<SponsorshipLeaderboardViewProp
                     }}
                   >
                     <Package size={15} />
-                    <span>Item Breakdown ({itemBreakdown.length} items • {totalIndividualItems} units)</span>
+                    <span>Item Breakdown</span>
                   </button>
                 )}
               </ScrollableTabStrip>

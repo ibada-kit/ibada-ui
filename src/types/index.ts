@@ -45,6 +45,7 @@ export interface LoginResponse {
 export interface Donation {
   donationId: string;
   receiptToken: string;
+  serialNumber?: number;
   donorName: string;
   whatsAppNumber: string;
   kitCount: number;

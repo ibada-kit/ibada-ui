@@ -410,7 +410,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
               <span>{isSharing ? 'Preparing...' : 'Share via WhatsApp'}</span>
             </button>
 
-            <button
+            {/* <button
               type="button"
               onClick={handleDownloadPoster}
               disabled={isSharing}
@@ -434,7 +434,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             >
               <Download size={17} color="#008A2E" />
               <span>Poster Image</span>
-            </button>
+            </button> */}
 
             {sponsorship.balanceAmount > 0 && onOpenPayBalance && (
               <button
@@ -482,7 +482,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
           </div>
 
           {/* Direct link to Create Supporter Poster */}
-          <a
+          {/* <a
             href={posterUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -508,7 +508,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
           >
             <Sparkles size={16} color="#D97706" />
             <span>Create Sponsor Supporter Poster</span>
-          </a>
+          </a> */}
         </div>
       </div>
     </div>

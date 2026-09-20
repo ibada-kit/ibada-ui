@@ -1,5 +1,6 @@
 export interface ReceiptPosterData {
   token: string;
+  serialNumber?: number;
   donorName: string;
   type: 'sponsorship' | 'kit';
   itemsDescription: string;
@@ -117,7 +118,9 @@ export async function generateReceiptPosterCanvas(data: ReceiptPosterData): Prom
   }
 
   // 5. Verification Token Badge (Bottom pill)
-  const tokenText = `Receipt Token: ${data.token}`;
+  const tokenText = data.serialNumber
+    ? `Receipt: ${data.token}  •  #${data.serialNumber}`
+    : `Receipt Token: ${data.token}`;
   ctx.font = '700 26px monospace';
   const textWidth = ctx.measureText(tokenText).width;
   const pillW = textWidth + 60;

@@ -1047,6 +1047,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       fontFamily: 'monospace'
                     }}>
                       Token: {don.receiptToken}
+                      {don.serialNumber && ` • Serial: #${don.serialNumber}`}
                     </span>
                   </div>
                 </div>
