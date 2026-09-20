@@ -1,12 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   Upload,
   Download,
   Share2,
-  ShieldCheck,
-  Heart,
   ArrowLeft,
-  Camera
+  Camera,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  CheckCircle2,
+  Copy,
+  Sliders
 } from 'lucide-react';
 
 interface DonorPosterGeneratorProps {
@@ -19,7 +23,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     const searchParams = new URLSearchParams(window.location.search);
     return {
       token: searchParams.get('token') || searchParams.get('id') || 'MDV-RELIEF',
-      name: searchParams.get('name') || 'Valued Donor',
+      name: searchParams.get('name') || 'Valued Supporter',
       type: searchParams.get('type') || 'kit', // 'kit' or 'sponsorship'
       kits: searchParams.get('kits') || searchParams.get('count') || '1',
       item: searchParams.get('item') || 'Relief Food & Essential Kits',
@@ -30,12 +34,22 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     };
   });
 
+  // Photo state
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [zoom, setZoom] = useState(1.0);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  // UI state
+  const [isExporting, setIsExporting] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoFrameRef = useRef<HTMLDivElement>(null);
+  const imgElementRef = useRef<HTMLImageElement | null>(null);
 
-  // Handle local photo upload (FileReader - Zero server/azure storage)
+  // Handle local photo upload (FileReader - Zero server storage)
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -48,226 +62,259 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     const reader = new FileReader();
     reader.onload = (event) => {
       setPhotoUrl(event.target?.result as string);
+      setZoom(1.0);
+      setPan({ x: 0, y: 0 });
+      setFeedback('Photo added! You can drag to position or adjust zoom.');
+      setTimeout(() => setFeedback(null), 3500);
     };
     reader.readAsDataURL(file);
   };
 
-  // Build contribution subtitle
-  const getContributionText = () => {
-    if (params.type === 'sponsorship') {
-      return `Proud Sponsor: ${params.item}`;
-    }
-    const count = parseInt(params.kits) || 1;
-    return `Contributed ${count} ${count === 1 ? 'Relief Kit' : 'Relief Kits'}`;
+  // Drag & Pan handlers
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!photoUrl) return;
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      panX: pan.x,
+      panY: pan.y
+    };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
 
-  // Render high-resolution poster to Canvas for download
-  const generatePosterCanvas = async (): Promise<HTMLCanvasElement> => {
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setPan({
+      x: dragStartRef.current.panX + dx,
+      y: dragStartRef.current.panY + dy
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDragging) {
+      setIsDragging(false);
+      try {
+        (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  // Reset photo zoom and pan
+  const handleResetPhoto = () => {
+    setZoom(1.0);
+    setPan({ x: 0, y: 0 });
+  };
+
+  // Subtitle text for contribution (used in WhatsApp caption)
+  const getContributionBadge = useCallback(() => {
+    if (params.type === 'sponsorship') {
+      return `★ Official Sponsor • ${params.item} ★`;
+    }
+    const count = parseInt(params.kits) || 1;
+    return `★ Ibada Kit Supporter • ${count} ${count === 1 ? 'Kit' : 'Kits'} ★`;
+  }, [params.type, params.item, params.kits]);
+
+  /**
+   * Generates 819x1024 high-resolution HTML5 Canvas matching the official poster template.
+   */
+  const generatePosterCanvas = useCallback(async (): Promise<HTMLCanvasElement> => {
     const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1080;
+    canvas.width = 819;
+    canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas context unavailable');
 
-    // 1. Draw Background Gradient
-    const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
-    grad.addColorStop(0, '#023014');
-    grad.addColorStop(0.5, '#005E20');
-    grad.addColorStop(1, '#063D18');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1080, 1080);
+    // 1. Draw base official poster template image
+    const templateImg = new Image();
+    templateImg.crossOrigin = 'anonymous';
+    templateImg.src = '/poster-template.jpg';
+    await new Promise<void>((resolve, reject) => {
+      templateImg.onload = () => resolve();
+      templateImg.onerror = () => reject(new Error('Failed to load poster template'));
+    });
+    ctx.drawImage(templateImg, 0, 0, 819, 1024);
 
-    // 2. Decorative Outer Border Frame
-    ctx.strokeStyle = '#F59E0B';
-    ctx.lineWidth = 14;
-    ctx.strokeRect(36, 36, 1008, 1008);
+    // Frame bounds on 819x1024 canvas
+    const frameX = 84;
+    const frameY = 250;
+    const frameW = 620;
+    const frameH = 361;
+    const frameRadius = 8;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(48, 48, 984, 984);
-
-    // 3. Campaign Header Bar
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('IBADA KIT CHALLENGE', 540, 120);
-
-    // Sub-header badge
-    ctx.fillStyle = '#FBBF24';
-    ctx.font = '700 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('★ OFFICIAL SUPPORTER ★', 540, 160);
-
-    // 4. Central Photo Frame Area
-    const frameSize = 480;
-    const frameX = 540 - frameSize / 2;
-    const frameY = 205;
-    const frameRadius = 32;
-
-    // Draw photo container shadow / background
+    // 2. Draw User Photo inside White Area (Clipped)
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(frameX, frameY, frameSize, frameSize, frameRadius);
+    if (ctx.roundRect) {
+      ctx.roundRect(frameX, frameY, frameW, frameH, frameRadius);
+    } else {
+      ctx.rect(frameX, frameY, frameW, frameH);
+    }
     ctx.clip();
 
-    ctx.fillStyle = '#0B1E12';
-    ctx.fillRect(frameX, frameY, frameSize, frameSize);
-
-    // If user uploaded a photo, draw it with object-fit: cover
     if (photoUrl) {
-      await new Promise<void>((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          const imgAspect = img.width / img.height;
-          let drawW = frameSize;
-          let drawH = frameSize;
-
-          if (imgAspect > 1) {
-            drawW = frameSize * imgAspect;
-          } else {
-            drawH = frameSize / imgAspect;
-          }
-
-          const drawX = frameX + (frameSize - drawW) / 2;
-          const drawY = frameY + (frameSize - drawH) / 2;
-
-          ctx.drawImage(img, drawX, drawY, drawW, drawH);
-          resolve();
-        };
-        img.onerror = () => resolve();
-        img.src = photoUrl;
+      // Load user photo
+      const userImg = new Image();
+      userImg.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        userImg.onload = () => resolve();
+        userImg.onerror = () => reject(new Error('Failed to load user image'));
+        userImg.src = photoUrl;
       });
+
+      // Calculate base 'cover' dimensions
+      const imgAspect = userImg.width / userImg.height;
+      const frameAspect = frameW / frameH;
+      let baseW: number;
+      let baseH: number;
+
+      if (imgAspect > frameAspect) {
+        // Image is wider than frame
+        baseH = frameH;
+        baseW = frameH * imgAspect;
+      } else {
+        // Image is taller than frame
+        baseW = frameW;
+        baseH = frameW / imgAspect;
+      }
+
+      // Apply user zoom
+      const drawW = baseW * zoom;
+      const drawH = baseH * zoom;
+
+      // Scale pan coordinates relative to preview container width
+      let panScale = 1;
+      if (photoFrameRef.current) {
+        const previewW = photoFrameRef.current.clientWidth || 300;
+        panScale = frameW / previewW;
+      }
+      const scaledPanX = pan.x * panScale;
+      const scaledPanY = pan.y * panScale;
+
+      const drawX = frameX + (frameW - drawW) / 2 + scaledPanX;
+      const drawY = frameY + (frameH - drawH) / 2 + scaledPanY;
+
+      ctx.drawImage(userImg, drawX, drawY, drawW, drawH);
     } else {
-      // Placeholder illustration
+      // Placeholder illustration if no photo uploaded
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(frameX, frameY, frameW, frameH);
+
       ctx.fillStyle = '#64748B';
-      ctx.font = '600 30px sans-serif';
+      ctx.font = '700 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('📸 Supporter Photo', 540, frameY + frameSize / 2);
+      ctx.fillText('📸 Supporter Photo', frameX + frameW / 2, frameY + frameH / 2);
     }
+
     ctx.restore();
 
-    // Draw photo border rim
-    ctx.strokeStyle = '#F59E0B';
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.roundRect(frameX, frameY, frameSize, frameSize, frameRadius);
-    ctx.stroke();
-
-    // 5. Donor Name (Prominent)
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 52px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(params.name || 'Valued Supporter', 540, 755);
-
-    // 6. Contribution Detail Ribbon
-    const contributionText = getContributionText();
-    ctx.fillStyle = '#4ADE80';
-    ctx.font = '800 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(contributionText, 540, 810);
-
-    // 7. Location & Panchayath
-    const locationText = params.ward
-      ? `Ward ${params.ward} • ${params.panchayath || 'Madavoor'}`
-      : `${params.panchayath || 'Madavoor'} Campaign Committee`;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    ctx.font = '600 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(locationText, 540, 855);
-
-    // 8. Verification Token Badge (Bottom pill)
-    const tokenText = params.serial
-      ? `Receipt: ${params.token}  • #${params.serial}`
-      : `Receipt: ${params.token}`;
-    ctx.font = '700 22px monospace';
-    const textWidth = ctx.measureText(tokenText).width;
-    const pillW = textWidth + 50;
-    const pillH = 46;
-    const pillX = 540 - pillW / 2;
-    const pillY = 895;
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.beginPath();
-    ctx.roundRect(pillX, pillY, pillW, pillH, 23);
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    // 3. Subtle Outer Border around the photo frame
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
     ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(frameX, frameY, frameW, frameH, frameRadius);
+    } else {
+      ctx.rect(frameX, frameY, frameW, frameH);
+    }
     ctx.stroke();
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textAlign = 'center';
-    ctx.fillText(tokenText, 540, pillY + 31);
-
-    // 9. Footer Tagline
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.font = '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('100% Direct Kit Distribution • Stand With Us', 540, 990);
 
     return canvas;
-  };
+  }, [photoUrl, zoom, pan]);
 
   // Download high-resolution PNG
   const handleDownload = async () => {
     try {
-      setIsDownloading(true);
+      setIsExporting(true);
       const canvas = await generatePosterCanvas();
       const safeName = (params.name || 'supporter').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const filename = `ibada-kit-challenge-supporter-${safeName}.png`;
+      const filename = `ibada-supporter-poster-${safeName}.png`;
 
-      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = filename;
-      link.href = dataUrl;
+      link.href = canvas.toDataURL('image/png');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      setFeedback('High-resolution poster downloaded successfully!');
+      setTimeout(() => setFeedback(null), 3500);
     } catch (err) {
-      console.error('Failed to export poster:', err);
+      console.error('Download failed:', err);
       alert('Could not generate poster. Please try again.');
     } finally {
-      setIsDownloading(false);
+      setIsExporting(false);
     }
   };
 
-  // Native share or WhatsApp share
-  const handleShare = async () => {
+  // WhatsApp Share or Native Share
+  const handleShareWhatsApp = async () => {
     try {
+      setIsExporting(true);
       const canvas = await generatePosterCanvas();
       const safeName = params.name || 'Valued Supporter';
+      const filename = `ibada-supporter-poster.png`;
 
-      canvas.toBlob(async (blob) => {
-        if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], 'supporter-poster.png', { type: 'image/png' })] })) {
-          try {
-            const file = new File([blob], `${safeName}-ibada-kit-supporter.png`, { type: 'image/png' });
-            await navigator.share({
-              title: 'Ibada Kit Challenge Supporter',
-              text: `I proudly supported the Ibada Kit Challenge! 🤲\nJoin me in making a difference: ${window.location.origin}`,
-              files: [file]
-            });
-            return;
-          } catch {
-            // User cancelled or fallback
-          }
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      const posterLink = window.location.href;
+
+      const messageText =
+        `*ശിഹാബ് തങ്ങൾ സെന്റർ സോഷ്യൽ വെൽഫെയർ കോംപ്ലക്സ്*\n` +
+        `*ഇബാദ് കിറ്റ് ചലഞ്ച് — Supporter Poster* 🤲\n\n` +
+        `Assalamu Alaikum,\n` +
+        `I proudly supported the Ibada Kit Challenge!\n` +
+        `• *Supporter:* ${safeName}\n` +
+        `• *Contribution:* ${getContributionBadge().replace(/★/g, '').trim()}\n` +
+        `• *Receipt No:* ${params.token}\n\n` +
+        `Create your own supporter poster here:\n` +
+        `${posterLink}\n\n` +
+        `_May Allah reward everyone manifold!_`;
+
+      if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
+        await navigator.share({
+          files: [new File([blob], filename, { type: 'image/png' })],
+          title: 'Ibada Kit Challenge Supporter Poster',
+          text: messageText
+        });
+        setFeedback('Poster shared successfully!');
+      } else {
+        // Desktop fallback: Download image and open WhatsApp web
+        if (blob) {
+          const link = document.createElement('a');
+          link.download = filename;
+          link.href = canvas.toDataURL('image/png');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
 
-        // Fallback: Open WhatsApp with text & current poster link
-        const shareText = encodeURIComponent(
-          `*I proudly contributed to the Ibada Kit Challenge!* 🤲%0A%0A` +
-          `• *Donor:* ${safeName}%0A` +
-          `• *Contribution:* ${getContributionText()}%0A` +
-          `• *Receipt Token:* ${params.token}%0A%0A` +
-          `Create your own supporter poster here:%0A${window.location.href}`
-        );
-        window.open(`https://api.whatsapp.com/send?text=${shareText}`, '_blank');
-      }, 'image/png');
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
+        window.open(waUrl, '_blank');
+        setFeedback('Poster image downloaded! Opening WhatsApp...');
+      }
+      setTimeout(() => setFeedback(null), 3500);
     } catch (err) {
-      console.error('Share error:', err);
+      console.error('Share failed:', err);
+    } finally {
+      setIsExporting(false);
     }
+  };
+
+  // Copy shareable link
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setFeedback('Poster link copied to clipboard!');
+    setTimeout(() => setFeedback(null), 3000);
   };
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0F172A',
+      background: '#0B1914',
       color: '#FFFFFF',
       display: 'flex',
       flexDirection: 'column',
@@ -284,10 +331,10 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
 
       {/* Top Header */}
       <header style={{
-        background: 'rgba(15, 23, 42, 0.92)',
+        background: 'rgba(11, 25, 20, 0.95)',
         backdropFilter: 'blur(10px)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '14px 20px',
+        padding: '12px 18px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -297,22 +344,23 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 36,
-            height: 36,
+            width: 38,
+            height: 38,
             borderRadius: 10,
-            background: 'linear-gradient(135deg, #008A2E 0%, #256CAA 100%)',
+            background: 'linear-gradient(135deg, #008A2E 0%, #157E6E 100%)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0, 138, 46, 0.3)'
           }}>
-            <Heart size={18} color="#FFFFFF" />
+            <Camera size={20} color="#FFFFFF" />
           </div>
           <div>
-            <h1 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
-              Ibada Kit Challenge
+            <h1 style={{ fontSize: '1.02rem', fontWeight: 800, margin: 0, letterSpacing: '-0.01em', color: '#FFFFFF' }}>
+              Supporter Poster Creator
             </h1>
-            <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-              Supporter Poster
+            <span style={{ fontSize: '0.74rem', color: '#6EE7B7', fontWeight: 600 }}>
+              ശിഹാബ് തങ്ങൾ സെന്റർ • ഇബാദ് കിറ്റ് ചലഞ്ച്
             </span>
           </div>
         </div>
@@ -324,10 +372,10 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
               background: 'rgba(255, 255, 255, 0.1)',
               border: '1px solid rgba(255, 255, 255, 0.15)',
               color: '#FFFFFF',
-              padding: '7px 12px',
+              padding: '7px 14px',
               borderRadius: 8,
-              fontSize: '0.8rem',
-              fontWeight: 600,
+              fontSize: '0.82rem',
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -340,267 +388,362 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
         )}
       </header>
 
-      {/* Main Centered Content: Clean Poster + Simple Action Buttons */}
+      {/* Main Content Area */}
       <main style={{
         flex: 1,
-        maxWidth: 500,
+        maxWidth: 520,
         width: '100%',
         margin: '0 auto',
-        padding: '24px 16px 36px 16px',
+        padding: '18px 16px 40px 16px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 20
+        gap: 16
       }}>
-        {/* The Supporter Poster */}
-        <div style={{
-          width: '100%',
-          aspectRatio: '1 / 1',
-          borderRadius: 24,
-          background: 'linear-gradient(145deg, #023D18 0%, #006822 55%, #0B4619 100%)',
-          border: '6px solid #F59E0B',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 35px rgba(0, 138, 46, 0.25)',
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '20px 18px 16px 18px',
-          textAlign: 'center',
-          color: '#FFFFFF'
-        }}>
-          {/* Header */}
-          <div>
-            <div style={{
-              fontSize: 'clamp(1rem, 4.2vw, 1.25rem)',
-              fontWeight: 900,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase'
-            }}>
-              Ibada Kit Challenge
-            </div>
-            <div style={{
-              fontSize: 'clamp(0.68rem, 2.5vw, 0.78rem)',
-              fontWeight: 800,
-              color: '#FBBF24',
-              letterSpacing: '0.08em',
-              marginTop: 2
-            }}>
-              ★ OFFICIAL SUPPORTER ★
-            </div>
-          </div>
 
-          {/* Central Photo Frame (Click to Upload / Change) */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
+        {/* Feedback Alert */}
+        {feedback && (
+          <div style={{
+            width: '100%',
+            padding: '10px 14px',
+            background: '#064E3B',
+            color: '#A7F3D0',
+            border: '1px solid #059669',
+            borderRadius: 10,
+            fontSize: '0.84rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+          }}>
+            <CheckCircle2 size={16} color="#34D399" />
+            <span>{feedback}</span>
+          </div>
+        )}
+
+        {/*
+          THE POSTER CONTAINER
+          Exact 819:1024 aspect ratio matching the official template image.
+          Container Query enables cqw scaling for responsive typography.
+        */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            aspectRatio: '819 / 1024',
+            containerType: 'inline-size',
+            borderRadius: 18,
+            overflow: 'hidden',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15)',
+            background: '#19806F',
+            userSelect: 'none'
+          }}
+        >
+          {/* Base Template Image */}
+          <img
+            src="/poster-template.jpg"
+            alt="Official Poster Template"
             style={{
-              width: '64%',
-              aspectRatio: '1 / 1',
-              margin: '0 auto',
-              borderRadius: 20,
-              border: '4px solid #F59E0B',
-              background: '#0B1E12',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
-              position: 'relative',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              display: 'block',
+              pointerEvents: 'none'
+            }}
+          />
+
+          {/*
+            THE DESIGNATED WHITE PHOTO AREA
+            Coordinates: X: 84 to 704 (width: 620/819 = 75.70%)
+                         Y: 250 to 611 (height: 361/1024 = 35.25%)
+                         left: 10.26%, top: 24.41%
+          */}
+          <div
+            ref={photoFrameRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            style={{
+              position: 'absolute',
+              left: '10.26%',
+              top: '24.41%',
+              width: '75.70%',
+              height: '35.25%',
               overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
+              borderRadius: '1.2cqw',
+              cursor: photoUrl ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+              touchAction: 'none',
+              background: '#FFFFFF',
+              boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.08)'
+            }}
+            onClick={() => {
+              if (!photoUrl) fileInputRef.current?.click();
             }}
           >
             {photoUrl ? (
-              <div style={{
-                width: '100%',
-                height: '100%',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
+              <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+                {/* User Image with interactive pan and scale */}
                 <img
+                  ref={imgElementRef}
                   src={photoUrl}
-                  alt="Donor"
+                  alt="Donor Supporter"
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover'
+                    objectFit: 'cover',
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                    transformOrigin: 'center center',
+                    transition: isDragging ? 'none' : 'transform 0.05s ease-out',
+                    pointerEvents: 'none',
+                    display: 'block'
                   }}
                 />
-                {/* Subtle tap to change badge */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: 8,
-                  right: 8,
-                  background: 'rgba(0, 0, 0, 0.65)',
-                  backdropFilter: 'blur(4px)',
-                  color: '#FFFFFF',
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
-                }}>
-                  <Camera size={12} />
-                  <span>Change</span>
-                </div>
               </div>
             ) : (
+              /* Inviting Photo Upload Target */
               <div style={{
-                padding: 16,
+                width: '100%',
+                height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 8,
-                color: '#94A3B8'
+                justifyContent: 'center',
+                gap: '2cqw',
+                padding: '4cqw',
+                textAlign: 'center',
+                background: 'linear-gradient(145deg, #F0FDF4 0%, #DCFCE7 100%)',
+                border: '2px dashed #16A34A',
+                borderRadius: '1.2cqw',
+                boxSizing: 'border-box'
               }}>
                 <div style={{
-                  width: 48,
-                  height: 48,
+                  width: '11cqw',
+                  height: '11cqw',
                   borderRadius: '50%',
-                  background: 'rgba(255, 255, 255, 0.1)',
+                  background: '#008A2E',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 10px rgba(0, 138, 46, 0.3)'
                 }}>
-                  <Upload size={24} color="#42B06F" />
+                  <Camera size={26} color="#FFFFFF" />
                 </div>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FFFFFF' }}>
-                  Tap to Add Photo
-                </span>
-                <span style={{ fontSize: '0.68rem', color: '#94A3B8' }}>
-                  Camera or Gallery
-                </span>
+                <div style={{ fontSize: '3.0cqw', fontWeight: 800, color: '#064E3B' }}>
+                  Tap Here to Upload Photo
+                </div>
+                <div style={{ fontSize: '2.0cqw', color: '#15803D', fontWeight: 600 }}>
+                  Camera or Gallery (JPG, PNG)
+                </div>
               </div>
             )}
           </div>
-
-          {/* Donor Info & Details */}
-          <div style={{ marginTop: 6 }}>
-            <div style={{
-              fontSize: 'clamp(1.2rem, 4.8vw, 1.45rem)',
-              fontWeight: 900,
-              lineHeight: 1.2,
-              color: '#FFFFFF'
-            }}>
-              {params.name || 'Valued Donor'}
-            </div>
-
-            <div style={{
-              fontSize: 'clamp(0.76rem, 2.8vw, 0.86rem)',
-              fontWeight: 800,
-              color: '#4ADE80',
-              marginTop: 3
-            }}>
-              {getContributionText()}
-            </div>
-
-            <div style={{
-              fontSize: '0.7rem',
-              color: '#D1FAE5',
-              marginTop: 2
-            }}>
-              {params.ward ? `Ward ${params.ward} • ` : ''}{params.panchayath || 'Madavoor'}
-            </div>
-
-            {/* Receipt Token Pill */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              background: 'rgba(255, 255, 255, 0.15)',
-              border: '1px solid rgba(255, 255, 255, 0.25)',
-              padding: '3px 10px',
-              borderRadius: 9999,
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              fontFamily: 'monospace',
-              color: '#FFFFFF',
-              marginTop: 6
-            }}>
-              <ShieldCheck size={11} />
-              <span>Receipt: {params.token}{params.serial ? ` • #${params.serial}` : ''}</span>
-            </div>
-          </div>
-
-          {/* Subtle Footer Tagline */}
-          <div style={{
-            fontSize: '0.58rem',
-            color: 'rgba(255, 255, 255, 0.55)',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase'
-          }}>
-            100% Direct Kit Distribution
-          </div>
         </div>
 
-        {/* Action Buttons: Only Download and Share via WhatsApp */}
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          marginTop: 4
-        }}>
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={isDownloading}
-            style={{
-              width: '100%',
-              background: '#008A2E',
-              color: '#FFFFFF',
-              border: 'none',
-              padding: '14px 20px',
-              borderRadius: 14,
-              fontSize: '0.96rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              boxShadow: '0 4px 14px rgba(0, 138, 46, 0.4)',
-              transition: 'transform 0.1s ease'
-            }}
-          >
-            <Download size={19} />
-            <span>{isDownloading ? 'Generating 1080p Image...' : 'Download Poster'}</span>
-          </button>
+        {/* Photo Controls (if photo is uploaded) */}
+        {photoUrl && (
+          <div style={{
+            width: '100%',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: 14,
+            padding: '12px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.84rem', fontWeight: 700, color: '#E2E8F0' }}>
+                <Sliders size={16} color="#34D399" />
+                <span>Adjust Photo (Drag on photo to reposition)</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetPhoto}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                <RotateCcw size={12} />
+                <span>Reset</span>
+              </button>
+            </div>
 
+            {/* Zoom Slider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setZoom((prev) => Math.max(0.8, Number((prev - 0.1).toFixed(2))))}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                aria-label="Zoom out"
+              >
+                <ZoomOut size={15} />
+              </button>
+
+              <input
+                type="range"
+                min="0.8"
+                max="2.5"
+                step="0.05"
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                style={{
+                  flex: 1,
+                  accentColor: '#10B981',
+                  height: 6,
+                  cursor: 'pointer'
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => setZoom((prev) => Math.min(2.5, Number((prev + 0.1).toFixed(2))))}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                aria-label="Zoom in"
+              >
+                <ZoomIn size={15} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  background: '#047857',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                <Upload size={12} />
+                <span>Change Photo</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons: Download & WhatsApp Share */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button
             type="button"
-            onClick={handleShare}
+            onClick={handleShareWhatsApp}
+            disabled={isExporting}
             style={{
               width: '100%',
               background: '#25D366',
               color: '#FFFFFF',
               border: 'none',
               padding: '14px 20px',
-              borderRadius: 14,
+              borderRadius: 12,
               fontSize: '0.96rem',
               fontWeight: 800,
+              cursor: isExporting ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 9,
+              boxShadow: '0 4px 14px rgba(37, 211, 102, 0.35)'
+            }}
+          >
+            <Share2 size={18} />
+            <span>{isExporting ? 'Preparing Poster...' : 'Share Poster on WhatsApp'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={isExporting}
+            style={{
+              width: '100%',
+              background: '#008A2E',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '13px 20px',
+              borderRadius: 12,
+              fontSize: '0.94rem',
+              fontWeight: 800,
+              cursor: isExporting ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 9,
+              boxShadow: '0 4px 14px rgba(0, 138, 46, 0.35)'
+            }}
+          >
+            <Download size={18} />
+            <span>{isExporting ? 'Rendering Image...' : 'Download Poster (HD PNG)'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              color: '#94A3B8',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              padding: '10px 16px',
+              borderRadius: 10,
+              fontSize: '0.82rem',
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 10,
-              boxShadow: '0 4px 14px rgba(37, 211, 102, 0.35)',
-              transition: 'transform 0.1s ease'
+              gap: 7
             }}
           >
-            <Share2 size={19} />
-            <span>Share via WhatsApp</span>
+            <Copy size={15} />
+            <span>Copy Poster Creator Link</span>
           </button>
         </div>
 
+        {/* Footer info */}
         <div style={{
-          fontSize: '0.72rem',
+          fontSize: '0.74rem',
           color: '#64748B',
           textAlign: 'center',
-          lineHeight: 1.4
+          lineHeight: 1.5,
+          marginTop: 4
         }}>
-          🔒 Handled 100% locally on your device. Zero external cloud storage.
+          🔒 100% Private: Your photo is processed directly on your device canvas and never stored on any cloud server.
         </div>
       </main>
     </div>
