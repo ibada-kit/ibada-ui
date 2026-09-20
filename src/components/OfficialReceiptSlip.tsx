@@ -9,7 +9,7 @@ interface OfficialReceiptSlipProps {
 
 /**
  * OfficialReceiptSlip
- * Renders donor name, kit count, total amount, receipt token, and lucky draw serial number
+ * Renders donor name, kit count, total amount, receipt token, and serial number
  * directly over the uploaded receipt template image using responsive CSS percentages & Container Queries (cqw).
  * Also supports 1-click HTML5 Canvas export for WhatsApp sharing and downloading.
  */
@@ -56,14 +56,14 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
     ctx.fillText(`Date: ${dateStr}`, 505, 246);
 
     // 3. Donor Name over the dotted placeholder (y = 321, x = 272 to 510)
-    ctx.font = '800 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#064E3B'; // Deep emerald
     ctx.textAlign = 'left';
     const displayDonor = donation.donorName.length > 24 ? donation.donorName.substring(0, 22) + '...' : donation.donorName;
     ctx.fillText(displayDonor, 272, 321);
 
     // 4. Amount / Kits over "നൽകിയ സംഭാവന.......................... തുക" placeholder (y = 422, x = 325 to 475)
-    ctx.font = '900 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '900 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#007A33';
     ctx.textAlign = 'center';
     ctx.fillText(`₹${formattedAmount}`, 400, 422);
@@ -75,14 +75,14 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.fillText('KITS CONTRIBUTED', 672, 428);
 
-    ctx.font = '900 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '900 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#FFFFFF';
     ctx.fillText(`${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}`, 672, 453);
 
-    // Bottom Half: Lucky Draw Serial Number
+    // Bottom Half: Serial Number
     ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#FDE047'; // Bright gold
-    ctx.fillText('LUCKY DRAW SERIAL', 672, 488);
+    ctx.fillText('Serial No', 672, 488);
 
     ctx.font = '900 20px monospace';
     ctx.fillStyle = '#FEF08A';
@@ -132,7 +132,7 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
         `Assalamu Alaikum *${donation.donorName}*,\n` +
         `Here is your official donation receipt slip for *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* (₹${formattedAmount}). 🤲\n\n` +
         `• *Receipt Token:* ${donation.receiptToken}\n` +
-        (donation.serialNumber ? `• *Lucky Draw Serial No:* #${donation.serialNumber}\n` : '') +
+        (donation.serialNumber ? `• *Serial No:* #${donation.serialNumber}\n` : '') +
         `• *Date:* ${dateStr}\n\n` +
         `_May Allah accept and reward your contribution abundantly!_`;
 
@@ -234,7 +234,7 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
             height: '2.8%',
             display: 'flex',
             alignItems: 'center',
-            fontSize: '2.3cqw',
+            fontSize: '2.8cqw',
             fontWeight: 800,
             color: '#064E3B',
             overflow: 'hidden',
@@ -259,7 +259,7 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '2.2cqw',
+            fontSize: '2.7cqw',
             fontWeight: 900,
             color: '#007A33',
             whiteSpace: 'nowrap',
@@ -292,7 +292,7 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
             <span style={{ fontSize: '1.4cqw', fontWeight: 700, color: 'rgba(255, 255, 255, 0.85)', letterSpacing: '0.04em' }}>
               KITS CONTRIBUTED
             </span>
-            <span style={{ fontSize: '2.5cqw', fontWeight: 900, color: '#FFFFFF', marginTop: '1%' }}>
+            <span style={{ fontSize: '3.0cqw', fontWeight: 900, color: '#FFFFFF', marginTop: '1%' }}>
               {donation.kitCount} {donation.kitCount === 1 ? 'Kit' : 'Kits'}
             </span>
           </div>
@@ -300,10 +300,10 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
           {/* Center Divider Line */}
           <div style={{ width: '80%', height: 1, background: 'rgba(255, 255, 255, 0.25)' }} />
 
-          {/* Bottom Half: Lucky Draw Serial Number */}
+          {/* Bottom Half: Serial Number */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
             <span style={{ fontSize: '1.4cqw', fontWeight: 700, color: '#FDE047', letterSpacing: '0.04em' }}>
-              LUCKY DRAW SERIAL
+              Serial No
             </span>
             <span style={{ fontSize: '2.3cqw', fontWeight: 900, color: '#FEF08A', fontFamily: 'monospace', marginTop: '1%' }}>
               {donation.serialNumber ? `#${donation.serialNumber}` : 'Standard'}

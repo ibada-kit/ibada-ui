@@ -175,7 +175,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
 
     // 8. Verification Token Badge (Bottom pill)
     const tokenText = params.serial
-      ? `Receipt: ${params.token}  •  Lucky Draw: #${params.serial}`
+      ? `Receipt: ${params.token}  • #${params.serial}`
       : `Receipt: ${params.token}`;
     ctx.font = '700 22px monospace';
     const textWidth = ctx.measureText(tokenText).width;
@@ -519,7 +519,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
               marginTop: 6
             }}>
               <ShieldCheck size={11} />
-              <span>Receipt: {params.token}{params.serial ? ` • Lucky Draw #${params.serial}` : ''}</span>
+              <span>Receipt: {params.token}{params.serial ? ` • #${params.serial}` : ''}</span>
             </div>
           </div>
 

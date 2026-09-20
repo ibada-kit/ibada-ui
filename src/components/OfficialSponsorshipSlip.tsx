@@ -61,14 +61,14 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
     ctx.fillText(`Date: ${dateStr}`, 505, 246);
 
     // 3. Sponsor / Organization Name over dotted placeholder (y = 321, x = 265 to 510)
-    ctx.font = '800 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#2E1065'; // Deep royal purple
     ctx.textAlign = 'left';
     const displayDonor = sponsorship.donorName.length > 25 ? sponsorship.donorName.substring(0, 23) + '...' : sponsorship.donorName;
     ctx.fillText(displayDonor, 262, 321);
 
     // 4. Total Amount over "താങ്കൾ നൽകിയ സംഭാവന ..........................." placeholder (y = 400, x = 380 to 515)
-    ctx.font = '900 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '900 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#4C1D95'; // Vibrant purple
     ctx.textAlign = 'center';
     ctx.fillText(`₹${formattedTotalAmount}`, 445, 400);
@@ -219,7 +219,7 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
             height: '2.8%',
             display: 'flex',
             alignItems: 'center',
-            fontSize: '2.3cqw',
+            fontSize: '2.8cqw',
             fontWeight: 800,
             color: '#2E1065',
             overflow: 'hidden',
@@ -244,7 +244,7 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '2.2cqw',
+            fontSize: '2.7cqw',
             fontWeight: 900,
             color: '#4C1D95',
             whiteSpace: 'nowrap',
