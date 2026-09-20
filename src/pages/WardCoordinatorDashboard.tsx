@@ -191,7 +191,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
         // Donations are scoped by backend for this ward/user
         const wardTx = user.wardNumber ? donations.filter(d => Number(d.wardNumber) === Number(user.wardNumber)) : donations;
-        setWardDonations(wardTx.length > 0 ? wardTx : donations);
+        setWardDonations(wardTx);
       })
       .catch(() => {});
 
@@ -233,7 +233,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       donationsApi.getRecentDonations(user.role)
         .then(donations => {
           const wardTx = user.wardNumber ? donations.filter(d => Number(d.wardNumber) === Number(user.wardNumber)) : donations;
-          setWardDonations(wardTx.length > 0 ? wardTx : donations);
+          setWardDonations(wardTx);
         })
         .catch(() => {});
     }
@@ -264,7 +264,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           fullName: volName.trim(),
           phoneNumber: `+91${cleanPhone.slice(-10)}`,
           role: 'Volunteer',
-          wardNumber: user.wardNumber || 4,
+          wardNumber: user.wardNumber || 0,
           targetKits: Number(volTarget),
           defaultPassword: defaultPass
         })
@@ -286,7 +286,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         fullName: volName.trim(),
         phone: `+91${cleanPhone.slice(-10)}`,
         defaultPassword: defaultPass,
-        wardNumber: user.wardNumber || 4
+        wardNumber: user.wardNumber || 0
       });
       setStatusMsg({ text: `Volunteer ${volName} registered successfully! Default password: ${defaultPass}`, isError: false });
       setVolName('');
@@ -908,10 +908,6 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                 </span>
               </div>
             </div>
-
-            <p style={{ fontSize: '0.74rem', color: '#475569', marginTop: 10, marginBottom: 0, lineHeight: 1.4 }}>
-              💡 <em>The Ward Committee Lead's target remains fixed at <strong>{wardStats.targetKits || user.targetKits || 50} Kits</strong> (what Admin set). You can assign any target to your volunteers without limits — including more than {wardStats.targetKits || user.targetKits || 50} kits (e.g. 15 volunteers × 10 kits = 150 kits).</em>
-            </p>
           </div>
 
           {showAddVol && (
@@ -1218,6 +1214,9 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                       </div>
                       <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
                         Collector: {tx.collectedByName || 'Ward Member'} • Receipt No: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                        {tx.serialNumber && (
+                          <span> • Serial: <span style={{ color: '#008A2E', fontWeight: 700 }}>#{tx.serialNumber}</span></span>
+                        )}
                       </div>
                     </div>
 

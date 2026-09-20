@@ -25,7 +25,8 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       item: searchParams.get('item') || 'Relief Food & Essential Kits',
       amount: searchParams.get('amount') || '',
       ward: searchParams.get('ward') || '',
-      panchayath: searchParams.get('panchayath') || 'Madavoor'
+      panchayath: searchParams.get('panchayath') || 'Madavoor',
+      serial: searchParams.get('serial') || ''
     };
   });
 
@@ -173,7 +174,9 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     ctx.fillText(locationText, 540, 855);
 
     // 8. Verification Token Badge (Bottom pill)
-    const tokenText = `Receipt: ${params.token}`;
+    const tokenText = params.serial
+      ? `Receipt: ${params.token}  •  Lucky Draw: #${params.serial}`
+      : `Receipt: ${params.token}`;
     ctx.font = '700 22px monospace';
     const textWidth = ctx.measureText(tokenText).width;
     const pillW = textWidth + 50;
@@ -516,7 +519,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
               marginTop: 6
             }}>
               <ShieldCheck size={11} />
-              <span>Receipt: {params.token}</span>
+              <span>Receipt: {params.token}{params.serial ? ` • Lucky Draw #${params.serial}` : ''}</span>
             </div>
           </div>
 

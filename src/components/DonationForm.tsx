@@ -231,6 +231,9 @@ export const DonationForm: React.FC<DonationFormProps> = ({
               <span style={{ fontWeight: 800, color: '#008A2E' }}>Donation Registered Successfully!</span>
               <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
                 Receipt Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedDonation.receiptToken}</span>
+                {recordedDonation.serialNumber && (
+                  <span> • Lucky Draw Serial: <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#008A2E' }}>#{recordedDonation.serialNumber}</span></span>
+                )}
                 {' '}• Automated WhatsApp receipt triggered.
               </div>
             </div>

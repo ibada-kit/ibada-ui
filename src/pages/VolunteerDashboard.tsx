@@ -468,6 +468,9 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
                       </div>
                       <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: 2 }}>
                         Receipt No: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{item.receiptToken}</span>
+                        {item.serialNumber && (
+                          <span> • Serial: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>#{item.serialNumber}</span></span>
+                        )}
                         {' '}• {item.whatsAppNumber}
                       </div>
                     </div>

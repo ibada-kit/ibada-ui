@@ -17,7 +17,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
 
   const handleCopyToken = () => {
     if (donation.receiptToken) {
-      navigator.clipboard.writeText(donation.receiptToken);
+      const copyContent = donation.serialNumber
+        ? `Token: ${donation.receiptToken} | Serial: #${donation.serialNumber}`
+        : donation.receiptToken;
+      navigator.clipboard.writeText(copyContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -26,13 +29,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
   const rawPhone = (donation.whatsAppNumber || '').replace(/\D/g, '');
   const cleanPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
 
-  const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${encodeURIComponent(donation.wardNumber?.toString() || '')}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}`;
+  const posterUrl = `${window.location.origin}/poster?token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${encodeURIComponent(donation.wardNumber?.toString() || '')}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${encodeURIComponent(donation.serialNumber.toString())}` : ''}`;
 
   const messageText =
     `*Ibada Kit Challenge — Kit Donation Receipt*\n\n` +
     `Assalamu Alaikum *${donation.donorName}*,\n` +
     `Thank you for your generous contribution of *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* to the Ibada Kit Challenge! 🤲\n\n` +
     `• *Receipt Token:* ${donation.receiptToken}\n` +
+    (donation.serialNumber ? `• *Serial No:* #${donation.serialNumber}\n` : '') +
     `• *Kits Contributed:* ${donation.kitCount}\n` +
     `• *Total Amount:* ₹${donation.totalAmount.toLocaleString('en-IN')}\n` +
     `• *Location:* Ward ${donation.wardNumber}, ${donation.panchayath}\n` +
@@ -47,6 +51,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
 
   const posterData: ReceiptPosterData = {
     token: donation.receiptToken,
+    serialNumber: donation.serialNumber,
     donorName: donation.donorName,
     type: 'kit',
     itemsDescription: `${donation.kitCount} ${donation.kitCount === 1 ? 'Ibada Kit' : 'Ibada Kits'}`,
@@ -197,7 +202,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               </div>
             </div>
 
-            {/* Receipt Token with Copy Button */}
+            {/* Receipt Token & Serial with Copy Button */}
             <div style={{
               background: '#F1F5F9',
               padding: '10px 14px',
@@ -206,15 +211,28 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               justifyContent: 'space-between',
               alignItems: 'center',
               border: '1px solid var(--border-subtle)',
-              marginBottom: 14
+              marginBottom: 14,
+              gap: 10
             }}>
-              <div style={{ textAlign: 'left' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
-                  Receipt Token
-                </span>
-                <strong style={{ color: '#0F172A', letterSpacing: '0.05em', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                  {donation.receiptToken}
-                </strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                <div style={{ textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
+                    Receipt Token
+                  </span>
+                  <strong style={{ color: '#0F172A', letterSpacing: '0.05em', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                    {donation.receiptToken}
+                  </strong>
+                </div>
+                {donation.serialNumber && (
+                  <div style={{ textAlign: 'left', borderLeft: '1px solid #CBD5E1', paddingLeft: 14 }}>
+                    <span style={{ fontSize: '0.68rem', color: '#008A2E', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
+                      Serial No
+                    </span>
+                    <strong style={{ color: '#008A2E', letterSpacing: '0.05em', fontFamily: 'monospace', fontSize: '0.95rem' }}>
+                      #{donation.serialNumber}
+                    </strong>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -231,6 +249,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
                   display: 'flex',
                   alignItems: 'center',
                   gap: 5,
+                  flexShrink: 0,
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -291,7 +310,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               <span>{isSharing ? 'Preparing...' : 'Share via WhatsApp'}</span>
             </button>
 
-            <button
+            {/* <button
               type="button"
               onClick={handleDownloadPoster}
               disabled={isSharing}
@@ -315,7 +334,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
             >
               <Download size={17} color="#008A2E" />
               <span>Poster Image</span>
-            </button>
+            </button> */}
 
             <button
               type="button"
@@ -334,7 +353,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
           </div>
 
           {/* Direct link to Create Supporter Poster */}
-          <a
+          {/* <a
             href={posterUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -360,7 +379,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
           >
             <Sparkles size={16} color="#D97706" />
             <span>Create Donor Supporter Poster</span>
-          </a>
+          </a> */}
         </div>
       </div>
     </div>

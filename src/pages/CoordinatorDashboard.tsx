@@ -77,7 +77,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   const [showAddVolunteer, setShowAddVolunteer] = useState(false);
   const [volFullName, setVolFullName] = useState('');
   const [volPhone, setVolPhone] = useState('');
-  const [volWard, setVolWard] = useState(user.wardNumber || 4);
+  const [volWard, setVolWard] = useState<number>(user.wardNumber || 0);
   const [volTarget, setVolTarget] = useState(50);
   const [creatingVol, setCreatingVol] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ text: string; isError: boolean } | null>(null);
@@ -160,6 +160,11 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
     const cleanPhone = volPhone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
       setCreateMsg({ text: 'Please enter a valid 10-digit mobile number.', isError: true });
+      return;
+    }
+
+    if (!volWard || volWard <= 0) {
+      setCreateMsg({ text: 'Please select a valid ward for this volunteer.', isError: true });
       return;
     }
 
@@ -722,9 +727,11 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                     className="input-field"
                     value={volWard}
                     onChange={(e) => setVolWard(Number(e.target.value))}
+                    required
                   >
+                    <option value={0}>-- Select Ward --</option>
                     {wards.map((w) => (
-                      <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} ({w.wardNumber})</option>
+                      <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} (Ward {w.wardNumber})</option>
                     ))}
                   </select>
                 </div>
@@ -956,6 +963,9 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                       </div>
                       <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
                         Collector: {tx.collectedByName || 'Volunteer'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                        {tx.serialNumber && (
+                          <span> • Serial: <span style={{ color: '#008A2E', fontWeight: 700 }}>#{tx.serialNumber}</span></span>
+                        )}
                       </div>
                     </div>
 
