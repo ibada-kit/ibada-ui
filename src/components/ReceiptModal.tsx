@@ -6,9 +6,10 @@ import { OfficialReceiptSlip } from './OfficialReceiptSlip';
 interface ReceiptModalProps {
   donation: Donation | null;
   onClose: () => void;
+  onOpenPoster?: () => void;
 }
 
-export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose }) => {
+export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose, onOpenPoster }) => {
   if (!donation) return null;
 
   return (
@@ -55,7 +56,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
         }}>
-          <OfficialReceiptSlip donation={donation} showActions={true} />
+          <OfficialReceiptSlip donation={donation} showActions={true} onOpenPoster={onOpenPoster} />
           <div style={{ marginTop: 14, textAlign: 'center' }}>
             <button
               type="button"

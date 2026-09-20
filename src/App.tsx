@@ -143,6 +143,39 @@ export const App: React.FC = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
+  const handleOpenPosterForDonation = (donation: Donation) => {
+    setActiveReceipt(null);
+    const params = new URLSearchParams({
+      poster: '1',
+      token: donation.receiptToken,
+      name: donation.donorName,
+      type: 'kit',
+      kits: String(donation.kitCount),
+      amount: String(donation.totalAmount),
+      ward: String(donation.wardNumber || ''),
+      panchayath: donation.panchayath || 'Madavoor',
+      serial: donation.serialNumber ? String(donation.serialNumber) : ''
+    });
+    window.history.pushState({}, '', `${window.location.origin}/?${params.toString()}`);
+    setIsPosterView(true);
+  };
+
+  const handleOpenPosterForSponsorship = (spon: any) => {
+    setActiveSponsorshipReceipt(null);
+    const params = new URLSearchParams({
+      poster: '1',
+      token: spon.receiptToken,
+      name: spon.donorName,
+      type: 'sponsorship',
+      item: spon.itemName || 'Sponsorship Contribution',
+      amount: String(spon.totalAmount),
+      ward: String(spon.wardNumber || ''),
+      panchayath: spon.panchayath || 'Madavoor'
+    });
+    window.history.pushState({}, '', `${window.location.origin}/?${params.toString()}`);
+    setIsPosterView(true);
+  };
+
   // Public Donor Poster Generator view (no auth required)
   if (isPosterView) {
     return (
@@ -241,6 +274,7 @@ export const App: React.FC = () => {
             <ReceiptModal
               donation={activeReceipt}
               onClose={() => setActiveReceipt(null)}
+              onOpenPoster={() => handleOpenPosterForDonation(activeReceipt)}
             />
           )}
 
@@ -250,6 +284,7 @@ export const App: React.FC = () => {
               sponsorship={activeSponsorshipReceipt}
               onClose={() => setActiveSponsorshipReceipt(null)}
               onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
+              onOpenPoster={() => handleOpenPosterForSponsorship(activeSponsorshipReceipt)}
             />
           )}
 

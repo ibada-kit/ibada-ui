@@ -1,10 +1,11 @@
 import React, { useRef, useState } from 'react';
 import type { Donation } from '../types';
-import { Download, Share2 } from 'lucide-react';
+import { Download, Share2, Camera } from 'lucide-react';
 
 interface OfficialReceiptSlipProps {
   donation: Donation;
   showActions?: boolean;
+  onOpenPoster?: () => void;
 }
 
 /**
@@ -15,7 +16,8 @@ interface OfficialReceiptSlipProps {
  */
 export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
   donation,
-  showActions = true
+  showActions = true,
+  onOpenPoster
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -127,6 +129,8 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
       const rawPhone = (donation.whatsAppNumber || '').replace(/\D/g, '');
       const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
 
+      const posterUrl = `${window.location.origin}/?poster=1&token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${donation.wardNumber || ''}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${donation.serialNumber}` : ''}`;
+
       const messageText =
         `*Ibada Kit Challenge — Official Receipt Slip*\n\n` +
         `Assalamu Alaikum *${donation.donorName}*,\n` +
@@ -134,7 +138,9 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
         `• *Receipt Token:* ${donation.receiptToken}\n` +
         (donation.serialNumber ? `• *Serial No:* #${donation.serialNumber}\n` : '') +
         `• *Date:* ${dateStr}\n\n` +
-        `_May Allah accept and reward your contribution abundantly!_`;
+        `_May Allah accept and reward your contribution abundantly!_\n\n` +
+        `📸 *Create your Supporter Poster with your photo:*\n` +
+        `${posterUrl}`;
 
       if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
         await navigator.share({
@@ -164,6 +170,15 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleOpenPosterMaker = () => {
+    if (onOpenPoster) {
+      onOpenPoster();
+      return;
+    }
+    const posterUrl = `/?poster=1&token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${donation.wardNumber || ''}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${donation.serialNumber}` : ''}`;
+    window.location.href = posterUrl;
   };
 
   return (
@@ -378,6 +393,32 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
           >
             <Download size={16} />
             <span>Download Slip PNG</span>
+          </button>
+
+          {/* Dedicated Button to Create Supporter Poster with Photo */}
+          <button
+            type="button"
+            onClick={handleOpenPosterMaker}
+            style={{
+              width: '100%',
+              padding: '11px 16px',
+              background: 'linear-gradient(135deg, #023D18 0%, #008A2E 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 800,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              boxShadow: '0 4px 12px rgba(0, 138, 46, 0.25)',
+              marginTop: 2
+            }}
+          >
+            <Camera size={17} />
+            <span>📸 Create Supporter Poster (Add Photo)</span>
           </button>
         </div>
       )}

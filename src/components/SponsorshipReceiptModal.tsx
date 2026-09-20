@@ -7,12 +7,14 @@ interface SponsorshipReceiptModalProps {
   sponsorship: SponsorshipRecord;
   onClose: () => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
+  onOpenPoster?: () => void;
 }
 
 export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = ({
   sponsorship,
   onClose,
-  onOpenPayBalance
+  onOpenPayBalance,
+  onOpenPoster
 }) => {
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
@@ -62,6 +64,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             sponsorship={sponsorship}
             showActions={true}
             onOpenPayBalance={onOpenPayBalance}
+            onOpenPoster={onOpenPoster}
           />
           <div style={{ marginTop: 14, textAlign: 'center' }}>
             <button

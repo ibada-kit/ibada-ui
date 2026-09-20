@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
 import type { SponsorshipRecord } from '../types';
-import { Download, Share2, CreditCard } from 'lucide-react';
+import { Download, Share2, CreditCard, Camera } from 'lucide-react';
 
 interface OfficialSponsorshipSlipProps {
   sponsorship: SponsorshipRecord;
   showActions?: boolean;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
+  onOpenPoster?: () => void;
 }
 
 /**
@@ -17,7 +18,8 @@ interface OfficialSponsorshipSlipProps {
 export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = ({
   sponsorship,
   showActions = true,
-  onOpenPayBalance
+  onOpenPayBalance,
+  onOpenPoster
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -111,6 +113,8 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
       const rawPhone = (sponsorship.mobileNumber || '').replace(/\D/g, '');
       const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
 
+      const posterUrl = `${window.location.origin}/?poster=1&token=${encodeURIComponent(sponsorship.receiptToken)}&name=${encodeURIComponent(sponsorship.donorName)}&type=sponsorship&item=${encodeURIComponent(sponsorship.itemName || 'Sponsorship Contribution')}&amount=${sponsorship.totalAmount}&ward=${sponsorship.wardNumber || ''}&panchayath=${encodeURIComponent(sponsorship.panchayath || 'Madavoor')}`;
+
       const messageText =
         `*Ibada Kit Challenge — Official Sponsorship Receipt*\n\n` +
         `Dear *${sponsorship.donorName}*,\n` +
@@ -119,7 +123,9 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
         `• *Total Contribution:* ₹${formattedTotalAmount}\n` +
         (sponsorship.paymentStatus !== 'Completed' ? `• *Amount Paid:* ₹${formattedAmountPaid}\n• *Balance:* ₹${formattedBalance}\n` : '') +
         `• *Date:* ${dateStr}\n\n` +
-        `_May Allah reward your contribution manifold!_`;
+        `_May Allah reward your contribution manifold!_\n\n` +
+        `📸 *Create your Supporter Poster with your photo:*\n` +
+        `${posterUrl}`;
 
       if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
         await navigator.share({
@@ -149,6 +155,15 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleOpenPosterMaker = () => {
+    if (onOpenPoster) {
+      onOpenPoster();
+      return;
+    }
+    const posterUrl = `/?poster=1&token=${encodeURIComponent(sponsorship.receiptToken)}&name=${encodeURIComponent(sponsorship.donorName)}&type=sponsorship&item=${encodeURIComponent(sponsorship.itemName || 'Sponsorship Contribution')}&amount=${sponsorship.totalAmount}&ward=${sponsorship.wardNumber || ''}&panchayath=${encodeURIComponent(sponsorship.panchayath || 'Madavoor')}`;
+    window.location.href = posterUrl;
   };
 
   return (
@@ -370,6 +385,32 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
           >
             <Download size={16} />
             <span>Download Slip PNG</span>
+          </button>
+
+          {/* Dedicated Button to Create Supporter Poster with Photo */}
+          <button
+            type="button"
+            onClick={handleOpenPosterMaker}
+            style={{
+              width: '100%',
+              padding: '11px 16px',
+              background: 'linear-gradient(135deg, #023D18 0%, #008A2E 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 800,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              boxShadow: '0 4px 12px rgba(0, 138, 46, 0.25)',
+              marginTop: 2
+            }}
+          >
+            <Camera size={17} />
+            <span>📸 Create Supporter Poster (Add Photo)</span>
           </button>
         </div>
       )}
