@@ -29,6 +29,7 @@ export const App: React.FC = () => {
   const [activeReceipt, setActiveReceipt] = useState<Donation | null>(null);
   const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
   const [activePayBalanceSponsorship, setActivePayBalanceSponsorship] = useState<SponsorshipRecord | null>(null);
+  const [activePayBalanceDonation, setActivePayBalanceDonation] = useState<Donation | null>(null);
   const [globalKitPrice, setGlobalKitPrice] = useState<number>(() => getKitUnitPrice());
   const [kitPriceInfo, setKitPriceInfo] = useState<KitPriceInfo | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -211,6 +212,7 @@ export const App: React.FC = () => {
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
+                onOpenPayDonationBalance={(don) => setActivePayBalanceDonation(don)}
               />
             )}
 
@@ -222,6 +224,7 @@ export const App: React.FC = () => {
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
+                onOpenPayDonationBalance={(don) => setActivePayBalanceDonation(don)}
               />
             )}
 
@@ -233,6 +236,7 @@ export const App: React.FC = () => {
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
+                onOpenPayDonationBalance={(don) => setActivePayBalanceDonation(don)}
               />
             )}
 
@@ -274,6 +278,7 @@ export const App: React.FC = () => {
             <ReceiptModal
               donation={activeReceipt}
               onClose={() => setActiveReceipt(null)}
+              onOpenPayBalance={(don) => setActivePayBalanceDonation(don)}
               onOpenPoster={() => handleOpenPosterForDonation(activeReceipt)}
             />
           )}
@@ -288,14 +293,29 @@ export const App: React.FC = () => {
             />
           )}
 
-          {/* Collect Outstanding Balance Modal */}
+          {/* Collect Outstanding Balance Modal for Sponsorship */}
           {activePayBalanceSponsorship && (
             <CollectBalanceModal
+              itemType="sponsorship"
               sponsorship={activePayBalanceSponsorship}
               onClose={() => setActivePayBalanceSponsorship(null)}
               onPaymentRecorded={(updated) => {
                 setActivePayBalanceSponsorship(null);
-                setActiveSponsorshipReceipt(updated);
+                setActiveSponsorshipReceipt(updated as SponsorshipRecord);
+                setRefreshKey((prev) => prev + 1);
+              }}
+            />
+          )}
+
+          {/* Collect Outstanding Balance Modal for Kit Donation */}
+          {activePayBalanceDonation && (
+            <CollectBalanceModal
+              itemType="donation"
+              donation={activePayBalanceDonation}
+              onClose={() => setActivePayBalanceDonation(null)}
+              onDonationPaymentRecorded={(updated) => {
+                setActivePayBalanceDonation(null);
+                setActiveReceipt(updated);
                 setRefreshKey((prev) => prev + 1);
               }}
             />

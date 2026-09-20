@@ -25,7 +25,7 @@ import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPas
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
-import { exportSponsorshipsToCSV } from '../utils/exportCsv';
+import { exportSponsorshipsToCSV, exportDonationsToCSV } from '../utils/exportCsv';
 import { useWards } from '../hooks/useWards';
 
 interface CoordinatorDashboardProps {
@@ -34,6 +34,7 @@ interface CoordinatorDashboardProps {
   onViewReceipt: (donation: Donation) => void;
   onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
+  onOpenPayDonationBalance?: (donation: Donation) => void;
 }
 
 export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
@@ -41,7 +42,8 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   kitPrice = getKitUnitPrice(),
   onViewReceipt,
   onViewSponsorshipReceipt,
-  onOpenPayBalance
+  onOpenPayBalance,
+  onOpenPayDonationBalance
 }) => {
   const { wards } = useWards();
   const [activeTab, setActiveTab] = useState<'progress' | 'record' | 'team' | 'transactions' | 'leaderboard' | 'sponsored-items'>('progress');
@@ -846,11 +848,15 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           kitPrice={kitPrice}
           onSuccess={(donation) => {
             setRecentTransactions(prev => [donation, ...prev]);
+            const paid = donation.amountPaid !== undefined ? donation.amountPaid : donation.totalAmount;
             setProgress((prev: UserProgress) => ({
               ...prev,
               collectedKits: prev.collectedKits + donation.kitCount,
-              collectedAmount: prev.collectedAmount + donation.totalAmount
+              collectedAmount: prev.collectedAmount + paid
             }));
+          }}
+          onSponsorshipSuccess={(spon) => {
+            setTeamSponsorships(prev => [spon, ...prev.filter(s => s.sponsorshipId !== spon.sponsorshipId)]);
           }}
         />
       )}
@@ -912,6 +918,26 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                 </button>
               </div>
 
+              {receiptsType === 'donations' && (
+                <button
+                  type="button"
+                  id="btn-export-coord-donations-receipts-csv"
+                  onClick={() => exportDonationsToCSV(recentTransactions, `${user.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_donations_report`)}
+                  className="btn-secondary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px',
+                    fontSize: '0.78rem'
+                  }}
+                  title="Export team kit donations to CSV"
+                >
+                  <Download size={14} color="#008A2E" />
+                  <span>Export CSV</span>
+                </button>
+              )}
+
               {receiptsType === 'sponsorships' && (
                 <button
                   type="button"
@@ -942,43 +968,95 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                   No kit receipts recorded yet for your team. Click "Record Donation" to log contributions!
                 </div>
               ) : (
-                recentTransactions.map((tx) => (
-                  <div
-                    key={tx.donationId}
-                    onClick={() => onViewReceipt(tx)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      background: '#F4F9FD',
-                      border: '1px solid #E2E8F0',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                        {tx.donorName}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                        Collector: {tx.collectedByName || 'Volunteer'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
-                        {tx.serialNumber && (
-                          <span> • Serial: <span style={{ color: '#008A2E', fontWeight: 700 }}>#{tx.serialNumber}</span></span>
-                        )}
-                      </div>
-                    </div>
+                recentTransactions.map((tx) => {
+                  const paid = tx.amountPaid !== undefined ? tx.amountPaid : tx.totalAmount;
+                  const bal = tx.balanceAmount !== undefined ? tx.balanceAmount : Math.max(0, tx.totalAmount - paid);
+                  const isCompleted = tx.paymentStatus === 'Completed' || (!tx.paymentStatus && bal <= 0);
+                  const isPartial = tx.paymentStatus === 'Partial' || (bal > 0 && paid > 0);
 
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
-                        ₹{tx.totalAmount.toLocaleString('en-IN')}
+                  return (
+                    <div
+                      key={tx.donationId || tx.receiptToken}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                        flexWrap: 'wrap',
+                        gap: 12
+                      }}
+                    >
+                      <div style={{ minWidth: 200, flex: '1 1 200px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                            {tx.donorName}
+                          </span>
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            background: isCompleted ? '#EBF7EE' : isPartial ? '#FEF3C7' : '#EDF4FA',
+                            color: isCompleted ? '#008A2E' : isPartial ? '#B45309' : '#2C82C9'
+                          }}>
+                            {isCompleted ? 'Fully Paid' : isPartial ? 'Advance Paid' : 'Booked'}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: 3 }}>
+                          Collector: {tx.collectedByName || 'Volunteer'} • Token: <span style={{ color: '#008A2E', fontWeight: 700 }}>{tx.receiptToken}</span>
+                          {tx.serialNumber && (
+                            <span> • Serial: <span style={{ color: '#008A2E', fontWeight: 700 }}>#{tx.serialNumber}</span></span>
+                          )}
+                          {' '}• {tx.kitCount} {tx.kitCount === 1 ? 'Kit' : 'Kits'}
+                        </div>
                       </div>
-                      <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
-                        {tx.kitCount} Kits
-                      </span>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                            ₹{paid.toLocaleString('en-IN')}
+                          </div>
+                          {bal > 0 ? (
+                            <span style={{ fontSize: '0.7rem', color: '#B91C1C', fontWeight: 700, display: 'block' }}>
+                              Bal: ₹{bal.toLocaleString('en-IN')}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                              Total: ₹{tx.totalAmount.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => onViewReceipt(tx)}
+                            className="btn-secondary"
+                            style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                          >
+                            Receipt
+                          </button>
+
+                          {bal > 0 && onOpenPayDonationBalance && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenPayDonationBalance(tx)}
+                              className="btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.78rem', background: '#008A2E' }}
+                            >
+                              Pay Bal
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

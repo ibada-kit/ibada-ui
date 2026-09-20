@@ -23,6 +23,7 @@ interface VolunteerDashboardProps {
   onViewReceipt: (donation: Donation) => void;
   onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
+  onOpenPayDonationBalance?: (donation: Donation) => void;
 }
 
 export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
@@ -30,7 +31,8 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   kitPrice = getKitUnitPrice(),
   onViewReceipt,
   onViewSponsorshipReceipt,
-  onOpenPayBalance
+  onOpenPayBalance,
+  onOpenPayDonationBalance
 }) => {
   const [activeTab, setActiveTab] = useState<'record' | 'history' | 'leaderboard' | 'profile'>('record');
   const [leaderboardMode, setLeaderboardMode] = useState<'individual' | 'sponsorship'>('individual');
@@ -73,7 +75,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           d.collectedByName?.toLowerCase() === user.fullName.toLowerCase()
         );
         const totalMyKits = myDonations.reduce((acc, curr) => acc + (curr.kitCount || 0), 0);
-        const myAmount = myDonations.reduce((acc, curr) => acc + (curr.totalAmount || ((curr.kitCount || 0) * kitPrice)), 0);
+        const myAmount = myDonations.reduce((acc, curr) => acc + (curr.amountPaid !== undefined ? curr.amountPaid : (curr.totalAmount || ((curr.kitCount || 0) * kitPrice))), 0);
 
         // Check if user has an entry in volunteer leaderboard
         const myVBoard = vBoard.find(v => 
@@ -160,7 +162,8 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
     setHistory(prev => [donation, ...prev]);
     setProgress(prev => {
       const newKits = prev.collectedKits + (donation.kitCount || 0);
-      const newAmt = prev.collectedAmount + (donation.totalAmount || ((donation.kitCount || 0) * kitPrice));
+      const paid = donation.amountPaid !== undefined ? donation.amountPaid : (donation.totalAmount || ((donation.kitCount || 0) * kitPrice));
+      const newAmt = prev.collectedAmount + paid;
       const effectiveTarget = prev.targetKits || user.targetKits || 0;
       return {
         ...prev,
@@ -446,45 +449,96 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {history.map((item) => (
-                  <div
-                    key={item.donationId}
-                    onClick={() => onViewReceipt(item)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      background: '#F4F9FD',
-                      border: '1px solid #E2E8F0',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                        {item.donorName}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: 2 }}>
-                        Receipt No: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{item.receiptToken}</span>
-                        {item.serialNumber && (
-                          <span> • Serial: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>#{item.serialNumber}</span></span>
-                        )}
-                        {' '}• {item.whatsAppNumber}
-                      </div>
-                    </div>
+                {history.map((item) => {
+                  const paid = item.amountPaid !== undefined ? item.amountPaid : item.totalAmount;
+                  const bal = item.balanceAmount !== undefined ? item.balanceAmount : Math.max(0, item.totalAmount - paid);
+                  const isCompleted = item.paymentStatus === 'Completed' || (!item.paymentStatus && bal <= 0);
+                  const isPartial = item.paymentStatus === 'Partial' || (bal > 0 && paid > 0);
 
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
-                        ₹{item.totalAmount.toLocaleString('en-IN')}
+                  return (
+                    <div
+                      key={item.donationId || item.receiptToken}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                        flexWrap: 'wrap',
+                        gap: 12
+                      }}
+                    >
+                      <div style={{ minWidth: 200, flex: '1 1 200px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                            {item.donorName}
+                          </span>
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            background: isCompleted ? '#EBF7EE' : isPartial ? '#FEF3C7' : '#EDF4FA',
+                            color: isCompleted ? '#008A2E' : isPartial ? '#B45309' : '#2C82C9'
+                          }}>
+                            {isCompleted ? 'Fully Paid' : isPartial ? 'Advance Paid' : 'Booked'}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: 3 }}>
+                          Receipt No: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{item.receiptToken}</span>
+                          {item.serialNumber && (
+                            <span> • Serial: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>#{item.serialNumber}</span></span>
+                          )}
+                          {' '}• {item.kitCount} {item.kitCount === 1 ? 'Kit' : 'Kits'}
+                          {item.whatsAppNumber && ` • ${item.whatsAppNumber}`}
+                        </div>
                       </div>
-                      <span style={{ fontSize: '0.74rem', color: '#2C82C9', fontWeight: 700 }}>
-                        {item.kitCount} {item.kitCount === 1 ? 'Kit' : 'Kits'}
-                      </span>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 900, color: '#008A2E' }}>
+                            ₹{paid.toLocaleString('en-IN')}
+                          </div>
+                          {bal > 0 ? (
+                            <span style={{ fontSize: '0.7rem', color: '#B91C1C', fontWeight: 700, display: 'block' }}>
+                              Bal: ₹{bal.toLocaleString('en-IN')}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                              Total: ₹{item.totalAmount.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => onViewReceipt(item)}
+                            className="btn-secondary"
+                            style={{ padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700 }}
+                          >
+                            Receipt
+                          </button>
+
+                          {bal > 0 && onOpenPayDonationBalance && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenPayDonationBalance(item)}
+                              className="btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.78rem', background: '#008A2E' }}
+                            >
+                              Pay Bal
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )
           )}
