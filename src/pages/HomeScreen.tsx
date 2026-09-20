@@ -1001,78 +1001,103 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
 
             <div style={{ display: 'grid', gap: 12 }}>
-              {scopedRecentDonations.map((don) => (
-                <div
-                  key={don.donationId}
-                  className="glass-card glass-card-interactive"
-                  style={{
-                    padding: '18px 22px',
-                    background: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 14
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
-                      background: '#EBF7F0',
-                      border: '1px solid #A5D6B8',
+              {scopedRecentDonations.map((don) => {
+                const paid = don.amountPaid !== undefined ? don.amountPaid : don.totalAmount;
+                const bal = don.balanceAmount !== undefined ? don.balanceAmount : Math.max(0, don.totalAmount - paid);
+                const isCompleted = don.paymentStatus === 'Completed' || (!don.paymentStatus && bal <= 0);
+                const isPartial = don.paymentStatus === 'Partial' || (bal > 0 && paid > 0);
+
+                return (
+                  <div
+                    key={don.donationId || don.receiptToken}
+                    className="glass-card glass-card-interactive"
+                    style={{
+                      padding: '18px 22px',
+                      background: '#FFFFFF',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#1E6B3E'
-                    }}>
-                      <Package size={22} />
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 14
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        background: '#EBF7F0',
+                        border: '1px solid #A5D6B8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#1E6B3E'
+                      }}>
+                        <Package size={22} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>{don.donorName}</h4>
+                          <span style={{
+                            fontSize: '0.66rem',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            background: isCompleted ? '#EBF7EE' : isPartial ? '#FEF3C7' : '#EDF4FA',
+                            color: isCompleted ? '#008A2E' : isPartial ? '#B45309' : '#2C82C9'
+                          }}>
+                            {isCompleted ? 'Fully Paid' : isPartial ? 'Advance Paid' : 'Booked'}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '3px 0' }}>
+                          Ward {don.wardNumber}, {don.panchayath} • Logged by{' '}
+                          <strong>{don.collectedByName || 'Volunteer'}</strong>
+                          {don.collectedByRole && (
+                            <span className={`badge ${don.collectedByRole === 'Coordinator' ? 'badge-blue' : don.collectedByRole === 'WardCommittee' ? 'badge-purple' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', marginLeft: 6, padding: '1px 6px' }}>
+                              {don.collectedByRole === 'WardCommittee' ? 'Ward Comm.' : don.collectedByRole}
+                            </span>
+                          )}
+                        </p>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          color: 'var(--text-muted)',
+                          letterSpacing: '0.04em',
+                          fontFamily: 'monospace'
+                        }}>
+                          Token: {don.receiptToken}
+                          {don.serialNumber && ` • Serial: #${don.serialNumber}`}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>{don.donorName}</h4>
-                      <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                        Ward {don.wardNumber}, {don.panchayath} • Logged by{' '}
-                        <strong>{don.collectedByName || 'Volunteer'}</strong>
-                        {don.collectedByRole && (
-                          <span className={`badge ${don.collectedByRole === 'Coordinator' ? 'badge-blue' : don.collectedByRole === 'WardCommittee' ? 'badge-purple' : 'badge-emerald'}`} style={{ fontSize: '0.62rem', marginLeft: 6, padding: '1px 6px' }}>
-                            {don.collectedByRole === 'WardCommittee' ? 'Ward Comm.' : don.collectedByRole}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#008A2E' }}>
+                          ₹{paid.toLocaleString('en-IN')}
+                        </div>
+                        {bal > 0 ? (
+                          <span style={{ fontSize: '0.72rem', color: '#B91C1C', fontWeight: 700, display: 'block' }}>
+                            Bal: ₹{bal.toLocaleString('en-IN')}
+                          </span>
+                        ) : (
+                          <span className="badge badge-emerald" style={{ fontSize: '0.72rem' }}>
+                            {don.kitCount} Kits Sponsored
                           </span>
                         )}
-                      </p>
-                    <span style={{
-                      fontSize: '0.72rem',
-                      color: 'var(--text-muted)',
-                      letterSpacing: '0.04em',
-                      fontFamily: 'monospace'
-                    }}>
-                      Token: {don.receiptToken}
-                      {don.serialNumber && ` • Serial: #${don.serialNumber}`}
-                    </span>
-                  </div>
-                </div>
+                      </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#256CAA' }}>
-                      ₹{don.totalAmount.toLocaleString('en-IN')}
+                      <button
+                        onClick={() => onViewReceipt && onViewReceipt(don)}
+                        className="btn-secondary"
+                        style={{ padding: '8px 14px', fontSize: '0.82rem' }}
+                      >
+                        <span>View Badge</span>
+                        <ExternalLink size={14} />
+                      </button>
                     </div>
-                    <span className="badge badge-emerald" style={{ fontSize: '0.72rem' }}>
-                      {don.kitCount} Kits Sponsored
-                    </span>
                   </div>
-
-                  <button
-                    onClick={() => onViewReceipt && onViewReceipt(don)}
-                    className="btn-secondary"
-                    style={{ padding: '8px 14px', fontSize: '0.82rem' }}
-                  >
-                    <span>View Badge</span>
-                    <ExternalLink size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
+                );
+              })}
 
             {scopedRecentDonations.length === 0 && (
               <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>

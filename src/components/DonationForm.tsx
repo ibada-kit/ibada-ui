@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2, Share2 } from 'lucide-react';
+import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2, Share2, Clock, BookmarkCheck } from 'lucide-react';
 import { donationsApi, getKitUnitPrice } from '../services/api';
-import type { Donation, SponsorshipRecord } from '../types';
+import type { Donation, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
 import { SponsorshipForm } from './SponsorshipForm';
 import { SponsorshipReceiptModal } from './SponsorshipReceiptModal';
 import { ReceiptModal } from './ReceiptModal';
+import { CollectBalanceModal } from './CollectBalanceModal';
 
 interface DonationFormProps {
   kitPrice?: number;
@@ -24,6 +25,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
   const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>(initialMode);
   const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
   const [activeDonationReceipt, setActiveDonationReceipt] = useState<Donation | null>(null);
+  const [balanceDonationToCollect, setBalanceDonationToCollect] = useState<Donation | null>(null);
 
   const [donorName, setDonorName] = useState('');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
@@ -32,7 +34,44 @@ export const DonationForm: React.FC<DonationFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [recordedDonation, setRecordedDonation] = useState<Donation | null>(null);
 
+  // Payment Terms & Booking State (same as Sponsorship)
+  const [paymentOption, setPaymentOption] = useState<PaymentOption>('PayFull');
+  const [initialAmountPaid, setInitialAmountPaid] = useState<number>(1 * kitPrice);
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
+  const [transactionReference, setTransactionReference] = useState('');
+  const [notes, setNotes] = useState('');
+  const [showExtraDetails, setShowExtraDetails] = useState(false);
+
   const totalAmount = kitCount * kitPrice;
+  const balanceAmount = Math.max(0, totalAmount - (initialAmountPaid || 0));
+
+  const handleKitCountChange = (newCount: number) => {
+    const clamped = Math.max(1, Math.min(1000, newCount));
+    setKitCount(clamped);
+    const newTotal = clamped * kitPrice;
+    if (paymentOption === 'PayFull') {
+      setInitialAmountPaid(newTotal);
+    } else if (paymentOption === 'Advance') {
+      if (initialAmountPaid > newTotal || initialAmountPaid === 0) {
+        setInitialAmountPaid(Math.round(newTotal * 0.5));
+      }
+    } else if (paymentOption === 'Book') {
+      if (initialAmountPaid > newTotal) {
+        setInitialAmountPaid(0);
+      }
+    }
+  };
+
+  const handlePaymentOptionChange = (option: PaymentOption) => {
+    setPaymentOption(option);
+    if (option === 'PayFull') {
+      setInitialAmountPaid(totalAmount);
+    } else if (option === 'Book') {
+      setInitialAmountPaid(0);
+    } else if (option === 'Advance') {
+      setInitialAmountPaid(Math.round(totalAmount * 0.5));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,13 +89,34 @@ export const DonationForm: React.FC<DonationFormProps> = ({
       return;
     }
 
+    if (paymentOption === 'Advance') {
+      if (!initialAmountPaid || initialAmountPaid <= 0) {
+        setError('Advance payment requires an upfront paid amount greater than ₹0.');
+        return;
+      }
+      if (initialAmountPaid >= totalAmount) {
+        setError(`Advance amount (₹${initialAmountPaid.toLocaleString('en-IN')}) cannot be equal to or greater than total (₹${totalAmount.toLocaleString('en-IN')}). Choose "Pay Full" for full payment.`);
+        return;
+      }
+    } else if (paymentOption === 'Book') {
+      if (initialAmountPaid > totalAmount) {
+        setError(`Booking amount cannot exceed total donation amount (₹${totalAmount.toLocaleString('en-IN')}).`);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       const donation = await donationsApi.recordDonation({
         donorName: donorName.trim(),
         whatsAppNumber: `+91${cleanPhone.slice(-10)}`,
         kitCount: Number(kitCount),
-        totalAmount
+        totalAmount,
+        paymentOption,
+        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
+        paymentMode,
+        transactionReference: transactionReference.trim() || undefined,
+        notes: notes.trim() || undefined
       });
 
       setRecordedDonation(donation);
@@ -67,6 +127,12 @@ export const DonationForm: React.FC<DonationFormProps> = ({
       setDonorName('');
       setWhatsAppNumber('');
       setKitCount(1);
+      setPaymentOption('PayFull');
+      setInitialAmountPaid(kitPrice);
+      setPaymentMode('Cash');
+      setTransactionReference('');
+      setNotes('');
+      setShowExtraDetails(false);
     } catch (err: any) {
       setError(err.message || 'Failed to record donation.');
     } finally {
@@ -350,7 +416,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
               <button
                 type="button"
                 key={count}
-                onClick={() => setKitCount(count)}
+                onClick={() => handleKitCountChange(count)}
                 style={{
                   padding: '10px 2px',
                   minHeight: 44,
@@ -376,7 +442,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
             required
             className="input-field"
             value={kitCount}
-            onChange={(e) => setKitCount(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={(e) => handleKitCountChange(parseInt(e.target.value) || 1)}
             placeholder="Custom Kit Count"
           />
         </div>
@@ -392,11 +458,11 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: 10,
-          marginBottom: 22
+          marginBottom: 20
         }}>
           <div>
             <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>
-              Total Contribution Amount
+              Total Kit Donation Value
             </span>
             <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#008A2E', lineHeight: 1.1, marginTop: 2 }}>
               ₹{totalAmount.toLocaleString('en-IN')}
@@ -413,6 +479,287 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           }}>
             {kitCount} Relief {kitCount === 1 ? 'Kit' : 'Kits'}
           </div>
+        </div>
+
+        {/* Glowing Payment Option Selector (Pay Full, Advance, Book) */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <label style={{
+              fontSize: '0.76rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: '#334155'
+            }}>
+              Payment Terms & Booking
+            </label>
+            <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>
+              {paymentOption === 'PayFull' ? 'Full upfront settlement' : paymentOption === 'Advance' ? 'Upfront deposit with balance' : 'Zero or nominal booking deposit'}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {/* 1. Pay Full Card */}
+            <button
+              type="button"
+              id="btn-kit-payfull"
+              onClick={() => handlePaymentOptionChange('PayFull')}
+              style={{
+                padding: '12px 6px',
+                borderRadius: 'var(--radius-lg)',
+                border: paymentOption === 'PayFull' ? '2.5px solid #008A2E' : '1px solid #CBD5E1',
+                background: paymentOption === 'PayFull' ? '#EBF7EE' : '#FFFFFF',
+                color: paymentOption === 'PayFull' ? '#008A2E' : '#334155',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 5,
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: paymentOption === 'PayFull' ? '0 0 14px rgba(0, 138, 46, 0.3)' : 'none',
+                position: 'relative'
+              }}
+            >
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: paymentOption === 'PayFull' ? '#008A2E' : '#E2E8F0',
+                color: paymentOption === 'PayFull' ? '#FFFFFF' : '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <CheckCircle size={15} />
+              </div>
+              <span style={{ fontWeight: 800, fontSize: '0.84rem' }}>Pay Full</span>
+              <span style={{ fontSize: '0.68rem', color: paymentOption === 'PayFull' ? '#0F5132' : '#64748B', fontWeight: 600 }}>
+                100% Upfront
+              </span>
+            </button>
+
+            {/* 2. Advance Card */}
+            <button
+              type="button"
+              id="btn-kit-advance"
+              onClick={() => handlePaymentOptionChange('Advance')}
+              style={{
+                padding: '12px 6px',
+                borderRadius: 'var(--radius-lg)',
+                border: paymentOption === 'Advance' ? '2.5px solid #D97706' : '1px solid #CBD5E1',
+                background: paymentOption === 'Advance' ? '#FEF3C7' : '#FFFFFF',
+                color: paymentOption === 'Advance' ? '#B45309' : '#334155',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 5,
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: paymentOption === 'Advance' ? '0 0 14px rgba(217, 119, 6, 0.35)' : 'none',
+                position: 'relative'
+              }}
+            >
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: paymentOption === 'Advance' ? '#D97706' : '#E2E8F0',
+                color: paymentOption === 'Advance' ? '#FFFFFF' : '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Clock size={15} />
+              </div>
+              <span style={{ fontWeight: 800, fontSize: '0.84rem' }}>Advance</span>
+              <span style={{ fontSize: '0.68rem', color: paymentOption === 'Advance' ? '#78350F' : '#64748B', fontWeight: 600 }}>
+                Partial Advance
+              </span>
+            </button>
+
+            {/* 3. Book Card */}
+            <button
+              type="button"
+              id="btn-kit-book"
+              onClick={() => handlePaymentOptionChange('Book')}
+              style={{
+                padding: '12px 6px',
+                borderRadius: 'var(--radius-lg)',
+                border: paymentOption === 'Book' ? '2.5px solid #2C82C9' : '1px solid #CBD5E1',
+                background: paymentOption === 'Book' ? '#EDF4FA' : '#FFFFFF',
+                color: paymentOption === 'Book' ? '#2C82C9' : '#334155',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 5,
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: paymentOption === 'Book' ? '0 0 14px rgba(44, 130, 201, 0.35)' : 'none',
+                position: 'relative'
+              }}
+            >
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: paymentOption === 'Book' ? '#2C82C9' : '#E2E8F0',
+                color: paymentOption === 'Book' ? '#FFFFFF' : '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <BookmarkCheck size={15} />
+              </div>
+              <span style={{ fontWeight: 800, fontSize: '0.84rem' }}>Booking</span>
+              <span style={{ fontSize: '0.68rem', color: paymentOption === 'Book' ? '#1E3A8A' : '#64748B', fontWeight: 600 }}>
+                Reserve Kits
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Dynamic Amount Paid / Balance Row (If Advance or Book) */}
+        {paymentOption !== 'PayFull' && (
+          <div style={{
+            padding: '14px 16px',
+            borderRadius: 'var(--radius-lg)',
+            background: paymentOption === 'Advance' ? '#FFFBEB' : '#F4F9FD',
+            border: paymentOption === 'Advance' ? '1.5px solid #FDE68A' : '1.5px solid #B8D4EE',
+            boxShadow: paymentOption === 'Advance' ? '0 2px 10px rgba(253, 230, 138, 0.3)' : '0 2px 10px rgba(184, 212, 238, 0.3)',
+            marginBottom: 20
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'center' }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  color: paymentOption === 'Advance' ? '#92400E' : '#1D4ED8',
+                  textTransform: 'uppercase',
+                  marginBottom: 4
+                }}>
+                  {paymentOption === 'Advance' ? 'Advance Paid Now (₹) *' : 'Initial Paid Amount (₹)'}
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="input-field"
+                  value={initialAmountPaid || ''}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '');
+                    setInitialAmountPaid(clean === '' ? 0 : parseInt(clean, 10));
+                  }}
+                  onKeyDown={(e) => {
+                    if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+                  }}
+                  style={{
+                    fontWeight: 800,
+                    fontSize: '1.05rem',
+                    color: paymentOption === 'Advance' ? '#92400E' : '#1D4ED8',
+                    background: '#FFFFFF'
+                  }}
+                  placeholder="0"
+                />
+              </div>
+
+              <div style={{
+                textAlign: 'right',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-md)',
+                background: '#FFFFFF',
+                border: '1px solid rgba(0,0,0,0.06)'
+              }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>
+                  Remaining Balance
+                </span>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
+                  ₹{balanceAmount.toLocaleString('en-IN')}
+                </div>
+                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                  Total: ₹{totalAmount.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Mode Selector */}
+        <div style={{ marginBottom: 18 }}>
+          <label style={{
+            display: 'block',
+            fontSize: '0.76rem',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: '#334155',
+            marginBottom: 6
+          }}>
+            Payment Mode
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+            {(['Cash', 'UPI', 'BankTransfer', 'Cheque'] as PaymentMode[]).map((mode) => (
+              <button
+                type="button"
+                key={mode}
+                onClick={() => setPaymentMode(mode)}
+                style={{
+                  padding: '9px 2px',
+                  borderRadius: 'var(--radius-md)',
+                  border: paymentMode === mode ? '2px solid #008A2E' : '1px solid #CBD5E1',
+                  background: paymentMode === mode ? '#EBF7EE' : '#FFFFFF',
+                  color: paymentMode === mode ? '#008A2E' : '#475569',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {mode === 'BankTransfer' ? 'Bank' : mode}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Optional Reference & Notes toggle */}
+        <div style={{ marginBottom: 20 }}>
+          <button
+            type="button"
+            onClick={() => setShowExtraDetails(!showExtraDetails)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#2C82C9',
+              fontSize: '0.76rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+          >
+            <span>{showExtraDetails ? '− Hide Reference / Notes' : '+ Add Transaction Reference / Notes (Optional)'}</span>
+          </button>
+
+          {showExtraDetails && (
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="UPI Reference, Cheque No, Transaction ID (Optional)"
+                value={transactionReference}
+                onChange={(e) => setTransactionReference(e.target.value)}
+              />
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Payment Remarks / Notes (Optional)"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         {/* Submit Actions */}
@@ -440,13 +787,19 @@ export const DonationForm: React.FC<DonationFormProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              background: '#008A2E'
+              background: paymentOption === 'Advance' ? '#D97706' : paymentOption === 'Book' ? '#2C82C9' : '#008A2E'
             }}
           >
             {loading ? (
               <RefreshCw size={20} className="animate-spin" />
             ) : (
-              <span>Submit & Send Receipt</span>
+              <span>
+                {paymentOption === 'PayFull'
+                  ? `Pay Full ₹${totalAmount.toLocaleString('en-IN')} & Register`
+                  : paymentOption === 'Advance'
+                    ? `Pay Advance ₹${(initialAmountPaid || 0).toLocaleString('en-IN')} & Register`
+                    : `Book Kits & Register (${initialAmountPaid ? `₹${initialAmountPaid.toLocaleString('en-IN')} Paid` : 'Pay Later'})`}
+              </span>
             )}
           </button>
         </div>
@@ -459,6 +812,23 @@ export const DonationForm: React.FC<DonationFormProps> = ({
         <ReceiptModal
           donation={activeDonationReceipt}
           onClose={() => setActiveDonationReceipt(null)}
+          onOpenPayBalance={(don) => {
+            setBalanceDonationToCollect(don);
+            setActiveDonationReceipt(null);
+          }}
+        />
+      )}
+
+      {/* Kit Donation Balance Collection Modal */}
+      {balanceDonationToCollect && (
+        <CollectBalanceModal
+          donation={balanceDonationToCollect}
+          onClose={() => setBalanceDonationToCollect(null)}
+          onDonationPaymentRecorded={(updated) => {
+            setBalanceDonationToCollect(null);
+            setActiveDonationReceipt(updated);
+            if (onSuccess) onSuccess(updated);
+          }}
         />
       )}
 

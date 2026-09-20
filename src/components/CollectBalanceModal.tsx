@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
 import { X, CreditCard, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { sponsorshipsApi } from '../services/api';
-import type { SponsorshipRecord, PaymentMode } from '../types';
+import { sponsorshipsApi, donationsApi } from '../services/api';
+import type { SponsorshipRecord, Donation, PaymentMode } from '../types';
 
 interface CollectBalanceModalProps {
-  sponsorship: SponsorshipRecord;
+  sponsorship?: SponsorshipRecord;
+  donation?: Donation;
+  itemType?: 'sponsorship' | 'donation';
   onClose: () => void;
-  onPaymentRecorded: (updated: SponsorshipRecord) => void;
+  onPaymentRecorded?: (updated: SponsorshipRecord) => void;
+  onDonationPaymentRecorded?: (updated: Donation) => void;
 }
 
 export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
   sponsorship,
+  donation,
   onClose,
-  onPaymentRecorded
+  onPaymentRecorded,
+  onDonationPaymentRecorded
 }) => {
-  const [amountToPay, setAmountToPay] = useState<number>(sponsorship.balanceAmount);
+  const isKitDonation = !!donation;
+  const donorName = donation ? donation.donorName : sponsorship?.donorName || '';
+  const receiptToken = donation ? donation.receiptToken : sponsorship?.receiptToken || '';
+  const totalAmount = donation ? donation.totalAmount : sponsorship?.totalAmount || 0;
+  const amountPaid = donation
+    ? (donation.amountPaid !== undefined ? donation.amountPaid : Math.max(0, totalAmount - (donation.balanceAmount || 0)))
+    : sponsorship?.amountPaid || 0;
+  const balanceAmount = donation
+    ? (donation.balanceAmount !== undefined ? donation.balanceAmount : Math.max(0, totalAmount - amountPaid))
+    : sponsorship?.balanceAmount || 0;
+  const subtitle = donation
+    ? `${donation.kitCount} ${donation.kitCount === 1 ? 'Relief Kit' : 'Relief Kits'}`
+    : `${sponsorship?.quantity}x ${sponsorship?.itemName}`;
+  const panchayath = donation ? donation.panchayath || 'Madavoor' : sponsorship?.panchayath || 'Madavoor';
+
+  const [amountToPay, setAmountToPay] = useState<number>(balanceAmount);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
   const [transactionReference, setTransactionReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -30,25 +50,38 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
       return;
     }
 
-    if (amountToPay > sponsorship.balanceAmount) {
-      setError(`Payment amount cannot exceed remaining balance (₹${sponsorship.balanceAmount.toLocaleString('en-IN')}).`);
+    if (amountToPay > balanceAmount) {
+      setError(`Payment amount cannot exceed remaining balance (₹${balanceAmount.toLocaleString('en-IN')}).`);
       return;
     }
 
     try {
       setSubmitting(true);
-      const updated = await sponsorshipsApi.updatePayment(
-        sponsorship.receiptToken,
-        {
-          amountToPay,
-          paymentMode,
-          transactionReference: transactionReference.trim() || undefined,
-          notes: notes.trim() || undefined
-        },
-        sponsorship.panchayath
-      );
-
-      onPaymentRecorded(updated);
+      if (isKitDonation && donation) {
+        const updated = await donationsApi.updatePayment(
+          donation.receiptToken,
+          {
+            amountToPay,
+            paymentMode,
+            transactionReference: transactionReference.trim() || undefined,
+            notes: notes.trim() || undefined
+          },
+          panchayath
+        );
+        if (onDonationPaymentRecorded) onDonationPaymentRecorded(updated);
+      } else if (sponsorship) {
+        const updated = await sponsorshipsApi.updatePayment(
+          sponsorship.receiptToken,
+          {
+            amountToPay,
+            paymentMode,
+            transactionReference: transactionReference.trim() || undefined,
+            notes: notes.trim() || undefined
+          },
+          panchayath
+        );
+        if (onPaymentRecorded) onPaymentRecorded(updated);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to update payment.');
     } finally {
@@ -86,7 +119,7 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
                 Collect Outstanding Balance
               </h3>
               <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                Receipt No: <strong style={{ fontFamily: 'monospace' }}>{sponsorship.receiptToken}</strong>
+                Receipt No: <strong style={{ fontFamily: 'monospace' }}>{receiptToken}</strong>
               </span>
             </div>
           </div>
@@ -118,24 +151,24 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
 
           {/* Firm & Balance Info Card */}
           <div style={{
-            background: '#FFFBEB',
-            border: '1px solid #FDE68A',
+            background: isKitDonation ? '#EBF7EE' : '#FFFBEB',
+            border: isKitDonation ? '1px solid #A5D6B8' : '1px solid #FDE68A',
             borderRadius: 'var(--radius-lg)',
             padding: '14px 16px',
             marginBottom: 18
           }}>
-            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#92400E', fontWeight: 800 }}>
-              {sponsorship.donorName}
+            <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: isKitDonation ? '#008A2E' : '#92400E', fontWeight: 800 }}>
+              {donorName}
             </span>
-            <div style={{ fontSize: '0.85rem', color: '#78350F', marginTop: 2 }}>
-              {sponsorship.quantity}x {sponsorship.itemName}
+            <div style={{ fontSize: '0.85rem', color: isKitDonation ? '#0F5132' : '#78350F', marginTop: 2 }}>
+              {subtitle}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTop: '1px dashed #FCD34D', paddingTop: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTop: isKitDonation ? '1px dashed #A5D6B8' : '1px dashed #FCD34D', paddingTop: 10 }}>
               <div>
-                <span style={{ fontSize: '0.7rem', color: '#78350F' }}>Total / Paid</span>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#78350F' }}>
-                  ₹{sponsorship.totalAmount.toLocaleString('en-IN')} / ₹{sponsorship.amountPaid.toLocaleString('en-IN')}
+                <span style={{ fontSize: '0.7rem', color: isKitDonation ? '#0F5132' : '#78350F' }}>Total / Paid</span>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: isKitDonation ? '#0F5132' : '#78350F' }}>
+                  ₹{totalAmount.toLocaleString('en-IN')} / ₹{amountPaid.toLocaleString('en-IN')}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -143,7 +176,7 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
                   Pending Balance
                 </span>
                 <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#B91C1C' }}>
-                  ₹{sponsorship.balanceAmount.toLocaleString('en-IN')}
+                  ₹{balanceAmount.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
@@ -157,7 +190,7 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
               </label>
               <button
                 type="button"
-                onClick={() => setAmountToPay(sponsorship.balanceAmount)}
+                onClick={() => setAmountToPay(balanceAmount)}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -180,7 +213,7 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
               value={amountToPay}
               onChange={(e) => {
                 const clean = e.target.value.replace(/\D/g, '');
-                setAmountToPay(clean === '' ? 0 : Math.min(sponsorship.balanceAmount, parseInt(clean, 10)));
+                setAmountToPay(clean === '' ? 0 : Math.min(balanceAmount, parseInt(clean, 10)));
               }}
               onKeyDown={(e) => {
                 if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
@@ -248,7 +281,7 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={submitting || amountToPay <= 0 || amountToPay > sponsorship.balanceAmount}
+              disabled={submitting || amountToPay <= 0 || amountToPay > balanceAmount}
               className="btn-primary"
               style={{
                 flex: 2,

@@ -63,14 +63,14 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
     ctx.fillText(`Date: ${dateStr}`, 505, 246);
 
     // 3. Sponsor / Organization Name over dotted placeholder (y = 321, x = 265 to 510)
-    ctx.font = '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '800 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#2E1065'; // Deep royal purple
     ctx.textAlign = 'left';
     const displayDonor = sponsorship.donorName.length > 25 ? sponsorship.donorName.substring(0, 23) + '...' : sponsorship.donorName;
     ctx.fillText(displayDonor, 262, 321);
 
     // 4. Total Amount over "താങ്കൾ നൽകിയ സംഭാവന ..........................." placeholder (y = 400, x = 380 to 515)
-    ctx.font = '900 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '900 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#4C1D95'; // Vibrant purple
     ctx.textAlign = 'center';
     ctx.fillText(`₹${formattedTotalAmount}`, 445, 400);
@@ -231,10 +231,10 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
             left: '32.0%',
             top: '30.1%',
             width: '30.5%',
-            height: '2.8%',
+            height: '3.2%',
             display: 'flex',
             alignItems: 'center',
-            fontSize: '2.8cqw',
+            fontSize: '3.1cqw',
             fontWeight: 800,
             color: '#2E1065',
             overflow: 'hidden',
@@ -253,13 +253,13 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
           style={{
             position: 'absolute',
             left: '46.2%',
-            top: '38.2%',
+            top: '38.0%',
             width: '15.8%',
-            height: '2.8%',
+            height: '3.2%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '2.7cqw',
+            fontSize: '3.0cqw',
             fontWeight: 900,
             color: '#4C1D95',
             whiteSpace: 'nowrap',

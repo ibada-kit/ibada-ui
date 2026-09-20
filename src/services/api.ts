@@ -537,6 +537,15 @@ export const donationsApi = {
               collectedByUserId: d.collectedByUserId,
               collectedByName: d.collectedByName || 'Volunteer',
               collectedByRole: d.collectedByRole,
+              paymentOption: d.paymentOption || 'PayFull',
+              amountPaid: d.amountPaid ?? d.totalAmount,
+              balanceAmount: d.balanceAmount ?? 0,
+              paymentStatus: d.paymentStatus || 'Completed',
+              paymentMode: d.paymentMode || 'Cash',
+              transactionReference: d.transactionReference || '',
+              notes: d.notes || '',
+              updateDate: d.updateDate,
+              updatedBy: d.updatedBy,
               timestamp: d.timestamp
             }));
           }
@@ -555,6 +564,7 @@ export const donationsApi = {
     const token = currentUser?.token;
     const cleanPhone = request.whatsAppNumber.replace(/\D/g, '');
     const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
+    const effectiveTotal = request.totalAmount !== undefined ? Number(request.totalAmount) : (Number(request.kitCount) * getKitUnitPrice());
 
     const res = await fetch(`${API_BASE_URL}/Donations`, {
       method: 'POST',
@@ -563,7 +573,13 @@ export const donationsApi = {
         donorName: request.donorName.trim(),
         whatsAppNumber: formattedPhone,
         kitCount: Number(request.kitCount),
-        totalAmount: request.totalAmount !== undefined ? Number(request.totalAmount) : (Number(request.kitCount) * getKitUnitPrice())
+        totalAmount: effectiveTotal,
+        paymentOption: request.paymentOption || 'PayFull',
+        initialAmountPaid: request.initialAmountPaid,
+        paymentMode: request.paymentMode || 'Cash',
+        transactionReference: request.transactionReference?.trim() || undefined,
+        notes: request.notes?.trim() || undefined,
+        sendWhatsApp: request.sendWhatsApp !== false
       })
     });
 
@@ -582,12 +598,21 @@ export const donationsApi = {
       whatsAppNumber: formattedPhone,
       kitCount: data.kitCount,
       kitUnitRate: effectiveKitPrice,
-      totalAmount: data.totalAmount || (request.totalAmount ?? Number(data.kitCount) * effectiveKitPrice),
+      totalAmount: data.totalAmount || effectiveTotal,
       panchayath: data.panchayath || currentUser?.panchayath || 'Madavoor',
       wardNumber: data.wardNumber || currentUser?.wardNumber || 0,
       collectedByUserId: currentUser?.userId || 'usr-guest',
       collectedByName: currentUser?.fullName || 'Volunteer',
       collectedByRole: currentUser?.role || 'Volunteer',
+      paymentOption: data.paymentOption || request.paymentOption || 'PayFull',
+      amountPaid: data.amountPaid ?? (request.paymentOption === 'Advance' ? (request.initialAmountPaid || 0) : (request.paymentOption === 'Book' ? (request.initialAmountPaid || 0) : effectiveTotal)),
+      balanceAmount: data.balanceAmount ?? (effectiveTotal - (data.amountPaid ?? 0)),
+      paymentStatus: data.paymentStatus || (request.paymentOption === 'PayFull' ? 'Completed' : (request.initialAmountPaid ? 'Partial' : 'Booked')),
+      paymentMode: data.paymentMode || request.paymentMode || 'Cash',
+      transactionReference: data.transactionReference || request.transactionReference || '',
+      notes: data.notes || request.notes || '',
+      updateDate: data.updateDate || new Date().toISOString(),
+      updatedBy: data.updatedBy || currentUser?.fullName || 'Volunteer',
       timestamp: data.timestamp || new Date().toISOString()
     };
 
@@ -618,14 +643,72 @@ export const donationsApi = {
           collectedByUserId: d.userId || d.UserId || '',
           collectedByName: d.collectedByName || d.CollectedByName || 'Volunteer',
           collectedByRole: d.collectedByRole || d.CollectedByRole || 'Volunteer',
+          paymentOption: d.paymentOption || d.PaymentOption || 'PayFull',
+          amountPaid: Number(d.amountPaid ?? d.AmountPaid ?? rawTotalAmount),
+          balanceAmount: Number(d.balanceAmount ?? d.BalanceAmount ?? 0),
+          paymentStatus: d.paymentStatus || d.PaymentStatus || 'Completed',
+          paymentMode: d.paymentMode || d.PaymentMode || 'Cash',
+          transactionReference: d.transactionReference || d.TransactionReference || '',
+          notes: d.notes || d.Notes || '',
+          updateDate: d.updateDate || d.UpdateDate,
+          updatedBy: d.updatedBy || d.UpdatedBy || '',
           timestamp: d.transactionDate || d.TransactionDate || d.timestamp || d.Timestamp || new Date().toISOString()
         };
       }
     } catch (err) {
       console.warn('API getReceipt failed:', err);
     }
-
     return null;
+  },
+
+  // Collect balance / update payment on an existing kit donation
+  updatePayment: async (
+    receiptToken: string,
+    payload: UpdatePaymentPayload,
+    panchayath = 'Madavoor'
+  ): Promise<Donation> => {
+    const currentUser = getCurrentUser();
+    const token = currentUser?.token;
+    const res = await fetch(
+      `${API_BASE_URL}/Donations/${encodeURIComponent(receiptToken)}/payments?panchayath=${encodeURIComponent(panchayath)}`,
+      {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(payload)
+      }
+    );
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to update donation payment');
+      throw new Error(msg);
+    }
+
+    const d = await res.json();
+    return {
+      donationId: d.donationId,
+      receiptToken: d.receiptToken,
+      serialNumber: d.serialNumber,
+      donorName: d.donorName,
+      whatsAppNumber: d.whatsAppNumber || '',
+      kitCount: d.kitCount,
+      kitUnitRate: (d.kitCount && d.totalAmount) ? Math.round(d.totalAmount / d.kitCount) : getKitUnitPrice(),
+      totalAmount: d.totalAmount,
+      panchayath: d.panchayath || 'Madavoor',
+      wardNumber: d.wardNumber,
+      collectedByUserId: d.collectedByUserId,
+      collectedByName: d.collectedByName,
+      collectedByRole: d.collectedByRole,
+      paymentOption: d.paymentOption || 'PayFull',
+      amountPaid: d.amountPaid,
+      balanceAmount: d.balanceAmount,
+      paymentStatus: d.paymentStatus,
+      paymentMode: d.paymentMode,
+      transactionReference: d.transactionReference,
+      notes: d.notes,
+      updateDate: d.updateDate,
+      updatedBy: d.updatedBy,
+      timestamp: d.timestamp
+    };
   }
 };
 

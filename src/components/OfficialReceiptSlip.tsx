@@ -1,10 +1,11 @@
 import React, { useRef, useState } from 'react';
 import type { Donation } from '../types';
-import { Download, Share2, Camera } from 'lucide-react';
+import { Download, Share2, Camera, CreditCard } from 'lucide-react';
 
 interface OfficialReceiptSlipProps {
   donation: Donation;
   showActions?: boolean;
+  onOpenPayBalance?: (donation: Donation) => void;
   onOpenPoster?: () => void;
 }
 
@@ -17,6 +18,7 @@ interface OfficialReceiptSlipProps {
 export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
   donation,
   showActions = true,
+  onOpenPayBalance,
   onOpenPoster
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,6 +26,12 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const formattedAmount = Number(donation.totalAmount || 0).toLocaleString('en-IN');
+  const amountPaidVal = donation.amountPaid !== undefined ? donation.amountPaid : (donation.balanceAmount !== undefined ? Math.max(0, donation.totalAmount - donation.balanceAmount) : donation.totalAmount);
+  const balanceVal = donation.balanceAmount !== undefined ? donation.balanceAmount : Math.max(0, donation.totalAmount - amountPaidVal);
+  const formattedAmountPaid = Number(amountPaidVal).toLocaleString('en-IN');
+  const formattedBalance = Number(balanceVal).toLocaleString('en-IN');
+  const isPartiallyPaid = (donation.paymentStatus && donation.paymentStatus !== 'Completed') || balanceVal > 0;
+
   const dateStr = new Date(donation.timestamp || Date.now()).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: '2-digit',
@@ -58,14 +66,14 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
     ctx.fillText(`Date: ${dateStr}`, 505, 246);
 
     // 3. Donor Name over the dotted placeholder (y = 321, x = 272 to 510)
-    ctx.font = '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '800 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#064E3B'; // Deep emerald
     ctx.textAlign = 'left';
     const displayDonor = donation.donorName.length > 24 ? donation.donorName.substring(0, 22) + '...' : donation.donorName;
     ctx.fillText(displayDonor, 272, 321);
 
     // 4. Amount / Kits over "നൽകിയ സംഭാവന.......................... തുക" placeholder (y = 422, x = 325 to 475)
-    ctx.font = '900 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '900 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#007A33';
     ctx.textAlign = 'center';
     ctx.fillText(`₹${formattedAmount}`, 400, 422);
@@ -77,7 +85,7 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.fillText('KITS CONTRIBUTED', 672, 428);
 
-    ctx.font = '900 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '900 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#FFFFFF';
     ctx.fillText(`${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}`, 672, 453);
 
@@ -129,14 +137,26 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
       const rawPhone = (donation.whatsAppNumber || '').replace(/\D/g, '');
       const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
 
+      const statusLabel = donation.paymentStatus === 'Partial'
+        ? '⏳ Advance Paid'
+        : donation.paymentStatus === 'Booked'
+          ? '📌 Booked (Payment Pending)'
+          : '✅ Fully Paid';
+
       const posterUrl = `${window.location.origin}/?poster=1&token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${donation.wardNumber || ''}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${donation.serialNumber}` : ''}`;
 
       const messageText =
         `*Ibada Kit Challenge — Official Receipt Slip*\n\n` +
         `Assalamu Alaikum *${donation.donorName}*,\n` +
-        `Here is your official donation receipt slip for *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* (₹${formattedAmount}). 🤲\n\n` +
+        `Here is your official donation receipt slip for *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* (Total: ₹${formattedAmount}). 🤲\n\n` +
         `• *Receipt Token:* ${donation.receiptToken}\n` +
         (donation.serialNumber ? `• *Serial No:* #${donation.serialNumber}\n` : '') +
+        (isPartiallyPaid
+          ? `• *Payment Status:* ${statusLabel}\n` +
+            `• *Amount Paid Now:* ₹${formattedAmountPaid}\n` +
+            `• *Pending Balance:* ₹${formattedBalance}\n`
+          : `• *Payment Status:* ✅ Fully Paid\n`
+        ) +
         `• *Date:* ${dateStr}\n\n` +
         `_May Allah accept and reward your contribution abundantly!_\n\n` +
         `📸 *Create your Supporter Poster with your photo:*\n` +
@@ -246,10 +266,10 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
             left: '33.2%',
             top: '30.1%',
             width: '29.3%',
-            height: '2.8%',
+            height: '3.2%',
             display: 'flex',
             alignItems: 'center',
-            fontSize: '2.8cqw',
+            fontSize: '3.1cqw',
             fontWeight: 800,
             color: '#064E3B',
             overflow: 'hidden',
@@ -268,13 +288,13 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
           style={{
             position: 'absolute',
             left: '39.5%',
-            top: '40.0%',
+            top: '39.8%',
             width: '18.5%',
-            height: '2.8%',
+            height: '3.2%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '2.7cqw',
+            fontSize: '3.0cqw',
             fontWeight: 900,
             color: '#007A33',
             whiteSpace: 'nowrap',
@@ -307,7 +327,7 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
             <span style={{ fontSize: '1.4cqw', fontWeight: 700, color: 'rgba(255, 255, 255, 0.85)', letterSpacing: '0.04em' }}>
               KITS CONTRIBUTED
             </span>
-            <span style={{ fontSize: '3.0cqw', fontWeight: 900, color: '#FFFFFF', marginTop: '1%' }}>
+            <span style={{ fontSize: '3.3cqw', fontWeight: 900, color: '#FFFFFF', marginTop: '1%' }}>
               {donation.kitCount} {donation.kitCount === 1 ? 'Kit' : 'Kits'}
             </span>
           </div>
@@ -326,6 +346,54 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Partial / Balance Status Alert (if not fully paid) */}
+      {isPartiallyPaid && (
+        <div style={{
+          width: '100%',
+          maxWidth: 480,
+          marginTop: 10,
+          padding: '10px 14px',
+          background: donation.paymentStatus === 'Booked' ? '#EDF4FA' : '#FEF3C7',
+          border: donation.paymentStatus === 'Booked' ? '1px solid #B8D4EE' : '1px solid #FDE68A',
+          borderRadius: 10,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.8rem'
+        }}>
+          <div>
+            <span style={{ color: donation.paymentStatus === 'Booked' ? '#1D4ED8' : '#92400E', fontWeight: 800 }}>
+              {donation.paymentStatus === 'Booked' ? 'Booked (Pending Payment)' : 'Advance Paid'}
+            </span>
+            <div style={{ color: donation.paymentStatus === 'Booked' ? '#1E3A8A' : '#78350F', fontSize: '0.74rem', marginTop: 2 }}>
+              Paid: ₹{formattedAmountPaid} | Balance: <strong>₹{formattedBalance}</strong>
+            </div>
+          </div>
+          {onOpenPayBalance && balanceVal > 0 && (
+            <button
+              type="button"
+              onClick={() => onOpenPayBalance(donation)}
+              style={{
+                background: donation.paymentStatus === 'Booked' ? '#2563EB' : '#D97706',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 6,
+                padding: '6px 12px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5
+              }}
+            >
+              <CreditCard size={13} />
+              <span>Collect Balance</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Optional Feedback banner */}
       {feedback && (

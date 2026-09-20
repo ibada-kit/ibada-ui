@@ -56,6 +56,15 @@ export interface Donation {
   collectedByUserId: string;
   collectedByName?: string;
   collectedByRole?: UserRole;
+  paymentOption?: PaymentOption;
+  amountPaid?: number;
+  balanceAmount?: number;
+  paymentStatus?: PaymentStatus;
+  paymentMode?: PaymentMode | string;
+  transactionReference?: string;
+  notes?: string;
+  updateDate?: string;
+  updatedBy?: string;
   timestamp: string;
 }
 
@@ -64,6 +73,12 @@ export interface CreateDonationRequest {
   whatsAppNumber: string;
   kitCount: number;
   totalAmount?: number;
+  paymentOption?: PaymentOption;
+  initialAmountPaid?: number;
+  paymentMode?: PaymentMode;
+  transactionReference?: string;
+  notes?: string;
+  sendWhatsApp?: boolean;
 }
 
 export interface WeeklyMetrics {
