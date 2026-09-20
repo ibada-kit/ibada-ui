@@ -29,12 +29,16 @@ import { useWards } from '../hooks/useWards';
 interface AdminDashboardProps {
   currentUser: User;
   kitPrice: number;
-  onUpdateKitPrice: (price: number) => void;
+  kitPriceModifiedDate?: string;
+  kitPriceModifiedBy?: string;
+  onUpdateKitPrice: (price: number) => Promise<void> | void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUser,
   kitPrice,
+  kitPriceModifiedDate,
+  kitPriceModifiedBy,
   onUpdateKitPrice
 }) => {
   const { wards: wardOptions } = useWards();
@@ -242,12 +246,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Handle Kit Price Update
-  const handleSavePrice = (e: React.FormEvent) => {
+  // Handle Kit Price Update (persisted in Azure Table Storage)
+  const [isSavingPrice, setIsSavingPrice] = useState(false);
+  const handleSavePrice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (tempKitPrice > 0) {
-      onUpdateKitPrice(tempKitPrice);
-      setFeedbackMsg({ text: `Global kit price updated to ₹${tempKitPrice}!`, isError: false });
+      try {
+        setIsSavingPrice(true);
+        await onUpdateKitPrice(tempKitPrice);
+        setFeedbackMsg({ text: `Relief Kit price has been updated to ₹${tempKitPrice.toLocaleString('en-IN')}!`, isError: false });
+      } catch (err: any) {
+        setFeedbackMsg({ text: err.message || 'Failed to update kit price. Please try again.', isError: true });
+      } finally {
+        setIsSavingPrice(false);
+      }
     }
   };
 
@@ -1262,18 +1274,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 className="input-field"
                 value={tempKitPrice}
                 onChange={(e) => setTempKitPrice(Number(e.target.value))}
+                disabled={isSavingPrice}
               />
               <button
                 type="submit"
                 className="btn-primary"
+                disabled={isSavingPrice}
                 style={{ padding: '10px 20px', background: '#008A2E' }}
               >
-                Save
+                {isSavingPrice ? 'Saving...' : 'Save'}
               </button>
             </div>
             <span style={{ fontSize: '0.74rem', color: '#64748B', display: 'block', marginTop: 8 }}>
-              All donation calculations and backend receipt generation will multiply by this kit rate.
+              All campaign goals, donations, and receipts will calculate using this relief kit price.
             </span>
+
+            <div style={{
+              marginTop: 14,
+              padding: '12px 14px',
+              background: '#FFFFFF',
+              borderRadius: 8,
+              border: '1px solid #CBD5E1',
+              fontSize: '0.78rem',
+              color: '#475569',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600 }}>Status:</span>
+                <span style={{ color: '#008A2E', fontWeight: 700 }}>Active & Live</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600 }}>Last Updated:</span>
+                <span>{kitPriceModifiedDate ? new Date(kitPriceModifiedDate).toLocaleString('en-IN') : 'Initial Setup'}</span>
+              </div>
+              {kitPriceModifiedBy && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: 600 }}>Updated By:</span>
+                  <span style={{ fontWeight: 600, color: '#1E293B' }}>{kitPriceModifiedBy}</span>
+                </div>
+              )}
+            </div>
           </form>
         </div>
       )}

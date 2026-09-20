@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord, SponsorshipItem } from '../types';
+import type { User, Donation, LeaderboardEntry, WardLeaderboardEntry, SponsorshipRecord } from '../types';
 import { DonationForm } from '../components/DonationForm';
 import { donationsApi, sponsorshipsApi, authApi, analyticsApi, adminApi, API_BASE_URL, generateRandomPassword, getKitUnitPrice, getAuthHeaders } from '../services/api';
 import { 
@@ -23,14 +23,12 @@ import {
   EyeOff,
   Building2,
   Award,
-  Package,
   Download,
   Target,
   Edit3
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
-import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV } from '../utils/exportCsv';
 
@@ -49,11 +47,10 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   onViewSponsorshipReceipt,
   onOpenPayBalance
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'record' | 'transactions' | 'ranks' | 'sponsored-items' | 'profile'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'record' | 'transactions' | 'ranks' | 'profile'>('overview');
   const [ranksMode, setRanksMode] = useState<'individual' | 'sponsorship'>('individual');
   const [receiptsType, setReceiptsType] = useState<'donations' | 'sponsorships'>('donations');
   const [wardSponsorships, setWardSponsorships] = useState<SponsorshipRecord[]>([]);
-  const [catalogItems, setCatalogItems] = useState<SponsorshipItem[]>([]);
   
   // Aggregate statistics for ward sponsorships
   const wardSponsorshipStats = useMemo(() => {
@@ -215,13 +212,6 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
       .then(spons => {
         const filtered = user.wardNumber ? spons.filter(s => Number(s.wardNumber) === Number(user.wardNumber)) : spons;
         setWardSponsorships(filtered);
-      })
-      .catch(() => {});
-
-    // 4. Fetch live sponsorship catalog items
-    sponsorshipsApi.getItems()
-      .then(items => {
-        if (items && items.length > 0) setCatalogItems(items);
       })
       .catch(() => {});
   }, [user.token, user.wardNumber]);
@@ -580,20 +570,6 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           }}
         >
           <span>Rankings</span>
-        </button>
-
-        <button
-          id="ward-tab-sponsored-items"
-          onClick={() => setActiveTab('sponsored-items')}
-          className={`tab-strip-btn ${activeTab === 'sponsored-items' ? 'active' : ''}`}
-          style={{
-            background: activeTab === 'sponsored-items' ? '#2C82C9' : 'transparent',
-            color: activeTab === 'sponsored-items' ? '#FFFFFF' : '#334155'
-          }}
-          title="Sponsored Items Catalog & Breakdown"
-        >
-          <Package size={14} />
-          <span>Items ({wardSponsorshipStats.totalItems})</span>
         </button>
 
         <button
@@ -1523,19 +1499,6 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           </>
           )}
         </div>
-      )}
-
-      {/* TAB: SPONSORED ITEMS SUMMARY VIEW */}
-      {activeTab === 'sponsored-items' && (
-        <SponsoredItemsSummaryView
-          title={`Ward ${user.wardNumber} Sponsored Items`}
-          subtitle={`Detailed breakdown of item quantities and sponsorships collected across Ward ${user.wardNumber}.`}
-          sponsorships={wardSponsorships}
-          catalogItems={catalogItems}
-          onViewReceipt={onViewSponsorshipReceipt}
-          onOpenPayBalance={onOpenPayBalance}
-          onOpenSponsorshipModal={() => setActiveTab('record')}
-        />
       )}
 
       {/* TAB 6: PROFILE & PASSWORD MANAGEMENT */}

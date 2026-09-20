@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, SponsorshipRecord } from './types';
-import { getCurrentUser, setCurrentUser, getKitUnitPrice, setKitUnitPrice } from './services/api';
+import { getCurrentUser, setCurrentUser, getKitUnitPrice, setKitUnitPrice, settingsApi, type KitPriceInfo } from './services/api';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './pages/AuthScreen';
 import { VolunteerDashboard } from './pages/VolunteerDashboard';
@@ -30,15 +30,35 @@ export const App: React.FC = () => {
   const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
   const [activePayBalanceSponsorship, setActivePayBalanceSponsorship] = useState<SponsorshipRecord | null>(null);
   const [globalKitPrice, setGlobalKitPrice] = useState<number>(() => getKitUnitPrice());
+  const [kitPriceInfo, setKitPriceInfo] = useState<KitPriceInfo | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const handleUpdateKitPrice = (newPrice: number) => {
-    setGlobalKitPrice(newPrice);
-    setKitUnitPrice(newPrice);
+  const handleUpdateKitPrice = async (newPrice: number) => {
+    if (!currentUser?.token) {
+      alert('You must be logged in as Admin to update kit price.');
+      return;
+    }
+    const updated = await settingsApi.updateKitPrice(currentUser.token, newPrice);
+    setGlobalKitPrice(updated.kitPrice);
+    setKitPriceInfo(updated);
+    setKitUnitPrice(updated.kitPrice);
     setRefreshKey((prev) => prev + 1);
   };
 
   useEffect(() => {
+    // Load authoritative kit price and modified date from Azure Table Storage
+    settingsApi.getKitPrice()
+      .then((info) => {
+        if (info && info.kitPrice > 0) {
+          setGlobalKitPrice(info.kitPrice);
+          setKitPriceInfo(info);
+          setKitUnitPrice(info.kitPrice);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch kit price from Azure Table Storage:', err);
+      });
+
     const user = getCurrentUser();
     if (user) {
       setCurUser(user);
@@ -138,6 +158,8 @@ export const App: React.FC = () => {
                 <AdminDashboard
                   currentUser={currentUser}
                   kitPrice={globalKitPrice}
+                  kitPriceModifiedDate={kitPriceInfo?.modifiedDate}
+                  kitPriceModifiedBy={kitPriceInfo?.modifiedBy}
                   onUpdateKitPrice={handleUpdateKitPrice}
                 />
               ) : (

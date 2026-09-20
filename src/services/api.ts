@@ -93,37 +93,27 @@ export function getAuthHeaders(
   return headers;
 }
 
-// Storage key and helpers for Admin-configured Campaign Kit Price
-const STORAGE_KIT_PRICE = 'charity_kit_price';
+// In-memory runtime state for Admin-configured Campaign Kit Price (Authoritative source: Azure Table Storage via /api/Settings/kit-price)
+let currentKitPrice = 1000;
 
 export function getKitUnitPrice(): number {
-  try {
-    const saved = localStorage.getItem(STORAGE_KIT_PRICE);
-    if (saved) {
-      const parsed = Number(saved);
-      if (!Number.isNaN(parsed) && parsed > 0) {
-        return parsed;
-      }
-    }
-  } catch {}
-  return 1000;
+  return currentKitPrice;
 }
 
 export function setKitUnitPrice(price: number): void {
-  try {
-    if (price > 0) {
-      localStorage.setItem(STORAGE_KIT_PRICE, price.toString());
-    }
-  } catch {}
+  if (price > 0) {
+    currentKitPrice = price;
+  }
 }
 
-export const KIT_UNIT_RATE = getKitUnitPrice();
+export const KIT_UNIT_RATE = 1000;
 
 // Local Storage Keys (Auth Session only)
 const STORAGE_USER = 'charity_user';
 
-// Purge any legacy local mock/cache data from user browser
+// Purge any legacy local mock/cache data from user browser (Strictly NO kit price or financial data in localStorage!)
 try {
+  localStorage.removeItem('charity_kit_price');
   localStorage.removeItem('charity_donations');
   localStorage.removeItem('charity_sponsorships');
 } catch {}
@@ -1108,4 +1098,59 @@ export const sponsorshipsApi = {
     return null;
   }
 };
+
+// -----------------------------------------------------------
+// 7. Global Settings API (Azure Table Storage: CampaignSettings)
+// -----------------------------------------------------------
+export interface KitPriceInfo {
+  kitPrice: number;
+  modifiedDate: string;
+  modifiedBy: string;
+}
+
+export const settingsApi = {
+  // Reads authoritative kit price and modified date from Azure Table Storage
+  getKitPrice: async (): Promise<KitPriceInfo> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/Settings/kit-price`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        const data: KitPriceInfo = await res.json();
+        if (data && data.kitPrice > 0) {
+          setKitUnitPrice(data.kitPrice);
+        }
+        return data;
+      }
+    } catch (err) {
+      console.warn('Could not fetch kit price from Azure Table Storage:', err);
+    }
+    return {
+      kitPrice: getKitUnitPrice(),
+      modifiedDate: new Date().toISOString(),
+      modifiedBy: 'Default'
+    };
+  },
+
+  // Updates global kit price in Azure Table Storage (Admin only)
+  updateKitPrice: async (token: string, newPrice: number): Promise<KitPriceInfo> => {
+    const res = await fetch(`${API_BASE_URL}/Settings/kit-price`, {
+      method: 'PUT',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ kitPrice: newPrice })
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to update kit price. Please try again.');
+      throw new Error(msg);
+    }
+
+    const data: KitPriceInfo = await res.json();
+    if (data && data.kitPrice > 0) {
+      setKitUnitPrice(data.kitPrice);
+    }
+    return data;
+  }
+};
+
 
