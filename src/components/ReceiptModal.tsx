@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Donation } from '../types';
-import { CheckCircle, Share2, X, ShieldCheck, Copy, Check, Sparkles, Download } from 'lucide-react';
-import { shareReceiptToWhatsApp, downloadReceiptPoster, type ReceiptPosterData } from '../utils/posterShare';
+import { CheckCircle, Share2, X, ShieldCheck, Copy, Check } from 'lucide-react';
+import { shareReceiptToWhatsApp, type ReceiptPosterData } from '../utils/posterShare';
 
 interface ReceiptModalProps {
   donation: Donation | null;
@@ -80,18 +80,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
     }
   };
 
-  const handleDownloadPoster = async () => {
-    try {
-      setIsSharing(true);
-      await downloadReceiptPoster(posterData);
-      setShareFeedback('Official Receipt Poster downloaded successfully!');
-      setTimeout(() => setShareFeedback(null), 3500);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSharing(false);
-    }
-  };
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
@@ -310,32 +298,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               <span>{isSharing ? 'Preparing...' : 'Share via WhatsApp'}</span>
             </button>
 
-            {/* <button
-              type="button"
-              onClick={handleDownloadPoster}
-              disabled={isSharing}
-              title="Download Receipt & Supporter Poster Image"
-              style={{
-                flex: '0 0 auto',
-                minHeight: 44,
-                padding: '12px 16px',
-                background: '#FFFFFF',
-                border: '1px solid #CBD5E1',
-                borderRadius: 'var(--radius-md)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                fontWeight: 700,
-                fontSize: '0.86rem',
-                color: '#334155',
-                cursor: isSharing ? 'not-allowed' : 'pointer'
-              }}
-            >
-              <Download size={17} color="#008A2E" />
-              <span>Poster Image</span>
-            </button> */}
-
             <button
               type="button"
               onClick={onClose}
@@ -351,35 +313,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose })
               Close
             </button>
           </div>
-
-          {/* Direct link to Create Supporter Poster */}
-          {/* <a
-            href={posterUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              marginTop: 10,
-              width: '100%',
-              minHeight: 42,
-              padding: '10px 14px',
-              background: '#F0FDF4',
-              color: '#008A2E',
-              border: '1px solid #A5D6B8',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              textDecoration: 'none',
-              fontWeight: 700,
-              fontSize: '0.84rem',
-              transition: 'all 0.15s ease',
-              boxSizing: 'border-box'
-            }}
-          >
-            <Sparkles size={16} color="#D97706" />
-            <span>Create Donor Supporter Poster</span>
-          </a> */}
         </div>
       </div>
     </div>
