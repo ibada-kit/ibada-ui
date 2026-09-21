@@ -1,6 +1,6 @@
 import React from 'react';
 import type { User } from '../types';
-import { Heart, LogOut, ShieldCheck, Home } from 'lucide-react';
+import { LogOut, ShieldCheck, Home } from 'lucide-react';
 
 interface NavbarProps {
   user: User | null;
@@ -37,19 +37,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => onNavigateView && onNavigateView('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, cursor: onNavigateView ? 'pointer' : 'default' }}
         >
-          <div style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: '#008A2E',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            boxShadow: '0 2px 8px rgba(0, 138, 46, 0.25)'
-          }}>
-            <Heart size={20} color="#ffffff" fill="#ffffff" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Ibada Kit Challenge Logo"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              objectFit: 'contain',
+              background: '#FFFFFF',
+              border: '1px solid rgba(0, 138, 46, 0.15)',
+              padding: 2,
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(0, 138, 46, 0.15)'
+            }}
+          />
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <h1 style={{

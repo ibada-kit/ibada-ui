@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import type { User } from '../types';
 import { authApi } from '../services/api';
 import { 
-  Heart, 
   Lock, 
   ArrowRight, 
   CheckCircle2, 
@@ -67,19 +66,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
         
         {/* Logo & Headline */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            borderRadius: 16,
-            background: '#008A2E',
-            margin: '0 auto 12px auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(0, 138, 46, 0.28)'
-          }}>
-            <Heart size={28} color="#ffffff" fill="#ffffff" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Ibada Kit Challenge Logo"
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 20,
+              objectFit: 'contain',
+              background: '#FFFFFF',
+              border: '1.5px solid rgba(0, 138, 46, 0.18)',
+              padding: 4,
+              margin: '0 auto 14px auto',
+              display: 'block',
+              boxShadow: '0 4px 14px rgba(0, 138, 46, 0.18)'
+            }}
+          />
           <h1 style={{ fontSize: '1.65rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: 4, color: '#0F172A' }}>
             Ibada Kit Challenge
           </h1>

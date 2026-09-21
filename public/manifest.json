@@ -1,6 +1,6 @@
 {
-  "name": "Ibada Kit Challenge Portal",
-  "short_name": "Ibada Kit Challenge",
+  "name": "Ibada Kit Challenge",
+  "short_name": "Ibada Kit",
   "description": "Community food & medical kit charity portal for weekly donation tracking and leaderboard.",
   "start_url": "/",
   "display": "standalone",
@@ -9,10 +9,27 @@
   "theme_color": "#090e17",
   "icons": [
     {
-      "src": "/pwa-icon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

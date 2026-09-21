@@ -182,16 +182,33 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           flexWrap: 'wrap',
           gap: 12
         }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="badge badge-emerald">Ibada Kit Challenge</span>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                {metrics ? `${metrics.startDate} – ${metrics.endDate}` : 'Current Week'}
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <img
+              src="/logo.png"
+              alt="Ibada Kit Challenge Logo"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                objectFit: 'contain',
+                background: '#FFFFFF',
+                border: '1.5px solid rgba(0, 138, 46, 0.18)',
+                padding: 3,
+                boxShadow: '0 4px 12px rgba(0, 138, 46, 0.15)',
+                flexShrink: 0
+              }}
+            />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="badge badge-emerald">Ibada Kit Challenge</span>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  {metrics ? `${metrics.startDate} – ${metrics.endDate}` : 'Current Week'}
+                </span>
+              </div>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: 4, letterSpacing: '-0.02em' }}>
+                Weekly Donation Overview
+              </h2>
             </div>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: 4, letterSpacing: '-0.02em' }}>
-              Weekly Donation Overview
-            </h2>
           </div>
 
           {metrics?.growthPercentage && metrics.growthPercentage > 0 ? (
