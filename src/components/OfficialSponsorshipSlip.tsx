@@ -113,7 +113,7 @@ export const OfficialSponsorshipSlip: React.FC<OfficialSponsorshipSlipProps> = (
       const rawPhone = (sponsorship.mobileNumber || '').replace(/\D/g, '');
       const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
 
-      const posterUrl = `${window.location.origin}/?poster=1&token=${encodeURIComponent(sponsorship.receiptToken)}&name=${encodeURIComponent(sponsorship.donorName)}&type=sponsorship&item=${encodeURIComponent(sponsorship.itemName || 'Sponsorship Contribution')}&amount=${sponsorship.totalAmount}&ward=${sponsorship.wardNumber || ''}&panchayath=${encodeURIComponent(sponsorship.panchayath || 'Madavoor')}`;
+      const posterUrl = `${window.location.origin}/?poster=1&donor=1&token=${encodeURIComponent(sponsorship.receiptToken)}&name=${encodeURIComponent(sponsorship.donorName)}&type=sponsorship&item=${encodeURIComponent(sponsorship.itemName || 'Sponsorship Contribution')}&amount=${sponsorship.totalAmount}&ward=${sponsorship.wardNumber || ''}&panchayath=${encodeURIComponent(sponsorship.panchayath || 'Madavoor')}`;
 
       const messageText =
         `*Ibada Kit Challenge — Official Sponsorship Receipt*\n\n` +

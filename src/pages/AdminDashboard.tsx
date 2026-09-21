@@ -87,20 +87,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [volunteers, setVolunteers] = useState<LeaderboardEntry[]>([]);
   const [wards, setWards] = useState<WardLeaderboardEntry[]>([]);
   const [adminProgress, setAdminProgress] = useState<UserProgress | null>(null);
+  const [sponsorshipSummary, setSponsorshipSummary] = useState<{
+    totalSponsorships: number;
+    totalPaidAmount: number;
+    totalCommittedAmount: number;
+  } | null>(null);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [users, vList, wList, prog] = await Promise.all([
+      const [users, vList, wList, prog, sponLBoard] = await Promise.all([
         adminApi.getManagedUsers(),
         donationsApi.getVolunteerLeaderboard('Admin'),
         donationsApi.getWardLeaderboard(),
-        analyticsApi.getMyProgress(currentUser?.token).catch(() => null)
+        analyticsApi.getMyProgress(currentUser?.token).catch(() => null),
+        sponsorshipsApi.getLeaderboard().catch(() => null)
       ]);
       setCoordinators(users);
       setVolunteers(vList);
       setWards(wList);
       if (prog) setAdminProgress(prog);
+      if (sponLBoard?.summary) {
+        setSponsorshipSummary({
+          totalSponsorships: sponLBoard.summary.totalSponsorships || 0,
+          totalPaidAmount: sponLBoard.summary.totalPaidAmount || 0,
+          totalCommittedAmount: sponLBoard.summary.totalCommittedAmount || 0
+        });
+      }
     } catch (err) {
       console.warn('Could not load admin management data', err);
     } finally {
@@ -392,9 +405,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {adminProgress.collectedKits}
                 </span>
                 <span style={{ fontSize: '1rem', opacity: 0.85, fontWeight: 600 }}>
-                  Total Kits Collected
+                  Relief Kits Collected
                 </span>
               </div>
+              {sponsorshipSummary && sponsorshipSummary.totalSponsorships > 0 && (
+                <div style={{ fontSize: '0.76rem', opacity: 0.9, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <Building2 size={13} />
+                  <span>+ {sponsorshipSummary.totalSponsorships} Corporate Sponsorship Packages</span>
+                </div>
+              )}
             </div>
 
             <div style={{ textAlign: 'right' }}>
@@ -402,8 +421,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 Total Funds Raised
               </span>
               <div style={{ fontSize: '1.6rem', fontWeight: 900, marginTop: 2 }}>
-                ₹{adminProgress.collectedAmount.toLocaleString('en-IN')}
+                ₹{(adminProgress.collectedAmount + (sponsorshipSummary?.totalPaidAmount || 0)).toLocaleString('en-IN')}
               </div>
+              {sponsorshipSummary && sponsorshipSummary.totalPaidAmount > 0 && (
+                <span style={{ fontSize: '0.72rem', opacity: 0.85, display: 'block', marginTop: 2 }}>
+                  (Kits: ₹{adminProgress.collectedAmount.toLocaleString('en-IN')} | Spon: ₹{sponsorshipSummary.totalPaidAmount.toLocaleString('en-IN')})
+                </span>
+              )}
             </div>
           </div>
         </div>

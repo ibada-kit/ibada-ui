@@ -58,7 +58,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
     const totalCommitted = teamSponsorships.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
     const totalPaid = teamSponsorships.reduce((sum, s) => sum + (Number(s.amountPaid) || 0), 0);
     const totalBalance = teamSponsorships.reduce((sum, s) => sum + (Number(s.balanceAmount) || 0), 0);
-    const realizationPct = totalCommitted > 0 ? Math.min(100, Math.round((totalPaid / totalCommitted) * 100)) : 100;
+    const realizationPct = totalCommitted > 0 ? Math.min(100, Math.round((totalPaid / totalCommitted) * 100)) : 0;
     return { totalItems, totalCommitted, totalPaid, totalBalance, realizationPct };
   }, [teamSponsorships]);
   

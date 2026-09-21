@@ -30,7 +30,8 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       amount: searchParams.get('amount') || '',
       ward: searchParams.get('ward') || '',
       panchayath: searchParams.get('panchayath') || 'Madavoor',
-      serial: searchParams.get('serial') || ''
+      serial: searchParams.get('serial') || '',
+      isDonor: searchParams.get('donor') === '1' || searchParams.has('donor')
     };
   });
 
@@ -260,7 +261,9 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       const filename = `ibada-supporter-poster.png`;
 
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      const posterLink = window.location.href;
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('donor', '1');
+      const posterLink = currentUrl.toString();
 
       const messageText =
         `*ശിഹാബ് തങ്ങൾ സെന്റർ സോഷ്യൽ വെൽഫെയർ കോംപ്ലക്സ്*\n` +
@@ -306,7 +309,9 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
 
   // Copy shareable link
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('donor', '1');
+    navigator.clipboard.writeText(currentUrl.toString());
     setFeedback('Poster link copied to clipboard!');
     setTimeout(() => setFeedback(null), 3000);
   };
@@ -365,7 +370,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
           </div>
         </div>
 
-        {onBackToApp && (
+        {!params.isDonor && onBackToApp && (
           <button
             onClick={onBackToApp}
             style={{
