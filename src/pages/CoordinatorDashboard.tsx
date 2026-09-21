@@ -26,7 +26,6 @@ import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboard
 import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV, exportDonationsToCSV } from '../utils/exportCsv';
-import { useWards } from '../hooks/useWards';
 
 interface CoordinatorDashboardProps {
   user: User;
@@ -45,7 +44,6 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   onOpenPayBalance,
   onOpenPayDonationBalance
 }) => {
-  const { wards } = useWards();
   const [activeTab, setActiveTab] = useState<'progress' | 'record' | 'team' | 'transactions' | 'leaderboard' | 'sponsored-items'>('progress');
   const [leaderboardMode, setLeaderboardMode] = useState<'individual' | 'sponsorship'>('individual');
   const [receiptsType, setReceiptsType] = useState<'donations' | 'sponsorships'>('donations');
@@ -79,7 +77,6 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   const [showAddVolunteer, setShowAddVolunteer] = useState(false);
   const [volFullName, setVolFullName] = useState('');
   const [volPhone, setVolPhone] = useState('');
-  const [volWard, setVolWard] = useState<number>(user.wardNumber || 0);
   const [volTarget, setVolTarget] = useState(50);
   const [creatingVol, setCreatingVol] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ text: string; isError: boolean } | null>(null);
@@ -165,11 +162,6 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
       return;
     }
 
-    if (!volWard || volWard <= 0) {
-      setCreateMsg({ text: 'Please select a valid ward for this volunteer.', isError: true });
-      return;
-    }
-
     const defaultPass = generateRandomPassword(6);
 
     try {
@@ -181,7 +173,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           fullName: volFullName.trim(),
           phoneNumber: `+91${cleanPhone.slice(-10)}`,
           role: 'Volunteer',
-          wardNumber: Number(volWard),
+          wardNumber: 0,
           targetKits: Number(volTarget),
           defaultPassword: defaultPass
         })
@@ -197,7 +189,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         fullName: volFullName.trim(),
         phoneNumber: `+91${cleanPhone.slice(-10)}`,
         role: 'Volunteer',
-        wardNumber: volWard,
+        wardNumber: 0,
         targetKits: volTarget
       }, ...prev]);
 
@@ -205,7 +197,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         fullName: volFullName.trim(),
         phone: `+91${cleanPhone.slice(-10)}`,
         defaultPassword: defaultPass,
-        wardNumber: Number(volWard)
+        wardNumber: 0
       });
 
       setVolFullName('');
@@ -614,7 +606,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                     {createdVolunteer.fullName}
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                    {createdVolunteer.phone} • Ward {createdVolunteer.wardNumber}
+                    {createdVolunteer.phone} • {createdVolunteer.wardNumber && createdVolunteer.wardNumber > 0 ? `Ward ${createdVolunteer.wardNumber}` : 'General / Drive Team'}
                   </div>
                 </div>
 
@@ -656,7 +648,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <a
-                  href={`https://wa.me/${createdVolunteer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Salam ${createdVolunteer.fullName},\n\nHere are your login credentials for the Ibada Kit Challenge:\nMobile: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\nWard: ${createdVolunteer.wardNumber}\n\nLogin: ${window.location.origin}`)}`}
+                  href={`https://wa.me/${createdVolunteer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Salam ${createdVolunteer.fullName},\n\nHere are your login credentials for the Ibada Kit Challenge:\nMobile: ${createdVolunteer.phone}\nPassword: ${createdVolunteer.defaultPassword}\n${createdVolunteer.wardNumber && createdVolunteer.wardNumber > 0 ? `Ward: ${createdVolunteer.wardNumber}\n` : ''}\nLogin: ${window.location.origin}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary"
@@ -723,23 +715,6 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                    Ward Name
-                  </label>
-                  <select
-                    className="input-field"
-                    value={volWard}
-                    onChange={(e) => setVolWard(Number(e.target.value))}
-                    required
-                  >
-                    <option value={0}>-- Select Ward --</option>
-                    {wards.map((w) => (
-                      <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} (Ward {w.wardNumber})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     Target Kits
                   </label>
                   <input
@@ -790,7 +765,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                       {vol.fullName}
                     </div>
                     <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                      {vol.phoneNumber} • Ward {vol.wardNumber}
+                      {vol.phoneNumber} • {vol.wardNumber && vol.wardNumber > 0 ? `Ward ${vol.wardNumber}` : 'General / Drive Team'}
                     </div>
                   </div>
 
