@@ -179,12 +179,14 @@ export const App: React.FC = () => {
 
   // Public Donor Poster Generator view (no auth required)
   if (isPosterView) {
+    const searchParams = new URLSearchParams(window.location.search);
+    const isDonorLink = searchParams.get('donor') === '1' || searchParams.has('donor') || !currentUser;
     return (
       <DonorPosterGenerator
-        onBackToApp={() => {
+        onBackToApp={!isDonorLink && currentUser ? () => {
           window.history.pushState({}, '', window.location.origin + '/');
           setIsPosterView(false);
-        }}
+        } : undefined}
       />
     );
   }

@@ -309,9 +309,14 @@ export const donationsApi = {
     const token = getCurrentUser()?.token;
     const today = new Date();
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Monday
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+    endOfWeek.setHours(23, 59, 59, 999);
     const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     try {
@@ -359,21 +364,17 @@ export const donationsApi = {
         liveDonations.forEach(d => {
           const rawDate = d.timestamp || d.transactionDate || d.TransactionDate;
           if (rawDate) {
-            const day = days[new Date(rawDate).getDay()];
-            if (dayCounts[day]) {
-              dayCounts[day].kits += d.kitCount || 0;
-              dayCounts[day].amount += d.totalAmount || 0;
+            const dt = new Date(rawDate);
+            // Only aggregate donations from the active week window
+            if (dt >= startOfWeek && dt <= endOfWeek) {
+              const day = days[dt.getDay()];
+              if (dayCounts[day]) {
+                dayCounts[day].kits += d.kitCount || 0;
+                dayCounts[day].amount += (d.amountPaid !== undefined ? d.amountPaid : (d.totalAmount || 0));
+              }
             }
           }
         });
-
-        // Attribute remaining live kits to current day if no local session timestamps
-        const currentDayName = days[today.getDay()];
-        const sumRecordedKits = Object.values(dayCounts).reduce((s, x) => s + x.kits, 0);
-        if (totalKits > sumRecordedKits && dayCounts[currentDayName]) {
-          dayCounts[currentDayName].kits += (totalKits - sumRecordedKits);
-          dayCounts[currentDayName].amount += (totalAmount - Object.values(dayCounts).reduce((s, x) => s + x.amount, 0));
-        }
 
         const dailyBreakdown = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => ({
           day,
@@ -915,10 +916,10 @@ export const adminApi = {
         fullName: u.fullName || data.fullName || '',
         phoneNumber: u.phoneNumber || formattedPhone || '',
         role: u.role || data.role || 'Coordinator',
-        wardNumber: u.wardNumber ?? data.wardNumber ?? 4,
+        wardNumber: u.wardNumber ?? data.wardNumber ?? 0,
         panchayath: u.panchayath || data.panchayath || 'Madavoor',
         district: u.district || data.district || 'Kozhikode',
-        targetKits: u.targetKits ?? data.targetKits ?? 50,
+        targetKits: u.targetKits ?? data.targetKits ?? 0,
         kitsCollected: 0,
         totalAmount: 0,
         donationsCount: 0,

@@ -73,10 +73,23 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
     ctx.fillText(displayDonor, 272, 321);
 
     // 4. Amount / Kits over "നൽകിയ സംഭാവന.......................... തുക" placeholder (y = 422, x = 325 to 475)
-    ctx.font = '900 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#007A33';
-    ctx.textAlign = 'center';
-    ctx.fillText(`₹${formattedAmount}`, 400, 422);
+    if (isPartiallyPaid) {
+      ctx.font = '900 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#D97706'; // Amber
+      ctx.textAlign = 'center';
+      const paidTag = donation.paymentStatus === 'Booked' ? 'Booked' : 'Advance';
+      ctx.fillText(`₹${formattedAmountPaid} (${paidTag})`, 400, 413);
+
+      // Dedicated balance line right below
+      ctx.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#B91C1C'; // Red
+      ctx.fillText(`Bal: ₹${formattedBalance} (Tot: ₹${formattedAmount})`, 400, 431);
+    } else {
+      ctx.font = '900 25px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#007A33';
+      ctx.textAlign = 'center';
+      ctx.fillText(`₹${formattedAmount}`, 400, 422);
+    }
 
     // 5. Right Side Rounded Card Box (x = 565 to 780, y = 395 to 520)
     // Top Half: Kits Count (e.g. 5 Kits)
@@ -143,7 +156,7 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
           ? '📌 Booked (Payment Pending)'
           : '✅ Fully Paid';
 
-      const posterUrl = `${window.location.origin}/?poster=1&token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${donation.wardNumber || ''}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${donation.serialNumber}` : ''}`;
+      const posterUrl = `${window.location.origin}/?poster=1&donor=1&token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${donation.wardNumber || ''}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${donation.serialNumber}` : ''}`;
 
       const messageText =
         `*Ibada Kit Challenge — Official Receipt Slip*\n\n` +
@@ -283,26 +296,52 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
           {donation.donorName}
         </div>
 
-        {/* 3. Amount & Kits: Exact overlay over "നൽകിയ സംഭാവന.......... തുക" (y ~ 40.0% to 42.0%) */}
+        {/* 3. Amount & Kits: Exact overlay over "നൽകിയ സംഭാവന.......... തുക" */}
         <div
           style={{
             position: 'absolute',
-            left: '39.5%',
-            top: '39.8%',
-            width: '18.5%',
-            height: '3.2%',
+            left: '28.0%',
+            top: isPartiallyPaid ? '38.8%' : '39.8%',
+            width: '41.5%',
+            height: isPartiallyPaid ? '5.2%' : '3.2%',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '3.0cqw',
-            fontWeight: 900,
-            color: '#007A33',
-            whiteSpace: 'nowrap',
-            lineHeight: 1,
+            lineHeight: 1.15,
             pointerEvents: 'none'
           }}
         >
-          ₹{formattedAmount}
+          {isPartiallyPaid ? (
+            <>
+              <span style={{
+                fontSize: '2.5cqw',
+                fontWeight: 900,
+                color: '#D97706',
+                whiteSpace: 'nowrap'
+              }}>
+                ₹{formattedAmountPaid} ({donation.paymentStatus === 'Booked' ? 'Booked' : 'Adv'})
+              </span>
+              <span style={{
+                fontSize: '1.4cqw',
+                fontWeight: 700,
+                color: '#B91C1C',
+                whiteSpace: 'nowrap',
+                marginTop: '0.5%'
+              }}>
+                Bal: ₹{formattedBalance} (Tot: ₹{formattedAmount})
+              </span>
+            </>
+          ) : (
+            <span style={{
+              fontSize: '3.0cqw',
+              fontWeight: 900,
+              color: '#007A33',
+              whiteSpace: 'nowrap'
+            }}>
+              ₹{formattedAmount}
+            </span>
+          )}
         </div>
 
         {/* 4. Right-Hand Card Box Outline (x ~ 68.5%, y ~ 38.6% to 51.5%) */}
