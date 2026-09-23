@@ -17,6 +17,70 @@ interface DonorPosterGeneratorProps {
   onBackToApp?: () => void;
 }
 
+interface PosterConfig {
+  type: 'kit' | 'sponsorship';
+  templateSrc: string;
+  fallbackSrc?: string;
+  headerTitle: string;
+  headerSubtitle: string;
+  badgeTitle: string;
+  frameX: number;
+  frameY: number;
+  frameW: number;
+  frameH: number;
+  frameRadius: number;
+  cssLeft: string;
+  cssTop: string;
+  cssWidth: string;
+  cssHeight: string;
+  borderRadius: string;
+  fileNamePrefix: string;
+}
+
+const POSTER_CONFIGS: Record<'kit' | 'sponsorship', PosterConfig> = {
+  kit: {
+    type: 'kit',
+    templateSrc: '/kit-poster-template.jpg',
+    headerTitle: 'Kit Supporter Poster Creator',
+    headerSubtitle: 'ശിഹാബ് തങ്ങൾ സെന്റർ • ഇബാദ് കിറ്റ് ചലഞ്ച്',
+    badgeTitle: 'ഇബാദ് കിറ്റ് ചലഞ്ചിൽ ഞാനും പങ്കാളിയായി',
+    // Exact white photo card on 819x1024 canvas
+    frameX: 104,
+    frameY: 334,
+    frameW: 248,
+    frameH: 338,
+    frameRadius: 8,
+    // CSS percentages for preview container
+    cssLeft: '12.70%',
+    cssTop: '32.62%',
+    cssWidth: '30.28%',
+    cssHeight: '33.01%',
+    borderRadius: '1.0cqw',
+    fileNamePrefix: 'ibada-kit-supporter'
+  },
+  sponsorship: {
+    type: 'sponsorship',
+    templateSrc: '/sponsor-poster-template.jpg',
+    fallbackSrc: '/poster-template.jpg',
+    headerTitle: 'Sponsor Supporter Poster Creator',
+    headerSubtitle: 'ശിഹാബ് തങ്ങൾ സെന്റർ സോഷ്യൽ വെൽഫെയർ കോംപ്ലക്സ്',
+    badgeTitle: 'ശിഹാബ് തങ്ങൾ സെന്റർ • Sponsorship Poster',
+    // Wide horizontal photo area on 819x1024 canvas
+    frameX: 84,
+    frameY: 250,
+    frameW: 620,
+    frameH: 361,
+    frameRadius: 8,
+    // CSS percentages for preview container
+    cssLeft: '10.26%',
+    cssTop: '24.41%',
+    cssWidth: '75.70%',
+    cssHeight: '35.25%',
+    borderRadius: '1.2cqw',
+    fileNamePrefix: 'ibada-sponsor-supporter'
+  }
+};
+
 export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBackToApp }) => {
   // Extract parameters from URL query string
   const [params] = useState(() => {
@@ -34,6 +98,13 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       isDonor: searchParams.get('donor') === '1' || searchParams.has('donor')
     };
   });
+
+  // Dedicated Poster Type: defaults to url param (kit or sponsorship)
+  const [posterType, setPosterType] = useState<'kit' | 'sponsorship'>(() => {
+    return params.type === 'sponsorship' ? 'sponsorship' : 'kit';
+  });
+
+  const currentConfig = POSTER_CONFIGS[posterType];
 
   // Photo state
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -113,15 +184,15 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
 
   // Subtitle text for contribution (used in WhatsApp caption)
   const getContributionBadge = useCallback(() => {
-    if (params.type === 'sponsorship') {
+    if (posterType === 'sponsorship') {
       return `★ Official Sponsor • ${params.item} ★`;
     }
     const count = parseInt(params.kits) || 1;
     return `★ Ibada Kit Supporter • ${count} ${count === 1 ? 'Kit' : 'Kits'} ★`;
-  }, [params.type, params.item, params.kits]);
+  }, [posterType, params.item, params.kits]);
 
   /**
-   * Generates 819x1024 high-resolution HTML5 Canvas matching the official poster template.
+   * Generates 819x1024 high-resolution HTML5 Canvas matching the designated poster template.
    */
   const generatePosterCanvas = useCallback(async (): Promise<HTMLCanvasElement> => {
     const canvas = document.createElement('canvas');
@@ -130,22 +201,31 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas context unavailable');
 
+    const config = POSTER_CONFIGS[posterType];
+
     // 1. Draw base official poster template image
     const templateImg = new Image();
     templateImg.crossOrigin = 'anonymous';
-    templateImg.src = '/poster-template.jpg';
+
     await new Promise<void>((resolve, reject) => {
       templateImg.onload = () => resolve();
-      templateImg.onerror = () => reject(new Error('Failed to load poster template'));
+      templateImg.onerror = () => {
+        if (config.fallbackSrc && templateImg.src !== config.fallbackSrc) {
+          templateImg.src = config.fallbackSrc;
+          return;
+        }
+        reject(new Error('Failed to load poster template'));
+      };
+      templateImg.src = config.templateSrc;
     });
     ctx.drawImage(templateImg, 0, 0, 819, 1024);
 
     // Frame bounds on 819x1024 canvas
-    const frameX = 84;
-    const frameY = 250;
-    const frameW = 620;
-    const frameH = 361;
-    const frameRadius = 8;
+    const frameX = config.frameX;
+    const frameY = config.frameY;
+    const frameW = config.frameW;
+    const frameH = config.frameH;
+    const frameRadius = config.frameRadius;
 
     // 2. Draw User Photo inside White Area (Clipped)
     ctx.save();
@@ -206,7 +286,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       ctx.fillRect(frameX, frameY, frameW, frameH);
 
       ctx.fillStyle = '#64748B';
-      ctx.font = '700 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = '700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('📸 Supporter Photo', frameX + frameW / 2, frameY + frameH / 2);
     }
@@ -214,8 +294,8 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     ctx.restore();
 
     // 3. Subtle Outer Border around the photo frame
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.10)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     if (ctx.roundRect) {
       ctx.roundRect(frameX, frameY, frameW, frameH, frameRadius);
@@ -225,7 +305,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     ctx.stroke();
 
     return canvas;
-  }, [photoUrl, zoom, pan]);
+  }, [posterType, photoUrl, zoom, pan]);
 
   // Download high-resolution PNG
   const handleDownload = async () => {
@@ -233,7 +313,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       setIsExporting(true);
       const canvas = await generatePosterCanvas();
       const safeName = (params.name || 'supporter').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const filename = `ibada-supporter-poster-${safeName}.png`;
+      const filename = `${currentConfig.fileNamePrefix}-${safeName}.png`;
 
       const link = document.createElement('a');
       link.download = filename;
@@ -258,29 +338,44 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
       setIsExporting(true);
       const canvas = await generatePosterCanvas();
       const safeName = params.name || 'Valued Supporter';
-      const filename = `ibada-supporter-poster.png`;
+      const filename = `${currentConfig.fileNamePrefix}.png`;
 
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.set('donor', '1');
+      currentUrl.searchParams.set('type', posterType);
       const posterLink = currentUrl.toString();
 
-      const messageText =
-        `*ശിഹാബ് തങ്ങൾ സെന്റർ സോഷ്യൽ വെൽഫെയർ കോംപ്ലക്സ്*\n` +
-        `*ഇബാദ് കിറ്റ് ചലഞ്ച് — Supporter Poster* 🤲\n\n` +
-        `Assalamu Alaikum,\n` +
-        `I proudly supported the Ibada Kit Challenge!\n` +
-        `• *Supporter:* ${safeName}\n` +
-        `• *Contribution:* ${getContributionBadge().replace(/★/g, '').trim()}\n` +
-        `• *Receipt No:* ${params.token}\n\n` +
-        `Create your own supporter poster here:\n` +
-        `${posterLink}\n\n` +
-        `_May Allah reward everyone manifold!_`;
+      const isKit = posterType === 'kit';
+      const badgeText = getContributionBadge().replace(/★/g, '').trim();
+
+      const messageText = isKit
+        ? `*ശിഹാബ് തങ്ങൾ സെന്റർ സോഷ്യൽ വെൽഫെയർ കോംപ്ലക്സ്*\n` +
+          `*ഇബാദ് കിറ്റ് ചലഞ്ചിൽ ഞാനും പങ്കാളിയായി!* 🤲\n\n` +
+          `Assalamu Alaikum,\n` +
+          `I proudly supported the Ibada Kit Challenge!\n` +
+          `• *Supporter:* ${safeName}\n` +
+          `• *Contribution:* ${badgeText}\n` +
+          (params.serial ? `• *Serial No:* #${params.serial}\n` : '') +
+          `• *Receipt No:* ${params.token}\n\n` +
+          `Create your own supporter poster here:\n` +
+          `${posterLink}\n\n` +
+          `_May Allah reward everyone manifold!_`
+        : `*ശിഹാബ് തങ്ങൾ സെന്റർ സോഷ്യൽ വെൽഫെയർ കോംപ്ലക്സ്*\n` +
+          `*Official Sponsorship Supporter Poster* 🌟\n\n` +
+          `Assalamu Alaikum,\n` +
+          `Proudly sponsored for Shihab Thangal Center Social Welfare Complex!\n` +
+          `• *Sponsor:* ${safeName}\n` +
+          `• *Sponsorship:* ${badgeText}\n` +
+          `• *Receipt No:* ${params.token}\n\n` +
+          `Create your own supporter poster here:\n` +
+          `${posterLink}\n\n` +
+          `_May Allah reward everyone manifold!_`;
 
       if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
         await navigator.share({
           files: [new File([blob], filename, { type: 'image/png' })],
-          title: 'Ibada Kit Challenge Supporter Poster',
+          title: currentConfig.badgeTitle,
           text: messageText
         });
         setFeedback('Poster shared successfully!');
@@ -311,6 +406,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
   const handleCopyLink = () => {
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set('donor', '1');
+    currentUrl.searchParams.set('type', posterType);
     navigator.clipboard.writeText(currentUrl.toString());
     setFeedback('Poster link copied to clipboard!');
     setTimeout(() => setFeedback(null), 3000);
@@ -362,10 +458,10 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
           </div>
           <div>
             <h1 style={{ fontSize: '1.02rem', fontWeight: 800, margin: 0, letterSpacing: '-0.01em', color: '#FFFFFF' }}>
-              Supporter Poster Creator
+              {currentConfig.headerTitle}
             </h1>
             <span style={{ fontSize: '0.74rem', color: '#6EE7B7', fontWeight: 600 }}>
-              ശിഹാബ് തങ്ങൾ സെന്റർ • ഇബാദ് കിറ്റ് ചലഞ്ച്
+              {currentConfig.headerSubtitle}
             </span>
           </div>
         </div>
@@ -399,12 +495,79 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
         maxWidth: 520,
         width: '100%',
         margin: '0 auto',
-        padding: '18px 16px 40px 16px',
+        padding: '16px 16px 40px 16px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 16
+        gap: 14
       }}>
+
+        {/* Template Type Selector Switcher */}
+        <div style={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          background: 'rgba(255, 255, 255, 0.06)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          borderRadius: 12,
+          padding: 4,
+          gap: 6
+        }}>
+          <button
+            type="button"
+            onClick={() => setPosterType('kit')}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: 'none',
+              background: posterType === 'kit' ? 'linear-gradient(135deg, #008A2E 0%, #157E6E 100%)' : 'transparent',
+              color: posterType === 'kit' ? '#FFFFFF' : '#94A3B8',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              boxShadow: posterType === 'kit' ? '0 2px 8px rgba(0, 138, 46, 0.4)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>📦 Kit Donation</span>
+            {posterType === 'kit' && (
+              <span style={{ fontSize: '0.66rem', background: 'rgba(255,255,255,0.22)', padding: '2px 6px', borderRadius: 8 }}>
+                Active
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPosterType('sponsorship')}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: 'none',
+              background: posterType === 'sponsorship' ? 'linear-gradient(135deg, #008A2E 0%, #157E6E 100%)' : 'transparent',
+              color: posterType === 'sponsorship' ? '#FFFFFF' : '#94A3B8',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              boxShadow: posterType === 'sponsorship' ? '0 2px 8px rgba(0, 138, 46, 0.4)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>🌟 Sponsorship</span>
+            {posterType === 'sponsorship' && (
+              <span style={{ fontSize: '0.66rem', background: 'rgba(255,255,255,0.22)', padding: '2px 6px', borderRadius: 8 }}>
+                Active
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Feedback Alert */}
         {feedback && (
@@ -447,8 +610,14 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
         >
           {/* Base Template Image */}
           <img
-            src="/poster-template.jpg"
-            alt="Official Poster Template"
+            key={currentConfig.templateSrc}
+            src={currentConfig.templateSrc}
+            alt={currentConfig.badgeTitle}
+            onError={(e) => {
+              if (currentConfig.fallbackSrc) {
+                (e.currentTarget as HTMLImageElement).src = currentConfig.fallbackSrc;
+              }
+            }}
             style={{
               width: '100%',
               height: '100%',
@@ -460,9 +629,7 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
 
           {/*
             THE DESIGNATED WHITE PHOTO AREA
-            Coordinates: X: 84 to 704 (width: 620/819 = 75.70%)
-                         Y: 250 to 611 (height: 361/1024 = 35.25%)
-                         left: 10.26%, top: 24.41%
+            Dynamically positioned and sized according to the active poster template
           */}
           <div
             ref={photoFrameRef}
@@ -472,12 +639,12 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
             onPointerCancel={handlePointerUp}
             style={{
               position: 'absolute',
-              left: '10.26%',
-              top: '24.41%',
-              width: '75.70%',
-              height: '35.25%',
+              left: currentConfig.cssLeft,
+              top: currentConfig.cssTop,
+              width: currentConfig.cssWidth,
+              height: currentConfig.cssHeight,
               overflow: 'hidden',
-              borderRadius: '1.2cqw',
+              borderRadius: currentConfig.borderRadius,
               cursor: photoUrl ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
               touchAction: 'none',
               background: '#FFFFFF',
@@ -515,17 +682,17 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '2cqw',
-                padding: '4cqw',
+                gap: posterType === 'kit' ? '1.2cqw' : '2cqw',
+                padding: posterType === 'kit' ? '2cqw' : '4cqw',
                 textAlign: 'center',
                 background: 'linear-gradient(145deg, #F0FDF4 0%, #DCFCE7 100%)',
                 border: '2px dashed #16A34A',
-                borderRadius: '1.2cqw',
+                borderRadius: currentConfig.borderRadius,
                 boxSizing: 'border-box'
               }}>
                 <div style={{
-                  width: '11cqw',
-                  height: '11cqw',
+                  width: posterType === 'kit' ? '8cqw' : '11cqw',
+                  height: posterType === 'kit' ? '8cqw' : '11cqw',
                   borderRadius: '50%',
                   background: '#008A2E',
                   display: 'flex',
@@ -533,13 +700,22 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
                   justifyContent: 'center',
                   boxShadow: '0 4px 10px rgba(0, 138, 46, 0.3)'
                 }}>
-                  <Camera size={26} color="#FFFFFF" />
+                  <Camera size={posterType === 'kit' ? 20 : 26} color="#FFFFFF" />
                 </div>
-                <div style={{ fontSize: '3.0cqw', fontWeight: 800, color: '#064E3B' }}>
+                <div style={{
+                  fontSize: posterType === 'kit' ? '2.4cqw' : '3.0cqw',
+                  fontWeight: 800,
+                  color: '#064E3B',
+                  lineHeight: 1.2
+                }}>
                   Tap Here to Upload Photo
                 </div>
-                <div style={{ fontSize: '2.0cqw', color: '#15803D', fontWeight: 600 }}>
-                  Camera or Gallery (JPG, PNG)
+                <div style={{
+                  fontSize: posterType === 'kit' ? '1.7cqw' : '2.0cqw',
+                  color: '#15803D',
+                  fontWeight: 600
+                }}>
+                  Camera or Gallery
                 </div>
               </div>
             )}
