@@ -3,7 +3,6 @@ import {
   Upload,
   Download,
   Share2,
-  ArrowLeft,
   Camera,
   ZoomIn,
   ZoomOut,
@@ -13,9 +12,6 @@ import {
   Sliders
 } from 'lucide-react';
 
-interface DonorPosterGeneratorProps {
-  onBackToApp?: () => void;
-}
 
 interface PosterConfig {
   type: 'kit' | 'sponsorship';
@@ -81,7 +77,7 @@ const POSTER_CONFIGS: Record<'kit' | 'sponsorship', PosterConfig> = {
   }
 };
 
-export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBackToApp }) => {
+export const DonorPosterGenerator: React.FC = () => {
   // Extract parameters from URL query string
   const [params] = useState(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -99,10 +95,9 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
     };
   });
 
-  // Dedicated Poster Type: defaults to url param (kit or sponsorship)
-  const [posterType, setPosterType] = useState<'kit' | 'sponsorship'>(() => {
-    return params.type === 'sponsorship' ? 'sponsorship' : 'kit';
-  });
+  // Dedicated Poster Type: strictly derived from workflow / receipt logic
+  const isSponsorship = params.type?.toLowerCase() === 'sponsorship';
+  const posterType: 'kit' | 'sponsorship' = isSponsorship ? 'sponsorship' : 'kit';
 
   const currentConfig = POSTER_CONFIGS[posterType];
 
@@ -465,28 +460,6 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
             </span>
           </div>
         </div>
-
-        {!params.isDonor && onBackToApp && (
-          <button
-            onClick={onBackToApp}
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#FFFFFF',
-              padding: '7px 14px',
-              borderRadius: 8,
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6
-            }}
-          >
-            <ArrowLeft size={14} />
-            <span>Portal</span>
-          </button>
-        )}
       </header>
 
       {/* Main Content Area */}
@@ -495,79 +468,12 @@ export const DonorPosterGenerator: React.FC<DonorPosterGeneratorProps> = ({ onBa
         maxWidth: 520,
         width: '100%',
         margin: '0 auto',
-        padding: '16px 16px 40px 16px',
+        padding: '18px 16px 40px 16px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 14
+        gap: 16
       }}>
-
-        {/* Template Type Selector Switcher */}
-        <div style={{
-          width: '100%',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          background: 'rgba(255, 255, 255, 0.06)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          borderRadius: 12,
-          padding: 4,
-          gap: 6
-        }}>
-          <button
-            type="button"
-            onClick={() => setPosterType('kit')}
-            style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: 'none',
-              background: posterType === 'kit' ? 'linear-gradient(135deg, #008A2E 0%, #157E6E 100%)' : 'transparent',
-              color: posterType === 'kit' ? '#FFFFFF' : '#94A3B8',
-              fontSize: '0.82rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              boxShadow: posterType === 'kit' ? '0 2px 8px rgba(0, 138, 46, 0.4)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <span>📦 Kit Donation</span>
-            {posterType === 'kit' && (
-              <span style={{ fontSize: '0.66rem', background: 'rgba(255,255,255,0.22)', padding: '2px 6px', borderRadius: 8 }}>
-                Active
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setPosterType('sponsorship')}
-            style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: 'none',
-              background: posterType === 'sponsorship' ? 'linear-gradient(135deg, #008A2E 0%, #157E6E 100%)' : 'transparent',
-              color: posterType === 'sponsorship' ? '#FFFFFF' : '#94A3B8',
-              fontSize: '0.82rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              boxShadow: posterType === 'sponsorship' ? '0 2px 8px rgba(0, 138, 46, 0.4)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <span>🌟 Sponsorship</span>
-            {posterType === 'sponsorship' && (
-              <span style={{ fontSize: '0.66rem', background: 'rgba(255,255,255,0.22)', padding: '2px 6px', borderRadius: 8 }}>
-                Active
-              </span>
-            )}
-          </button>
-        </div>
 
         {/* Feedback Alert */}
         {feedback && (
