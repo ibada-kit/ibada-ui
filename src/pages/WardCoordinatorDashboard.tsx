@@ -25,7 +25,9 @@ import {
   Award,
   Download,
   Target,
-  Edit3
+  Edit3,
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
@@ -115,6 +117,61 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   const [copiedPass, setCopiedPass] = useState(false);
   const [copiedCreds, setCopiedCreds] = useState(false);
   const [resetVolunteerUser, setResetVolunteerUser] = useState<ResetTargetUser | null>(null);
+  const [isHighlightedRecord, setIsHighlightedRecord] = useState(false);
+
+  // Navigate to record donation and highlight section with smooth scrolling
+  const handleNavigateToRecord = () => {
+    setActiveTab('record');
+    setTimeout(() => {
+      const section = document.getElementById('record-donation-section');
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setIsHighlightedRecord(true);
+        setTimeout(() => setIsHighlightedRecord(false), 2600);
+      }
+    }, 100);
+  };
+
+  // Calculates exact kits collected vs target for a ward volunteer
+  const getVolunteerAchievement = (v: any) => {
+    const target = Number(v.targetKits) || 20;
+
+    // 1. Direct API metric
+    let collected = Number(v.kitsCollected ?? v.totalKits ?? v.collectedKits ?? 0);
+
+    // 2. Cross-reference Volunteer Leaderboard
+    if (collected === 0 && volunteersBoard.length > 0) {
+      const match = volunteersBoard.find(
+        (b) =>
+          (v.userId && b.id === v.userId) ||
+          (v.phoneNumber && b.id === v.phoneNumber) ||
+          (v.fullName && b.name && b.name.trim().toLowerCase() === v.fullName.trim().toLowerCase())
+      );
+      if (match) {
+        collected = Number(match.kitsCollected) || 0;
+      }
+    }
+
+    // 3. Cross-reference ward donations
+    if (collected === 0 && wardDonations.length > 0) {
+      const volDons = wardDonations.filter(
+        (d: any) =>
+          (v.userId && (d.collectedByUserId === v.userId || d.userId === v.userId)) ||
+          (v.fullName && d.collectedByName && d.collectedByName.trim().toLowerCase() === v.fullName.trim().toLowerCase())
+      );
+      if (volDons.length > 0) {
+        collected = volDons.reduce((sum, d) => sum + (Number(d.kitCount) || 0), 0);
+      }
+    }
+
+    const percentage = target > 0 ? Math.round((collected / target) * 100) : 0;
+    return {
+      target,
+      collected,
+      percentage,
+      remaining: Math.max(0, target - collected)
+    };
+  };
 
   // Change Password state
   const [oldPassword, setOldPassword] = useState('');
@@ -365,7 +422,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
             <span>Profile & Password</span>
           </button>
           <button
-            onClick={() => setActiveTab('record')}
+            onClick={handleNavigateToRecord}
             className="btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#008A2E' }}
           >
@@ -542,7 +599,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
         </button>
 
         <button
-          onClick={() => setActiveTab('record')}
+          onClick={handleNavigateToRecord}
           className={`tab-strip-btn ${activeTab === 'record' ? 'active' : ''}`}
           style={{
             background: activeTab === 'record' ? '#008A2E' : 'transparent',
@@ -986,104 +1043,161 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                 No volunteers registered for Ward {user.wardNumber} yet. Click "Add Volunteer" to deploy members!
               </div>
             ) : (
-              wardVolunteers.map((v, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#F8FAFC',
-                    border: '1px solid var(--border-subtle)',
-                    flexWrap: 'wrap',
-                    gap: 10
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                      {v.fullName}
+              wardVolunteers.map((v, i) => {
+                const ach = getVolunteerAchievement(v);
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 18px',
+                      borderRadius: 'var(--radius-lg)',
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+                      flexWrap: 'wrap',
+                      gap: 12
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>
+                        {v.fullName}
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: 2 }}>
+                        {v.phoneNumber} • Ward {v.wardNumber || user.wardNumber}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                      {v.phoneNumber} • Ward {v.wardNumber || user.wardNumber}
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{
-                      background: '#EBF7EE',
-                      color: '#008A2E',
-                      fontWeight: 800,
-                      fontSize: '0.78rem',
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-full)'
-                    }}>
-                      Target: {v.targetKits || 20} Kits
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                      {/* Target Achievement Metric */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                        minWidth: 150,
+                        background: ach.percentage >= 100 ? '#F0FDF4' : '#F8FAFC',
+                        padding: '8px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        border: `1px solid ${ach.percentage >= 100 ? '#BBF7D0' : '#E2E8F0'}`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <span style={{
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            color: ach.percentage >= 100 ? '#008A2E' : ach.collected > 0 ? '#1E40AF' : '#475569',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            {ach.percentage >= 100 ? <CheckCircle2 size={13} color="#008A2E" /> : <Target size={13} color="#64748B" />}
+                            <span>Target: {ach.collected}/{ach.target}</span>
+                          </span>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            color: ach.percentage >= 100 ? '#008A2E' : ach.collected > 0 ? '#2563EB' : '#64748B'
+                          }}>
+                            {ach.percentage}%
+                          </span>
+                        </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const vId = v.userId || v.id || v.phoneNumber;
-                        setEditingVolunteer({
-                          id: vId,
+                        {/* Progress Bar */}
+                        <div style={{
+                          width: '100%',
+                          height: 6,
+                          background: '#E2E8F0',
+                          borderRadius: 'var(--radius-full)',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            width: `${Math.min(100, ach.percentage)}%`,
+                            height: '100%',
+                            background: ach.percentage >= 100
+                              ? 'linear-gradient(90deg, #10B981, #008A2E)'
+                              : ach.collected > 0
+                              ? 'linear-gradient(90deg, #3B82F6, #1D4ED8)'
+                              : '#CBD5E1',
+                            borderRadius: 'var(--radius-full)',
+                            transition: 'width 0.4s ease'
+                          }} />
+                        </div>
+
+                        <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+                          {ach.percentage >= 100 ? (
+                            <span style={{ color: '#008A2E', fontWeight: 700 }}>🎉 Target Completed!</span>
+                          ) : ach.collected > 0 ? (
+                            <span>{ach.remaining} kits remaining</span>
+                          ) : (
+                            <span>0 kits recorded</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const vId = v.userId || v.id || v.phoneNumber;
+                          setEditingVolunteer({
+                            id: vId,
+                            name: v.fullName,
+                            targetKits: Number(v.targetKits) || 20
+                          });
+                          setEditTargetValue(Number(v.targetKits) || 20);
+                        }}
+                        className="btn-secondary"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '6px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          color: '#0F172A',
+                          background: '#FFFFFF',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer'
+                        }}
+                        title="Adjust volunteer target share"
+                      >
+                        <Edit3 size={13} color="#2563EB" />
+                        <span>Target</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setResetVolunteerUser({
+                          id: v.userId || v.phoneNumber,
                           name: v.fullName,
-                          targetKits: Number(v.targetKits) || 20
-                        });
-                        setEditTargetValue(Number(v.targetKits) || 20);
-                      }}
-                      className="btn-secondary"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        color: '#0F172A',
-                        background: '#FFFFFF',
-                        border: '1px solid #CBD5E1',
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer'
-                      }}
-                      title="Adjust volunteer target share"
-                    >
-                      <Edit3 size={13} color="#2563EB" />
-                      <span>Target</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setResetVolunteerUser({
-                        id: v.userId || v.phoneNumber,
-                        name: v.fullName,
-                        phone: v.phoneNumber,
-                        role: 'Volunteer',
-                        wardNumber: v.wardNumber || user.wardNumber
-                      })}
-                      className="btn-secondary"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        color: '#0F172A',
-                        background: '#FFFFFF',
-                        border: '1px solid #CBD5E1',
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer'
-                      }}
-                      title="Reset or change volunteer password"
-                    >
-                      <KeyRound size={13} color="#008A2E" />
-                      <span>Password</span>
-                    </button>
+                          phone: v.phoneNumber,
+                          role: 'Volunteer',
+                          wardNumber: v.wardNumber || user.wardNumber
+                        })}
+                        className="btn-secondary"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '6px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          color: '#0F172A',
+                          background: '#FFFFFF',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer'
+                        }}
+                        title="Reset or change volunteer password"
+                      >
+                        <KeyRound size={13} color="#008A2E" />
+                        <span>Password</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -1091,19 +1205,52 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
 
       {/* TAB 3: RECORD DONATION */}
       {activeTab === 'record' && (
-        <DonationForm
-          kitPrice={kitPrice}
-          onSuccess={(donation) => {
-            setWardDonations(prev => [donation, ...prev]);
-            const paid = donation.amountPaid !== undefined ? donation.amountPaid : donation.totalAmount;
-            setWardStats(prev => ({
-              ...prev,
-              collectedKits: prev.collectedKits + donation.kitCount,
-              collectedAmount: prev.collectedAmount + paid
-            }));
+        <div
+          id="record-donation-section"
+          style={{
+            borderRadius: 'var(--radius-xl)',
+            transition: 'all 0.5s ease',
+            boxShadow: isHighlightedRecord
+              ? '0 0 0 4px rgba(0, 138, 46, 0.4), 0 16px 36px rgba(0, 138, 46, 0.22)'
+              : 'none',
+            transform: isHighlightedRecord ? 'scale(1.008)' : 'scale(1)',
+            position: 'relative',
+            scrollMarginTop: '80px'
           }}
-          onSponsorshipSuccess={handleSponsorshipRecorded}
-        />
+        >
+          {isHighlightedRecord && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 18px',
+                background: 'linear-gradient(135deg, #008A2E 0%, #10B981 100%)',
+                color: '#FFFFFF',
+                borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
+                fontSize: '0.86rem',
+                fontWeight: 800,
+                boxShadow: '0 4px 12px rgba(0, 138, 46, 0.2)'
+              }}
+            >
+              <Sparkles size={16} />
+              <span>Record Ward Donation Section — Enter donor contribution details below</span>
+            </div>
+          )}
+          <DonationForm
+            kitPrice={kitPrice}
+            onSuccess={(donation) => {
+              setWardDonations(prev => [donation, ...prev]);
+              const paid = donation.amountPaid !== undefined ? donation.amountPaid : donation.totalAmount;
+              setWardStats(prev => ({
+                ...prev,
+                collectedKits: prev.collectedKits + donation.kitCount,
+                collectedAmount: prev.collectedAmount + paid
+              }));
+            }}
+            onSponsorshipSuccess={handleSponsorshipRecorded}
+          />
+        </div>
       )}
 
       {/* TAB 4: RECENT WARD RECEIPTS */}
@@ -1470,7 +1617,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           </div>
 
           {ranksMode === 'sponsorship' ? (
-            <SponsorshipLeaderboardView user={user} onOpenSponsorshipModal={() => setActiveTab('record')} />
+            <SponsorshipLeaderboardView user={user} onOpenSponsorshipModal={handleNavigateToRecord} />
           ) : (
             <>
           {/* Top Wards */}

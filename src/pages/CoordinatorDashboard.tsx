@@ -19,7 +19,9 @@ import {
   X, 
   Building2, 
   Award,
-  Download
+  Download,
+  Target,
+  Sparkles
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
@@ -90,6 +92,61 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   } | null>(null);
   const [copiedPass, setCopiedPass] = useState(false);
   const [resetVolunteerUser, setResetVolunteerUser] = useState<ResetTargetUser | null>(null);
+  const [isHighlightedRecord, setIsHighlightedRecord] = useState(false);
+
+  // Navigate to record donation and highlight section with smooth scrolling
+  const handleNavigateToRecord = () => {
+    setActiveTab('record');
+    setTimeout(() => {
+      const section = document.getElementById('record-donation-section');
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setIsHighlightedRecord(true);
+        setTimeout(() => setIsHighlightedRecord(false), 2600);
+      }
+    }, 100);
+  };
+
+  // Calculates exact kits collected vs target for a team volunteer
+  const getVolunteerAchievement = (vol: any) => {
+    const target = Number(vol.targetKits) || 50;
+
+    // 1. Direct API metric
+    let collected = Number(vol.kitsCollected ?? vol.totalKits ?? vol.collectedKits ?? 0);
+
+    // 2. Cross-reference Volunteer Leaderboard
+    if (collected === 0 && volunteersBoard.length > 0) {
+      const match = volunteersBoard.find(
+        (b) =>
+          (vol.userId && b.id === vol.userId) ||
+          (vol.phoneNumber && b.id === vol.phoneNumber) ||
+          (vol.fullName && b.name && b.name.trim().toLowerCase() === vol.fullName.trim().toLowerCase())
+      );
+      if (match) {
+        collected = Number(match.kitsCollected) || 0;
+      }
+    }
+
+    // 3. Cross-reference recent transactions
+    if (collected === 0 && recentTransactions.length > 0) {
+      const volDons = recentTransactions.filter(
+        (d: any) =>
+          (vol.userId && (d.collectedByUserId === vol.userId || d.userId === vol.userId)) ||
+          (vol.fullName && d.collectedByName && d.collectedByName.trim().toLowerCase() === vol.fullName.trim().toLowerCase())
+      );
+      if (volDons.length > 0) {
+        collected = volDons.reduce((sum, d) => sum + (Number(d.kitCount) || 0), 0);
+      }
+    }
+
+    const percentage = target > 0 ? Math.round((collected / target) * 100) : 0;
+    return {
+      target,
+      collected,
+      percentage,
+      remaining: Math.max(0, target - collected)
+    };
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -250,7 +307,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         </div>
 
         <button
-          onClick={() => setActiveTab('record')}
+          onClick={handleNavigateToRecord}
           className="btn-primary"
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#008A2E' }}
         >
@@ -419,7 +476,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('record')}
+          onClick={handleNavigateToRecord}
           className={`tab-strip-btn ${activeTab === 'record' ? 'active' : ''}`}
         >
           <PlusCircle size={14} />
@@ -528,7 +585,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
               Collect donations directly as a coordinator. Receipts will be logged to your team metrics.
             </p>
             <button
-              onClick={() => setActiveTab('record')}
+              onClick={handleNavigateToRecord}
               className="btn-primary"
               style={{ width: '100%', padding: '10px', fontSize: '0.84rem', background: '#008A2E' }}
             >
@@ -745,73 +802,130 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {teamMembers.map((vol, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#F8FAFC',
-                    border: '1px solid var(--border-subtle)',
-                    flexWrap: 'wrap',
-                    gap: 10
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.92rem' }}>
-                      {vol.fullName}
+              {teamMembers.map((vol, idx) => {
+                const ach = getVolunteerAchievement(vol);
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 18px',
+                      borderRadius: 'var(--radius-lg)',
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+                      flexWrap: 'wrap',
+                      gap: 12
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.95rem' }}>
+                        {vol.fullName}
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: 2 }}>
+                        {vol.phoneNumber} • {vol.wardNumber && vol.wardNumber > 0 ? `Ward ${vol.wardNumber}` : 'General / Drive Team'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-                      {vol.phoneNumber} • {vol.wardNumber && vol.wardNumber > 0 ? `Ward ${vol.wardNumber}` : 'General / Drive Team'}
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{
-                      background: '#EBF7EE',
-                      color: '#008A2E',
-                      fontWeight: 800,
-                      fontSize: '0.78rem',
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-full)'
-                    }}>
-                      Target: {vol.targetKits || 50} Kits
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setResetVolunteerUser({
-                        id: vol.userId || vol.phoneNumber,
-                        name: vol.fullName,
-                        phone: vol.phoneNumber,
-                        role: 'Volunteer',
-                        wardNumber: vol.wardNumber
-                      })}
-                      className="btn-secondary"
-                      style={{
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                      {/* Target Achievement Metric */}
+                      <div style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        color: '#0F172A',
-                        background: '#FFFFFF',
-                        border: '1px solid #CBD5E1',
+                        flexDirection: 'column',
+                        gap: 4,
+                        minWidth: 150,
+                        background: ach.percentage >= 100 ? '#F0FDF4' : '#F8FAFC',
+                        padding: '8px 12px',
                         borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer'
-                      }}
-                      title="Reset or change volunteer password"
-                    >
-                      <KeyRound size={13} color="#008A2E" />
-                      <span>Password</span>
-                    </button>
+                        border: `1px solid ${ach.percentage >= 100 ? '#BBF7D0' : '#E2E8F0'}`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <span style={{
+                            fontSize: '0.78rem',
+                            fontWeight: 800,
+                            color: ach.percentage >= 100 ? '#008A2E' : ach.collected > 0 ? '#1E40AF' : '#475569',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            {ach.percentage >= 100 ? <CheckCircle2 size={13} color="#008A2E" /> : <Target size={13} color="#64748B" />}
+                            <span>Target: {ach.collected}/{ach.target}</span>
+                          </span>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            color: ach.percentage >= 100 ? '#008A2E' : ach.collected > 0 ? '#2563EB' : '#64748B'
+                          }}>
+                            {ach.percentage}%
+                          </span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div style={{
+                          width: '100%',
+                          height: 6,
+                          background: '#E2E8F0',
+                          borderRadius: 'var(--radius-full)',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{
+                            width: `${Math.min(100, ach.percentage)}%`,
+                            height: '100%',
+                            background: ach.percentage >= 100
+                              ? 'linear-gradient(90deg, #10B981, #008A2E)'
+                              : ach.collected > 0
+                              ? 'linear-gradient(90deg, #3B82F6, #1D4ED8)'
+                              : '#CBD5E1',
+                            borderRadius: 'var(--radius-full)',
+                            transition: 'width 0.4s ease'
+                          }} />
+                        </div>
+
+                        <div style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 600 }}>
+                          {ach.percentage >= 100 ? (
+                            <span style={{ color: '#008A2E', fontWeight: 700 }}>🎉 Target Completed!</span>
+                          ) : ach.collected > 0 ? (
+                            <span>{ach.remaining} kits remaining</span>
+                          ) : (
+                            <span>0 kits recorded</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setResetVolunteerUser({
+                          id: vol.userId || vol.phoneNumber,
+                          name: vol.fullName,
+                          phone: vol.phoneNumber,
+                          role: 'Volunteer',
+                          wardNumber: vol.wardNumber
+                        })}
+                        className="btn-secondary"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '6px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          color: '#0F172A',
+                          background: '#FFFFFF',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer'
+                        }}
+                        title="Reset or change volunteer password"
+                      >
+                        <KeyRound size={13} color="#008A2E" />
+                        <span>Password</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -819,21 +933,54 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
 
       {/* TAB 3: RECORD DONATION */}
       {activeTab === 'record' && (
-        <DonationForm
-          kitPrice={kitPrice}
-          onSuccess={(donation) => {
-            setRecentTransactions(prev => [donation, ...prev]);
-            const paid = donation.amountPaid !== undefined ? donation.amountPaid : donation.totalAmount;
-            setProgress((prev: UserProgress) => ({
-              ...prev,
-              collectedKits: prev.collectedKits + donation.kitCount,
-              collectedAmount: prev.collectedAmount + paid
-            }));
+        <div
+          id="record-donation-section"
+          style={{
+            borderRadius: 'var(--radius-xl)',
+            transition: 'all 0.5s ease',
+            boxShadow: isHighlightedRecord
+              ? '0 0 0 4px rgba(0, 138, 46, 0.4), 0 16px 36px rgba(0, 138, 46, 0.22)'
+              : 'none',
+            transform: isHighlightedRecord ? 'scale(1.008)' : 'scale(1)',
+            position: 'relative',
+            scrollMarginTop: '80px'
           }}
-          onSponsorshipSuccess={(spon) => {
-            setTeamSponsorships(prev => [spon, ...prev.filter(s => s.sponsorshipId !== spon.sponsorshipId)]);
-          }}
-        />
+        >
+          {isHighlightedRecord && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 18px',
+                background: 'linear-gradient(135deg, #008A2E 0%, #10B981 100%)',
+                color: '#FFFFFF',
+                borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
+                fontSize: '0.86rem',
+                fontWeight: 800,
+                boxShadow: '0 4px 12px rgba(0, 138, 46, 0.2)'
+              }}
+            >
+              <Sparkles size={16} />
+              <span>Record Donation Section — Enter donor contribution details below</span>
+            </div>
+          )}
+          <DonationForm
+            kitPrice={kitPrice}
+            onSuccess={(donation) => {
+              setRecentTransactions(prev => [donation, ...prev]);
+              const paid = donation.amountPaid !== undefined ? donation.amountPaid : donation.totalAmount;
+              setProgress((prev: UserProgress) => ({
+                ...prev,
+                collectedKits: prev.collectedKits + donation.kitCount,
+                collectedAmount: prev.collectedAmount + paid
+              }));
+            }}
+            onSponsorshipSuccess={(spon) => {
+              setTeamSponsorships(prev => [spon, ...prev.filter(s => s.sponsorshipId !== spon.sponsorshipId)]);
+            }}
+          />
+        </div>
       )}
 
       {/* TAB 4: RECENT TEAM RECEIPTS */}
@@ -1198,7 +1345,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           </div>
 
           {leaderboardMode === 'sponsorship' ? (
-            <SponsorshipLeaderboardView user={user} onOpenSponsorshipModal={() => setActiveTab('record')} />
+            <SponsorshipLeaderboardView user={user} onOpenSponsorshipModal={handleNavigateToRecord} />
           ) : (
             <div style={{
               background: '#FFFFFF',
@@ -1261,7 +1408,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           catalogItems={catalogItems}
           onViewReceipt={onViewSponsorshipReceipt}
           onOpenPayBalance={onOpenPayBalance}
-          onOpenSponsorshipModal={() => setActiveTab('record')}
+          onOpenSponsorshipModal={handleNavigateToRecord}
         />
       )}
 
