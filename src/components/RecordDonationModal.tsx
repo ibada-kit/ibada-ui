@@ -21,7 +21,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
   const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>('kit');
   const [donorName, setDonorName] = useState('');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
-  const [kitCount, setKitCount] = useState<number>(2);
+  const [kitCount, setKitCount] = useState<number | ''>(2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,10 +33,15 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
   const [notes, setNotes] = useState('');
   const [showExtraDetails, setShowExtraDetails] = useState(false);
 
-  const totalAmount = kitCount * kitPrice;
+  const numericKits = typeof kitCount === 'number' && kitCount > 0 ? kitCount : 0;
+  const totalAmount = numericKits * kitPrice;
   const balanceAmount = Math.max(0, totalAmount - (initialAmountPaid || 0));
 
-  const handleKitCountChange = (newCount: number) => {
+  const handleKitCountChange = (newCount: number | '') => {
+    if (newCount === '') {
+      setKitCount('');
+      return;
+    }
     const clamped = Math.max(1, Math.min(1000, newCount));
     setKitCount(clamped);
     const newTotal = clamped * kitPrice;
@@ -79,7 +84,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
       return;
     }
 
-    if (kitCount < 1) {
+    if (!kitCount || Number(kitCount) < 1) {
       setError('Donation must include at least 1 kit.');
       return;
     }
@@ -105,7 +110,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
       const newDonation = await donationsApi.recordDonation({
         donorName: donorName.trim(),
         whatsAppNumber: `+91 ${cleanPhone.slice(-10)}`,
-        kitCount,
+        kitCount: Number(kitCount) || 1,
         totalAmount,
         paymentOption,
         initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
@@ -363,7 +368,21 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
                 max="500"
                 className="input-field"
                 value={kitCount}
-                onChange={(e) => handleKitCountChange(parseInt(e.target.value) || 1)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    handleKitCountChange('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    handleKitCountChange(isNaN(parsed) ? '' : parsed);
+                  }
+                }}
+                onBlur={() => {
+                  if (!kitCount || Number(kitCount) < 1) {
+                    handleKitCountChange(1);
+                  }
+                }}
+                placeholder="Custom Kit Count"
               />
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                 @ ₹{kitPrice.toLocaleString('en-IN')} each
@@ -392,7 +411,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
             </div>
             <div style={{ textAlign: 'right' }}>
               <span className="badge badge-emerald">
-                {kitCount} Relief {kitCount === 1 ? 'Kit' : 'Kits'}
+                {numericKits || 1} Relief {(numericKits || 1) === 1 ? 'Kit' : 'Kits'}
               </span>
             </div>
           </div>

@@ -29,7 +29,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
 
   const [donorName, setDonorName] = useState('');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
-  const [kitCount, setKitCount] = useState<number>(1);
+  const [kitCount, setKitCount] = useState<number | ''>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordedDonation, setRecordedDonation] = useState<Donation | null>(null);
@@ -42,10 +42,15 @@ export const DonationForm: React.FC<DonationFormProps> = ({
   const [notes, setNotes] = useState('');
   const [showExtraDetails, setShowExtraDetails] = useState(false);
 
-  const totalAmount = kitCount * kitPrice;
+  const numericKits = typeof kitCount === 'number' && kitCount > 0 ? kitCount : 0;
+  const totalAmount = numericKits * kitPrice;
   const balanceAmount = Math.max(0, totalAmount - (initialAmountPaid || 0));
 
-  const handleKitCountChange = (newCount: number) => {
+  const handleKitCountChange = (newCount: number | '') => {
+    if (newCount === '') {
+      setKitCount('');
+      return;
+    }
     const clamped = Math.max(1, Math.min(1000, newCount));
     setKitCount(clamped);
     const newTotal = clamped * kitPrice;
@@ -110,7 +115,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
       const donation = await donationsApi.recordDonation({
         donorName: donorName.trim(),
         whatsAppNumber: `+91${cleanPhone.slice(-10)}`,
-        kitCount: Number(kitCount),
+        kitCount: Number(kitCount) || 1,
         totalAmount,
         paymentOption,
         initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
@@ -442,7 +447,20 @@ export const DonationForm: React.FC<DonationFormProps> = ({
             required
             className="input-field"
             value={kitCount}
-            onChange={(e) => handleKitCountChange(parseInt(e.target.value) || 1)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '') {
+                handleKitCountChange('');
+              } else {
+                const parsed = parseInt(val, 10);
+                handleKitCountChange(isNaN(parsed) ? '' : parsed);
+              }
+            }}
+            onBlur={() => {
+              if (!kitCount || Number(kitCount) < 1) {
+                handleKitCountChange(1);
+              }
+            }}
             placeholder="Custom Kit Count"
           />
         </div>
@@ -477,7 +495,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
             fontWeight: 800,
             fontSize: '0.82rem'
           }}>
-            {kitCount} Relief {kitCount === 1 ? 'Kit' : 'Kits'}
+            {numericKits || 1} Relief {(numericKits || 1) === 1 ? 'Kit' : 'Kits'}
           </div>
         </div>
 
