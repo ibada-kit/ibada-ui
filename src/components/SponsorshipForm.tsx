@@ -604,7 +604,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             padding: '16px',
             marginBottom: 16
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ marginBottom: 8 }}>
               <label style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -619,20 +619,9 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                 <IndianRupee size={15} color="#008A2E" strokeWidth={2.5} />
                 <span>Sponsorship Cash Amount (₹) *</span>
               </label>
-              <span style={{
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                color: '#008A2E',
-                background: '#EBF7EE',
-                border: '1px solid #A5D6B8',
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-full)'
-              }}>
-                Lump-Sum Mode
-              </span>
             </div>
 
-            <div style={{ position: 'relative', marginBottom: 12 }}>
+            <div style={{ position: 'relative' }}>
               <span style={{
                 position: 'absolute',
                 left: 14,
@@ -670,22 +659,6 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
                   }
                 }}
               />
-            </div>
-
-
-            <div style={{
-              fontSize: '0.74rem',
-              color: '#475569',
-              background: '#FFFFFF',
-              border: '1px solid #E2E8F0',
-              borderRadius: 'var(--radius-md)',
-              padding: '8px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6
-            }}>
-              <CheckCircle size={15} color="#008A2E" style={{ flexShrink: 0 }} />
-              <span>Un-itemized flat donation recorded as cash without price or inventory validation.</span>
             </div>
           </div>
         ) : (

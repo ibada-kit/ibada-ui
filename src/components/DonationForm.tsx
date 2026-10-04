@@ -419,9 +419,6 @@ export const DonationForm: React.FC<DonationFormProps> = ({
                         <div style={{ fontSize: '0.88rem', fontWeight: 800, color: generalKitCount > 0 ? '#0F172A' : '#334155' }}>
                           General Ibada Kit
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                          Family & community relief
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -531,9 +528,6 @@ export const DonationForm: React.FC<DonationFormProps> = ({
                       <div>
                         <div style={{ fontSize: '0.88rem', fontWeight: 800, color: studentKitCount > 0 ? '#0F172A' : '#334155' }}>
                           Student Ibada Kit
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                          Student & education kit
                         </div>
                       </div>
                     </div>
