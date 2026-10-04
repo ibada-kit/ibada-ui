@@ -139,14 +139,9 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
     }
   };
 
-  const handleShareWhatsApp = async () => {
+  // Direct WhatsApp Click-to-Chat (wa.me) — opens donor's chat directly without saving contact
+  const handleShareWhatsApp = () => {
     try {
-      setIsExporting(true);
-      const canvas = await generateSlipCanvas();
-      const safeName = (donation.donorName || 'donor').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      const filename = `ibada-receipt-slip-${donation.receiptToken}-${safeName}.png`;
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
       const rawPhone = (donation.whatsAppNumber || '').replace(/\D/g, '');
       const formattedPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
 
@@ -157,11 +152,12 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
           : '✅ Fully Paid';
 
       const posterUrl = `${window.location.origin}/?poster=1&donor=1&token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${donation.wardNumber || ''}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${donation.serialNumber}` : ''}`;
+      const receiptViewUrl = `${window.location.origin}/?receipt=${encodeURIComponent(donation.receiptToken)}`;
 
       const messageText =
-        `*Ibada Kit Challenge — Official Receipt Slip*\n\n` +
+        `*Ibada Kit Challenge — Official Receipt Slip* 🤲\n\n` +
         `Assalamu Alaikum *${donation.donorName}*,\n` +
-        `Here is your official donation receipt slip for *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* (Total: ₹${formattedAmount}). 🤲\n\n` +
+        `Here is your official donation receipt for *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* (Total: ₹${formattedAmount}).\n\n` +
         `• *Receipt Token:* ${donation.receiptToken}\n` +
         (donation.serialNumber ? `• *Serial No:* #${donation.serialNumber}\n` : '') +
         (isPartiallyPaid
@@ -172,36 +168,20 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
         ) +
         `• *Date:* ${dateStr}\n\n` +
         `_May Allah accept and reward your contribution abundantly!_\n\n` +
+        `📄 *View / Download Official Digital Receipt:*\n` +
+        `${receiptViewUrl}\n\n` +
         `📸 *Create your Supporter Poster with your photo:*\n` +
         `${posterUrl}`;
 
-      if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'image/png' })] })) {
-        await navigator.share({
-          files: [new File([blob], filename, { type: 'image/png' })],
-          title: 'Ibada Kit Official Receipt',
-          text: messageText
-        });
-        setFeedback('Receipt shared successfully!');
-      } else {
-        // Fallback: download image and open WhatsApp web/app
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = canvas.toDataURL('image/png');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      const waUrl = formattedPhone
+        ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`
+        : `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
 
-        const waUrl = formattedPhone
-          ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`
-          : `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
-        window.open(waUrl, '_blank');
-        setFeedback('Slip downloaded! Opening WhatsApp...');
-      }
+      window.open(waUrl, '_blank');
+      setFeedback('Opening WhatsApp chat with donor...');
       setTimeout(() => setFeedback(null), 3500);
     } catch (err) {
-      console.error('Share failed:', err);
-    } finally {
-      setIsExporting(false);
+      console.error('WhatsApp share failed:', err);
     }
   };
 
@@ -227,14 +207,15 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
         style={{
           position: 'relative',
           width: '100%',
-          maxWidth: 480,
+          maxWidth: 'min(360px, calc(min(45dvh, 380px) * 819 / 1024))',
           aspectRatio: '819 / 1024',
           containerType: 'inline-size',
-          borderRadius: 16,
+          borderRadius: 14,
           overflow: 'hidden',
-          boxShadow: '0 12px 30px rgba(15, 76, 58, 0.22)',
+          boxShadow: '0 8px 24px rgba(15, 76, 58, 0.20)',
           border: '1px solid rgba(0, 0, 0, 0.08)',
-          background: '#19806F'
+          background: '#19806F',
+          margin: '0 auto'
         }}
       >
         {/* The Base Receipt Template Image */}
@@ -452,30 +433,29 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
 
       {/* Action Buttons */}
       {showActions && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 480 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 420 }}>
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            disabled={isExporting}
             style={{
-              flex: '1 1 150px',
-              padding: '10px 16px',
+              flex: '1 1 140px',
+              padding: '9px 12px',
               background: '#25D366',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: 8,
               fontWeight: 800,
-              fontSize: '0.86rem',
-              cursor: isExporting ? 'not-allowed' : 'pointer',
+              fontSize: '0.84rem',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 7,
-              boxShadow: '0 2px 6px rgba(37, 211, 102, 0.3)'
+              gap: 6,
+              boxShadow: '0 2px 6px rgba(37, 211, 102, 0.28)'
             }}
           >
-            <Share2 size={16} />
-            <span>{isExporting ? 'Rendering...' : 'Share on WhatsApp'}</span>
+            <Share2 size={15} />
+            <span>Send via WhatsApp</span>
           </button>
 
           <button
@@ -483,23 +463,23 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
             onClick={handleDownload}
             disabled={isExporting}
             style={{
-              flex: '1 1 150px',
-              padding: '10px 16px',
+              flex: '1 1 140px',
+              padding: '9px 12px',
               background: '#FFFFFF',
               color: '#0F5132',
               border: '1px solid #A5D6B8',
               borderRadius: 8,
               fontWeight: 800,
-              fontSize: '0.86rem',
+              fontSize: '0.84rem',
               cursor: isExporting ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 7
+              gap: 6
             }}
           >
-            <Download size={16} />
-            <span>Download Slip PNG</span>
+            <Download size={15} />
+            <span>{isExporting ? 'Generating...' : 'Download Slip PNG'}</span>
           </button>
 
           {/* Dedicated Button to Create Supporter Poster with Photo */}
@@ -508,24 +488,23 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
             onClick={handleOpenPosterMaker}
             style={{
               width: '100%',
-              padding: '11px 16px',
+              padding: '9px 14px',
               background: 'linear-gradient(135deg, #023D18 0%, #008A2E 100%)',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: 8,
               fontWeight: 800,
-              fontSize: '0.88rem',
+              fontSize: '0.84rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
-              boxShadow: '0 4px 12px rgba(0, 138, 46, 0.25)',
-              marginTop: 2
+              gap: 7,
+              boxShadow: '0 3px 10px rgba(0, 138, 46, 0.22)'
             }}
           >
-            <Camera size={17} />
-            <span>📸 Create Supporter Poster (Add Photo)</span>
+            <Camera size={16} />
+            <span>Create Supporter Poster with Photo</span>
           </button>
         </div>
       )}

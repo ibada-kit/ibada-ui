@@ -661,6 +661,9 @@ export const donationsApi = {
     }
     return null;
   },
+  getReceipt: (token: string, panchayath = 'Madavoor'): Promise<Donation | null> => {
+    return donationsApi.getPublicReceipt(token, panchayath);
+  },
 
   // Collect balance / update payment on an existing kit donation
   updatePayment: async (

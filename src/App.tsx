@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, SponsorshipRecord } from './types';
-import { getCurrentUser, setCurrentUser, getKitUnitPrice, setKitUnitPrice, settingsApi, type KitPriceInfo } from './services/api';
+import { getCurrentUser, setCurrentUser, getKitUnitPrice, setKitUnitPrice, settingsApi, donationsApi, sponsorshipsApi, type KitPriceInfo } from './services/api';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './pages/AuthScreen';
 import { VolunteerDashboard } from './pages/VolunteerDashboard';
@@ -116,6 +116,25 @@ export const App: React.FC = () => {
         updateDate: new Date().toISOString(),
         updatedBy: 'usr-123'
       });
+    }
+
+    // Load Live Verified Receipt Token from URL (e.g. from WhatsApp Link)
+    const receiptParam = params.get('receipt') || params.get('token');
+    if (receiptParam && receiptParam !== 'sample' && receiptParam !== 'sponsor') {
+      const cleanToken = receiptParam.trim();
+      if (cleanToken.toUpperCase().startsWith('SPON-')) {
+        sponsorshipsApi.getSponsorshipByToken(cleanToken)
+          .then((spon) => {
+            if (spon) setActiveSponsorshipReceipt(spon);
+          })
+          .catch(() => {});
+      } else {
+        donationsApi.getPublicReceipt(cleanToken)
+          .then((don: Donation | null) => {
+            if (don) setActiveReceipt(don);
+          })
+          .catch(() => {});
+      }
     }
 
     const handlePopState = () => {

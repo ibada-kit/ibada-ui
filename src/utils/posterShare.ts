@@ -188,6 +188,27 @@ export async function shareReceiptToWhatsApp(
 
   try {
     const canvas = await generateReceiptPosterCanvas(posterData);
+    const safeName = (posterData.donorName || 'supporter').toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const filename = `ibada-receipt-${posterData.token}-${safeName}.png`;
+
+    // If phone number is specified, directly open WhatsApp chat (wa.me) so contact creation isn't required
+    if (formattedPhone) {
+      // Also download image so it's readily accessible in gallery/recent media
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch {
+        // Continue if background download is restricted
+      }
+
+      window.open(waUrl, '_blank');
+      return { method: 'whatsapp_link', success: true };
+    }
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
     if (!blob) {
@@ -195,11 +216,9 @@ export async function shareReceiptToWhatsApp(
       return { method: 'whatsapp_link', success: true };
     }
 
-    const safeName = (posterData.donorName || 'supporter').toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const filename = `ibada-receipt-${posterData.token}-${safeName}.png`;
     const file = new File([blob], filename, { type: 'image/png' });
 
-    // Try Web Share API (Mobile phones: Android Chrome, iOS Safari)
+    // Try Web Share API (Mobile phones without target phone: opens share sheet)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         title: 'Ibada Kit Challenge Receipt',

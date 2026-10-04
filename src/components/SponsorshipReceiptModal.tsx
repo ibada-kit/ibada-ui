@@ -61,7 +61,7 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
 
         {/* Modal Body: Renders Official Sponsorship Slip */}
         <div style={{
-          padding: '16px clamp(14px, 3.5vw, 20px) max(16px, env(safe-area-inset-bottom))',
+          padding: '12px clamp(10px, 2.5vw, 16px) max(16px, env(safe-area-inset-bottom))',
           overflowY: 'auto',
           flex: 1,
           WebkitOverflowScrolling: 'touch',
@@ -73,16 +73,6 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
             onOpenPayBalance={onOpenPayBalance}
             onOpenPoster={onOpenPoster}
           />
-          <div style={{ marginTop: 14, textAlign: 'center' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-              style={{ width: '100%', minHeight: 42, fontWeight: 700, borderRadius: 'var(--radius-md)' }}
-            >
-              Close
-            </button>
-          </div>
         </div>
       </div>
     </div>
