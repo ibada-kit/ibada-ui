@@ -75,6 +75,7 @@ export interface CreateDonationRequest {
   totalAmount?: number;
   paymentOption?: PaymentOption;
   initialAmountPaid?: number;
+  balanceAmount?: number;
   paymentMode?: PaymentMode;
   transactionReference?: string;
   notes?: string;

@@ -44,7 +44,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
 
   const numericKits = typeof kitCount === 'number' && kitCount > 0 ? kitCount : 0;
   const totalAmount = numericKits * kitPrice;
-  const balanceAmount = Math.max(0, totalAmount - (initialAmountPaid || 0));
+  const balanceAmount = paymentOption === 'Book' ? totalAmount : Math.max(0, totalAmount - (initialAmountPaid || 0));
 
   const handleKitCountChange = (newCount: number | '') => {
     if (newCount === '') {
@@ -61,9 +61,7 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
         setInitialAmountPaid(Math.round(newTotal * 0.5));
       }
     } else if (paymentOption === 'Book') {
-      if (initialAmountPaid > newTotal) {
-        setInitialAmountPaid(0);
-      }
+      setInitialAmountPaid(0);
     }
   };
 
@@ -122,7 +120,8 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
         kitCount: Number(kitCount) || 1,
         totalAmount,
         paymentOption,
-        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
+        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : (paymentOption === 'Book' ? 0 : initialAmountPaid),
+        balanceAmount: paymentOption === 'PayFull' ? 0 : (paymentOption === 'Book' ? totalAmount : balanceAmount),
         paymentMode,
         transactionReference: transactionReference.trim() || undefined,
         notes: notes.trim() || undefined
@@ -514,34 +513,86 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
               border: paymentOption === 'Advance' ? '1px solid #FDE68A' : '1px solid #B8D4EE',
               marginBottom: 20
             }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'center' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: paymentOption === 'Advance' ? '#92400E' : '#1D4ED8', textTransform: 'uppercase', marginBottom: 4 }}>
-                    {paymentOption === 'Advance' ? 'Advance Paid (₹) *' : 'Initial Paid (₹)'}
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    className="input-field"
-                    value={initialAmountPaid || ''}
-                    onChange={(e) => {
-                      const clean = e.target.value.replace(/\D/g, '');
-                      setInitialAmountPaid(clean === '' ? 0 : parseInt(clean, 10));
-                    }}
-                    style={{ fontWeight: 800, fontSize: '1rem', background: '#FFFFFF' }}
-                    placeholder="0"
-                  />
-                </div>
-                <div style={{ textAlign: 'right', padding: '8px', background: '#FFFFFF', borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>
-                    Remaining Balance
-                  </span>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
-                    ₹{balanceAmount.toLocaleString('en-IN')}
+              {paymentOption === 'Advance' ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'center' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', marginBottom: 4 }}>
+                      Advance Paid (₹) *
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="input-field"
+                      value={initialAmountPaid || ''}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '');
+                        setInitialAmountPaid(clean === '' ? 0 : parseInt(clean, 10));
+                      }}
+                      style={{ fontWeight: 800, fontSize: '1rem', background: '#FFFFFF' }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div style={{ textAlign: 'right', padding: '8px', background: '#FFFFFF', borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>
+                      Remaining Balance
+                    </span>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
+                      ₹{balanceAmount.toLocaleString('en-IN')}
+                    </div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                      Total: ₹{totalAmount.toLocaleString('en-IN')}
+                    </span>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* Booking: No initial amount field, show balance amount filled */
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 12
+                }}>
+                  <div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      color: '#1D4ED8',
+                      textTransform: 'uppercase',
+                      marginBottom: 2
+                    }}>
+                      <BookmarkCheck size={16} />
+                      <span>Kit Reservation (Zero Advance)</span>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#475569' }}>
+                      No upfront payment collected. Full amount recorded as balance due.
+                    </div>
+                  </div>
+
+                  <div style={{
+                    textAlign: 'right',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#FFFFFF',
+                    border: '1.5px solid #B8D4EE',
+                    minWidth: 130
+                  }}>
+                    <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>
+                      Balance Due
+                    </span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#B91C1C' }}>
+                      ₹{totalAmount.toLocaleString('en-IN')}
+                    </div>
+                    <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
+                      Total: ₹{totalAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

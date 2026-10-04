@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, User, CheckCircle, AlertCircle, RefreshCw, IndianRupee, Clock, Check, Plus, Minus, Layers } from 'lucide-react';
+import { Building2, User, CheckCircle, AlertCircle, RefreshCw, IndianRupee, Clock, Check, Plus, Minus, Layers, BookmarkCheck } from 'lucide-react';
 import { sponsorshipsApi } from '../services/api';
 import type { SponsorshipItem, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
 
@@ -118,9 +118,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
         setInitialAmountPaid(Math.round(newTotal * 0.5));
       }
     } else if (paymentOption === 'Book') {
-      if (initialAmountPaid > newTotal) {
-        setInitialAmountPaid(newTotal);
-      }
+      setInitialAmountPaid(0);
     }
   };
 
@@ -141,7 +139,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
     }
   };
 
-  const balanceAmount = Math.max(0, totalAmount - (initialAmountPaid || 0));
+  const balanceAmount = paymentOption === 'Book' ? totalAmount : Math.max(0, totalAmount - (initialAmountPaid || 0));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,7 +193,8 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
           quantity: itemQuantities[item.itemId] || 1
         })),
         paymentOption,
-        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
+        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : (paymentOption === 'Book' ? 0 : initialAmountPaid),
+        balanceAmount: paymentOption === 'PayFull' ? 0 : (paymentOption === 'Book' ? totalAmount : balanceAmount),
         paymentMode,
         transactionReference: transactionReference.trim() || undefined,
         notes: notes.trim() || undefined
@@ -875,70 +874,122 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             border: paymentOption === 'Advance' ? '1px solid #FDE68A' : '1px solid #B8D4EE',
             borderRadius: 'var(--radius-lg)',
             padding: '14px',
-            marginBottom: 16,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 12,
-            alignItems: 'center'
+            marginBottom: 16
           }}>
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: '#334155',
-                marginBottom: 6
+            {paymentOption === 'Advance' ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: 12,
+                alignItems: 'center'
               }}>
-                {paymentOption === 'Advance' ? 'Advance Paid Now (₹) *' : 'Initial Paid Amount (₹)'}
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                className="input-field"
-                value={initialAmountPaid}
-                onChange={(e) => {
-                  const clean = e.target.value.replace(/\D/g, '');
-                  if (clean === '') {
-                    setInitialAmountPaid(0);
-                  } else {
-                    const parsed = parseInt(clean, 10);
-                    setInitialAmountPaid(Math.min(totalAmount, parsed));
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                placeholder={paymentOption === 'Book' ? '0' : '5000'}
-                style={{
-                  fontWeight: 800,
-                  fontSize: '1.05rem',
-                  color: '#0F172A',
-                  background: '#FFFFFF'
-                }}
-              />
-            </div>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: '#334155',
+                    marginBottom: 6
+                  }}>
+                    Advance Paid Now (₹) *
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="input-field"
+                    value={initialAmountPaid}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '');
+                      if (clean === '') {
+                        setInitialAmountPaid(0);
+                      } else {
+                        const parsed = parseInt(clean, 10);
+                        setInitialAmountPaid(Math.min(totalAmount, parsed));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="5000"
+                    style={{
+                      fontWeight: 800,
+                      fontSize: '1.05rem',
+                      color: '#0F172A',
+                      background: '#FFFFFF'
+                    }}
+                  />
+                </div>
 
-            <div style={{
-              background: '#FFFFFF',
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid #E2E8F0'
-            }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
-                Remaining Balance Due
-              </span>
-              <div style={{ fontSize: '1.2rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
-                ₹{balanceAmount.toLocaleString('en-IN')}
+                <div style={{
+                  background: '#FFFFFF',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid #E2E8F0'
+                }}>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Remaining Balance Due
+                  </span>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
+                    ₹{balanceAmount.toLocaleString('en-IN')}
+                  </div>
+                  <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                    {balanceAmount > 0 ? 'Collectable in follow-up' : 'All cleared'}
+                  </span>
+                </div>
               </div>
-              <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
-                {balanceAmount > 0 ? 'Collectable in follow-up' : 'All cleared'}
-              </span>
-            </div>
+            ) : (
+              /* Booking Option: No initial amount field, show balance amount filled */
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 12
+              }}>
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    color: '#1D4ED8',
+                    textTransform: 'uppercase',
+                    marginBottom: 2
+                  }}>
+                    <BookmarkCheck size={16} />
+                    <span>Sponsorship Booking (Zero Advance)</span>
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#475569' }}>
+                    No upfront payment collected. Total sponsorship value recorded as balance due.
+                  </div>
+                </div>
+
+                <div style={{
+                  background: '#FFFFFF',
+                  padding: '10px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1.5px solid #B8D4EE',
+                  textAlign: 'right',
+                  minWidth: 140
+                }}>
+                  <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>
+                    Balance Amount Due
+                  </span>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#B91C1C' }}>
+                    ₹{totalAmount.toLocaleString('en-IN')}
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                    Total: ₹{totalAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

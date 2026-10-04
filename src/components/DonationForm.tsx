@@ -512,7 +512,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
               Payment Terms & Booking
             </label>
             <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>
-              {paymentOption === 'PayFull' ? 'Full upfront settlement' : paymentOption === 'Advance' ? 'Upfront deposit with balance' : 'Zero or nominal booking deposit'}
+              {paymentOption === 'PayFull' ? 'Full upfront settlement' : paymentOption === 'Advance' ? 'Upfront deposit with balance' : 'Zero advance kit reservation'}
             </span>
           </div>
 
@@ -573,7 +573,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
                 gap: 5,
                 cursor: 'pointer',
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                boxShadow: paymentOption === 'Advance' ? '0 0 14px rgba(217, 119, 6, 0.35)' : 'none',
+                boxShadow: paymentOption === 'Advance' ? '0 0 14px rgba(217, 119, 6, 0.3)' : 'none',
                 position: 'relative'
               }}
             >
@@ -595,7 +595,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
               </span>
             </button>
 
-            {/* 3. Book Card */}
+            {/* 3. Booking Card */}
             <button
               type="button"
               id="btn-kit-book"
@@ -612,7 +612,7 @@ export const DonationForm: React.FC<DonationFormProps> = ({
                 gap: 5,
                 cursor: 'pointer',
                 transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                boxShadow: paymentOption === 'Book' ? '0 0 14px rgba(44, 130, 201, 0.35)' : 'none',
+                boxShadow: paymentOption === 'Book' ? '0 0 14px rgba(44, 130, 201, 0.3)' : 'none',
                 position: 'relative'
               }}
             >
@@ -646,59 +646,109 @@ export const DonationForm: React.FC<DonationFormProps> = ({
             boxShadow: paymentOption === 'Advance' ? '0 2px 10px rgba(253, 230, 138, 0.3)' : '0 2px 10px rgba(184, 212, 238, 0.3)',
             marginBottom: 20
           }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'center' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.74rem',
-                  fontWeight: 800,
-                  color: paymentOption === 'Advance' ? '#92400E' : '#1D4ED8',
-                  textTransform: 'uppercase',
-                  marginBottom: 4
-                }}>
-                  {paymentOption === 'Advance' ? 'Advance Paid Now (₹) *' : 'Initial Paid Amount (₹)'}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  className="input-field"
-                  value={initialAmountPaid || ''}
-                  onChange={(e) => {
-                    const clean = e.target.value.replace(/\D/g, '');
-                    setInitialAmountPaid(clean === '' ? 0 : parseInt(clean, 10));
-                  }}
-                  onKeyDown={(e) => {
-                    if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
-                  }}
-                  style={{
+            {paymentOption === 'Advance' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'center' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.74rem',
                     fontWeight: 800,
-                    fontSize: '1.05rem',
-                    color: paymentOption === 'Advance' ? '#92400E' : '#1D4ED8',
-                    background: '#FFFFFF'
-                  }}
-                  placeholder="0"
-                />
-              </div>
-
-              <div style={{
-                textAlign: 'right',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-md)',
-                background: '#FFFFFF',
-                border: '1px solid rgba(0,0,0,0.06)'
-              }}>
-                <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>
-                  Remaining Balance
-                </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
-                  ₹{balanceAmount.toLocaleString('en-IN')}
+                    color: '#92400E',
+                    textTransform: 'uppercase',
+                    marginBottom: 4
+                  }}>
+                    Advance Paid Now (₹) *
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="input-field"
+                    value={initialAmountPaid || ''}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/\D/g, '');
+                      setInitialAmountPaid(clean === '' ? 0 : parseInt(clean, 10));
+                    }}
+                    onKeyDown={(e) => {
+                      if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+                    }}
+                    style={{
+                      fontWeight: 800,
+                      fontSize: '1.05rem',
+                      color: '#92400E',
+                      background: '#FFFFFF'
+                    }}
+                    placeholder="0"
+                  />
                 </div>
-                <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                  Total: ₹{totalAmount.toLocaleString('en-IN')}
-                </span>
+
+                <div style={{
+                  textAlign: 'right',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: '#FFFFFF',
+                  border: '1px solid rgba(0,0,0,0.06)'
+                }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>
+                    Remaining Balance
+                  </span>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
+                    ₹{balanceAmount.toLocaleString('en-IN')}
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                    Total: ₹{totalAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Booking Option: No initial paid amount field! Full balance amount filled */
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 12
+              }}>
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: '0.78rem',
+                    fontWeight: 800,
+                    color: '#1D4ED8',
+                    textTransform: 'uppercase',
+                    marginBottom: 3
+                  }}>
+                    <BookmarkCheck size={16} />
+                    <span>Booking Reservation (Zero Advance)</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 500 }}>
+                    No upfront payment collected. Total donation value will be recorded as balance due.
+                  </div>
+                </div>
+
+                <div style={{
+                  textAlign: 'right',
+                  padding: '8px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: '#FFFFFF',
+                  border: '1.5px solid #B8D4EE',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  minWidth: 150
+                }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>
+                    Balance Amount Due
+                  </span>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#B91C1C', lineHeight: 1.1 }}>
+                    ₹{totalAmount.toLocaleString('en-IN')}
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                    Total: ₹{totalAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
