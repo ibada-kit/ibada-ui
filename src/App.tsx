@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User, Donation, SponsorshipRecord } from './types';
-import { getCurrentUser, setCurrentUser, getKitUnitPrice, setKitUnitPrice, settingsApi, donationsApi, sponsorshipsApi, type KitPriceInfo } from './services/api';
+import { getCurrentUser, setCurrentUser, getKitUnitPrice, setKitUnitPrice, settingsApi, type KitPriceInfo } from './services/api';
 import { Navbar } from './components/Navbar';
 import { AuthScreen } from './pages/AuthScreen';
 import { VolunteerDashboard } from './pages/VolunteerDashboard';
@@ -13,6 +13,7 @@ import { ReceiptModal } from './components/ReceiptModal';
 import { SponsorshipReceiptModal } from './components/SponsorshipReceiptModal';
 import { CollectBalanceModal } from './components/CollectBalanceModal';
 import { DonorPosterGenerator } from './components/DonorPosterGenerator';
+import { PublicReceiptView } from './pages/PublicReceiptView';
 
 export const App: React.FC = () => {
   const [currentUser, setCurUser] = useState<User | null>(() => getCurrentUser());
@@ -20,6 +21,11 @@ export const App: React.FC = () => {
     const path = window.location.pathname.toLowerCase();
     const params = new URLSearchParams(window.location.search);
     return path.startsWith('/poster') || params.get('view') === 'poster' || params.has('poster');
+  });
+  const [publicReceiptToken, setPublicReceiptToken] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const receiptParam = params.get('receipt') || params.get('token');
+    return receiptParam && receiptParam !== 'sample' && receiptParam !== 'sponsor' ? receiptParam.trim() : null;
   });
   const [activeAdminView, setActiveAdminView] = useState<'home' | 'admin'>(() => {
     const user = getCurrentUser();
@@ -118,29 +124,12 @@ export const App: React.FC = () => {
       });
     }
 
-    // Load Live Verified Receipt Token from URL (e.g. from WhatsApp Link)
-    const receiptParam = params.get('receipt') || params.get('token');
-    if (receiptParam && receiptParam !== 'sample' && receiptParam !== 'sponsor') {
-      const cleanToken = receiptParam.trim();
-      if (cleanToken.toUpperCase().startsWith('SPON-')) {
-        sponsorshipsApi.getSponsorshipByToken(cleanToken)
-          .then((spon) => {
-            if (spon) setActiveSponsorshipReceipt(spon);
-          })
-          .catch(() => {});
-      } else {
-        donationsApi.getPublicReceipt(cleanToken)
-          .then((don: Donation | null) => {
-            if (don) setActiveReceipt(don);
-          })
-          .catch(() => {});
-      }
-    }
-
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
       const p = new URLSearchParams(window.location.search);
       setIsPosterView(path.startsWith('/poster') || p.get('view') === 'poster' || p.has('poster'));
+      const r = p.get('receipt') || p.get('token');
+      setPublicReceiptToken(r && r !== 'sample' && r !== 'sponsor' ? r.trim() : null);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -199,6 +188,11 @@ export const App: React.FC = () => {
   // Public Donor Poster Generator view (no auth required)
   if (isPosterView) {
     return <DonorPosterGenerator />;
+  }
+
+  // Public Verified Digital Receipt view (strictly one-directional, no app interfaces, no auth required)
+  if (publicReceiptToken) {
+    return <PublicReceiptView token={publicReceiptToken} />;
   }
 
   return (
