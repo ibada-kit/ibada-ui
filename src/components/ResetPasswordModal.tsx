@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Key, RefreshCw, Copy, Check, Share2, Eye, EyeOff, X, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { usersApi, generateRandomPassword } from '../services/api';
 
@@ -29,6 +29,16 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   const [resultPassword, setResultPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Prevent background scroll and viewport displacement on mobile while modal is open
+  useEffect(() => {
+    if (!isOpen || !targetUser) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen, targetUser]);
 
   if (!isOpen || !targetUser) return null;
 
@@ -96,30 +106,15 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   );
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.65)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px',
-      zIndex: 1000
-    }}>
-      <div style={{
-        background: '#FFFFFF',
-        borderRadius: 'var(--radius-xl)',
-        padding: '24px clamp(16px, 4vw, 24px)',
-        maxWidth: 480,
-        width: '100%',
-        maxHeight: '90dvh',
-        overflowY: 'auto',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-      }}>
+    <div className="modal-overlay" onClick={handleClose} style={{ zIndex: 1100 }}>
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: 480,
+          padding: '24px clamp(16px, 4vw, 24px)'
+        }}
+      >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -364,6 +359,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
                 placeholder="Enter new password (min 4 chars)"
                 value={customPassword}
                 onChange={(e) => setCustomPassword(e.target.value)}
+                autoComplete="new-password"
               />
               <button
                 type="button"

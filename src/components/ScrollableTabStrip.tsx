@@ -29,24 +29,33 @@ export const ScrollableTabStrip: React.FC<ScrollableTabStripProps> = ({
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6);
   }, []);
 
+  // Center active tab horizontally ONLY within this tab strip container.
+  // NEVER use activeEl.scrollIntoView(), which forcibly scrolls all ancestor containers and window to the top.
   useEffect(() => {
-    updateScrollState();
     const el = scrollRef.current;
     if (!el) return;
 
-    // Center active tab if found
     const activeEl = el.querySelector('.active') as HTMLElement;
     if (activeEl) {
-      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      const containerRect = el.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      const targetScrollLeft = el.scrollLeft + (activeRect.left - containerRect.left) - (el.clientWidth / 2) + (activeRect.width / 2);
+      el.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: 'smooth' });
     }
+  }, [activeKey]);
 
+  // Keep scroll indicators updated on scroll and window resize
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
     el.addEventListener('scroll', updateScrollState, { passive: true });
     window.addEventListener('resize', updateScrollState);
     return () => {
       el.removeEventListener('scroll', updateScrollState);
       window.removeEventListener('resize', updateScrollState);
     };
-  }, [children, activeKey, updateScrollState]);
+  }, [updateScrollState]);
 
   const handleScroll = (direction: 'left' | 'right') => {
     const el = scrollRef.current;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Building2 } from 'lucide-react';
 import type { SponsorshipRecord } from '../types';
 import { OfficialSponsorshipSlip } from './OfficialSponsorshipSlip';
@@ -16,6 +16,13 @@ export const SponsorshipReceiptModal: React.FC<SponsorshipReceiptModalProps> = (
   onOpenPayBalance,
   onOpenPoster
 }) => {
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
       <div

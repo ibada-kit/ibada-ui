@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Donation, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
 import { donationsApi, getKitUnitPrice } from '../services/api';
 import confetti from 'canvas-confetti';
@@ -24,6 +24,15 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
   const [kitCount, setKitCount] = useState<number | ''>(2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Prevent background scroll and displacement on mobile while modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   // Payment Terms
   const [paymentOption, setPaymentOption] = useState<PaymentOption>('PayFull');

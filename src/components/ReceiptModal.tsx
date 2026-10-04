@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { Donation } from '../types';
 import { X, ShieldCheck } from 'lucide-react';
 import { OfficialReceiptSlip } from './OfficialReceiptSlip';
@@ -11,6 +11,15 @@ interface ReceiptModalProps {
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({ donation, onClose, onOpenPayBalance, onOpenPoster }) => {
+  useEffect(() => {
+    if (!donation) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [donation]);
+
   if (!donation) return null;
 
   return (

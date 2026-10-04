@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, CreditCard, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { sponsorshipsApi, donationsApi } from '../services/api';
 import type { SponsorshipRecord, Donation, PaymentMode } from '../types';
@@ -40,6 +40,15 @@ export const CollectBalanceModal: React.FC<CollectBalanceModalProps> = ({
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Prevent background scroll and displacement on mobile while modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
