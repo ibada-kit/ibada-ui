@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import type { Donation } from '../types';
 import { Download, Share2, Camera, CreditCard } from 'lucide-react';
+import { formatKitBreakdown } from '../utils/kitFormatters';
 
 interface OfficialReceiptSlipProps {
   donation: Donation;
@@ -154,10 +155,17 @@ export const OfficialReceiptSlip: React.FC<OfficialReceiptSlipProps> = ({
       const posterUrl = `${window.location.origin}/?poster=1&donor=1&token=${encodeURIComponent(donation.receiptToken)}&name=${encodeURIComponent(donation.donorName)}&type=kit&kits=${donation.kitCount}&amount=${donation.totalAmount}&ward=${donation.wardNumber || ''}&panchayath=${encodeURIComponent(donation.panchayath || 'Madavoor')}${donation.serialNumber ? `&serial=${donation.serialNumber}` : ''}`;
       const receiptViewUrl = `${window.location.origin}/?receipt=${encodeURIComponent(donation.receiptToken)}`;
 
+      const kitDescriptionText = formatKitBreakdown(
+        donation.kitCount,
+        donation.generalKitCount,
+        donation.studentKitCount,
+        donation.kitStyle
+      );
+
       const messageText =
         `*Ibada Kit Challenge — Official Receipt Slip* 🤲\n\n` +
         `Assalamu Alaikum *${donation.donorName}*,\n` +
-        `Here is your official donation receipt for *${donation.kitCount} ${donation.kitCount === 1 ? 'Kit' : 'Kits'}* (Total: ₹${formattedAmount}).\n\n` +
+        `Here is your official donation receipt for *${kitDescriptionText}* (Total: ₹${formattedAmount}).\n\n` +
         `• *Receipt Token:* ${donation.receiptToken}\n` +
         (donation.serialNumber ? `• *Serial No:* #${donation.serialNumber}\n` : '') +
         (isPartiallyPaid

@@ -28,6 +28,7 @@ import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboard
 import { SponsoredItemsSummaryView } from '../components/SponsoredItemsSummaryView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV, exportDonationsToCSV } from '../utils/exportCsv';
+import { formatKitBreakdownWithTotal } from '../utils/kitFormatters';
 
 interface CoordinatorDashboardProps {
   user: User;
@@ -1134,7 +1135,7 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
                           {tx.serialNumber && (
                             <span> • Serial: <span style={{ color: '#008A2E', fontWeight: 700 }}>#{tx.serialNumber}</span></span>
                           )}
-                          {' '}• {tx.kitCount} {tx.kitCount === 1 ? 'Kit' : 'Kits'}
+                          {' '}• {formatKitBreakdownWithTotal(tx.kitCount, tx.generalKitCount, tx.studentKitCount, tx.kitStyle)}
                         </div>
                       </div>
 

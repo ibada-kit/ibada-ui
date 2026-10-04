@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Donation, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
 import { donationsApi, getKitUnitPrice } from '../services/api';
 import confetti from 'canvas-confetti';
-import { X, Heart, RefreshCw, AlertCircle, Sparkles, Building2, CheckCircle, Clock, BookmarkCheck } from 'lucide-react';
+import { X, Heart, RefreshCw, AlertCircle, Sparkles, Building2, CheckCircle, Clock, BookmarkCheck, Package, GraduationCap, Plus, Minus } from 'lucide-react';
 import { SponsorshipForm } from './SponsorshipForm';
 
 interface RecordDonationModalProps {
@@ -21,7 +21,8 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
   const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>('kit');
   const [donorName, setDonorName] = useState('');
   const [whatsAppNumber, setWhatsAppNumber] = useState('');
-  const [kitCount, setKitCount] = useState<number | ''>(2);
+  const [generalKitCount, setGeneralKitCount] = useState<number>(1);
+  const [studentKitCount, setStudentKitCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,24 +37,23 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
 
   // Payment Terms
   const [paymentOption, setPaymentOption] = useState<PaymentOption>('PayFull');
-  const [initialAmountPaid, setInitialAmountPaid] = useState<number>(2 * kitPrice);
+  const [initialAmountPaid, setInitialAmountPaid] = useState<number>(1 * kitPrice);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
   const [transactionReference, setTransactionReference] = useState('');
   const [notes, setNotes] = useState('');
   const [showExtraDetails, setShowExtraDetails] = useState(false);
 
-  const numericKits = typeof kitCount === 'number' && kitCount > 0 ? kitCount : 0;
-  const totalAmount = numericKits * kitPrice;
+  const totalKits = (Number(generalKitCount) || 0) + (Number(studentKitCount) || 0);
+  const totalAmount = totalKits * kitPrice;
   const balanceAmount = Math.max(0, totalAmount - (initialAmountPaid || 0));
 
-  const handleKitCountChange = (newCount: number | '') => {
-    if (newCount === '') {
-      setKitCount('');
-      return;
-    }
-    const clamped = Math.max(1, Math.min(1000, newCount));
-    setKitCount(clamped);
-    const newTotal = clamped * kitPrice;
+  const handleUpdateKits = (newGeneral: number, newStudent: number) => {
+    const clampedGeneral = Math.max(0, Math.min(1000, Math.floor(newGeneral || 0)));
+    const clampedStudent = Math.max(0, Math.min(1000, Math.floor(newStudent || 0)));
+    setGeneralKitCount(clampedGeneral);
+    setStudentKitCount(clampedStudent);
+
+    const newTotal = (clampedGeneral + clampedStudent) * kitPrice;
     if (paymentOption === 'PayFull') {
       setInitialAmountPaid(newTotal);
     } else if (paymentOption === 'Advance') {
@@ -93,8 +93,8 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
       return;
     }
 
-    if (!kitCount || Number(kitCount) < 1) {
-      setError('Donation must include at least 1 kit.');
+    if (totalKits < 1) {
+      setError('Donation must include at least 1 kit (General or Student Ibada Kit).');
       return;
     }
 
@@ -116,10 +116,17 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
 
     try {
       setLoading(true);
+      const kitStyle = (generalKitCount > 0 && studentKitCount > 0)
+        ? 'Mixed'
+        : (studentKitCount > 0 ? 'Student' : 'General');
+
       const newDonation = await donationsApi.recordDonation({
         donorName: donorName.trim(),
         whatsAppNumber: `+91 ${cleanPhone.slice(-10)}`,
-        kitCount: Number(kitCount) || 1,
+        kitCount: totalKits,
+        generalKitCount,
+        studentKitCount,
+        kitStyle,
         totalAmount,
         paymentOption,
         initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : initialAmountPaid,
@@ -338,64 +345,252 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
             </div>
           </div>
 
-          {/* Kit Quantity Selector */}
+          {/* Kit Type & Quantity Selector */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              Select Number of Kits
-            </label>
-            
-            {/* Quick preset chips */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              {[1, 2, 5, 10, 20].map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => handleKitCountChange(num)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 4px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: kitCount === num ? '1px solid #42B06F' : '1px solid var(--border-subtle)',
-                    background: kitCount === num ? '#EBF7F0' : '#FFFFFF',
-                    color: kitCount === num ? '#1E6B3E' : 'var(--text-primary)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {num} {num === 1 ? 'Kit' : 'Kits'}
-                </button>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#334155', margin: 0 }}>
+                Select Ibada Kits *
+              </label>
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: totalKits > 0 ? '#008A2E' : '#94A3B8',
+                background: totalKits > 0 ? '#EBF7EE' : '#F1F5F9',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-full)',
+                border: `1px solid ${totalKits > 0 ? '#A5D6B8' : '#CBD5E1'}`
+              }}>
+                Rate: ₹{kitPrice.toLocaleString('en-IN')} each
+              </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input
-                id="input-kit-count"
-                type="number"
-                min="1"
-                max="500"
-                className="input-field"
-                value={kitCount}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === '') {
-                    handleKitCountChange('');
-                  } else {
-                    const parsed = parseInt(val, 10);
-                    handleKitCountChange(isNaN(parsed) ? '' : parsed);
-                  }
-                }}
-                onBlur={() => {
-                  if (!kitCount || Number(kitCount) < 1) {
-                    handleKitCountChange(1);
-                  }
-                }}
-                placeholder="Custom Kit Count"
-              />
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                @ ₹{kitPrice.toLocaleString('en-IN')} each
-              </span>
+            {/* Two Kit Cards: General Ibada Kit & Student Ibada Kit */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10 }}>
+              {/* General Ibada Kit Card */}
+              <div style={{
+                background: generalKitCount > 0 ? '#F0FDF4' : '#FFFFFF',
+                border: generalKitCount > 0 ? '2px solid #22C55E' : '1.5px solid #E2E8F0',
+                borderRadius: 'var(--radius-lg)',
+                padding: '12px 14px',
+                transition: 'all 0.15s ease',
+                boxShadow: generalKitCount > 0 ? '0 2px 8px rgba(34, 197, 94, 0.12)' : 'none'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: generalKitCount > 0 ? '#DCFCE7' : '#F1F5F9',
+                      color: generalKitCount > 0 ? '#16A34A' : '#64748B',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Package size={17} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: generalKitCount > 0 ? '#0F172A' : '#334155' }}>
+                        General Ibada Kit
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                        Family & community relief
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#008A2E' }}>
+                    ₹{kitPrice.toLocaleString('en-IN')} / kit
+                  </span>
+
+                  {/* Stepper Counter */}
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    border: generalKitCount > 0 ? '1.5px solid #22C55E' : '1px solid #CBD5E1',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#FFFFFF',
+                    overflow: 'hidden'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateKits(generalKitCount - 1, studentKitCount)}
+                      disabled={generalKitCount <= 0}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        border: 'none',
+                        background: generalKitCount > 0 ? '#F1F5F9' : '#F8FAFC',
+                        color: generalKitCount > 0 ? '#0F172A' : '#CBD5E1',
+                        cursor: generalKitCount > 0 ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Decrease General Kits"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      value={generalKitCount}
+                      onChange={(e) => {
+                        const parsed = parseInt(e.target.value, 10);
+                        handleUpdateKits(isNaN(parsed) ? 0 : parsed, studentKitCount);
+                      }}
+                      style={{
+                        width: 44,
+                        height: 30,
+                        border: 'none',
+                        borderLeft: '1px solid #E2E8F0',
+                        borderRight: '1px solid #E2E8F0',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        fontSize: '0.86rem',
+                        color: '#0F172A',
+                        outline: 'none',
+                        MozAppearance: 'textfield'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateKits(generalKitCount + 1, studentKitCount)}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        border: 'none',
+                        background: '#F1F5F9',
+                        color: '#0F172A',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Increase General Kits"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Student Ibada Kit Card */}
+              <div style={{
+                background: studentKitCount > 0 ? '#F0F9FF' : '#FFFFFF',
+                border: studentKitCount > 0 ? '2px solid #0284C7' : '1.5px solid #E2E8F0',
+                borderRadius: 'var(--radius-lg)',
+                padding: '12px 14px',
+                transition: 'all 0.15s ease',
+                boxShadow: studentKitCount > 0 ? '0 2px 8px rgba(2, 132, 199, 0.12)' : 'none'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: studentKitCount > 0 ? '#E0F2FE' : '#F1F5F9',
+                      color: studentKitCount > 0 ? '#0284C7' : '#64748B',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <GraduationCap size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: studentKitCount > 0 ? '#0F172A' : '#334155' }}>
+                        Student Ibada Kit
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                        Student & education kit
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0284C7' }}>
+                    ₹{kitPrice.toLocaleString('en-IN')} / kit
+                  </span>
+
+                  {/* Stepper Counter */}
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    border: studentKitCount > 0 ? '1.5px solid #0284C7' : '1px solid #CBD5E1',
+                    borderRadius: 'var(--radius-md)',
+                    background: '#FFFFFF',
+                    overflow: 'hidden'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateKits(generalKitCount, studentKitCount - 1)}
+                      disabled={studentKitCount <= 0}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        border: 'none',
+                        background: studentKitCount > 0 ? '#F1F5F9' : '#F8FAFC',
+                        color: studentKitCount > 0 ? '#0F172A' : '#CBD5E1',
+                        cursor: studentKitCount > 0 ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Decrease Student Kits"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      value={studentKitCount}
+                      onChange={(e) => {
+                        const parsed = parseInt(e.target.value, 10);
+                        handleUpdateKits(generalKitCount, isNaN(parsed) ? 0 : parsed);
+                      }}
+                      style={{
+                        width: 44,
+                        height: 30,
+                        border: 'none',
+                        borderLeft: '1px solid #E2E8F0',
+                        borderRight: '1px solid #E2E8F0',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        fontSize: '0.86rem',
+                        color: '#0F172A',
+                        outline: 'none',
+                        MozAppearance: 'textfield'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateKits(generalKitCount, studentKitCount + 1)}
+                      style={{
+                        width: 30,
+                        height: 30,
+                        border: 'none',
+                        background: '#F1F5F9',
+                        color: '#0F172A',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Increase Student Kits"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -419,8 +614,13 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <span className="badge badge-emerald">
-                {numericKits || 1} Relief {(numericKits || 1) === 1 ? 'Kit' : 'Kits'}
+              <span className="badge badge-emerald" style={{ fontSize: '0.78rem' }}>
+                {totalKits} {totalKits === 1 ? 'Kit' : 'Kits'}{' '}
+                {generalKitCount > 0 && studentKitCount > 0
+                  ? `(${generalKitCount} Gen + ${studentKitCount} Stu)`
+                  : studentKitCount > 0
+                    ? `(Student Kit)`
+                    : `(General Kit)`}
               </span>
             </div>
           </div>

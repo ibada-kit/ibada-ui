@@ -116,7 +116,7 @@ try {
   localStorage.removeItem('charity_kit_price');
   localStorage.removeItem('charity_donations');
   localStorage.removeItem('charity_sponsorships');
-} catch {}
+} catch { }
 
 // Helper to decode claims from JWT token
 export function parseJwt(token: string): any {
@@ -359,7 +359,7 @@ export const donationsApi = {
             const donData = await donRes.json();
             if (Array.isArray(donData)) liveDonations = donData;
           }
-        } catch {}
+        } catch { }
 
         liveDonations.forEach(d => {
           const rawDate = d.timestamp || d.transactionDate || d.TransactionDate;
@@ -531,6 +531,9 @@ export const donationsApi = {
               donorName: d.donorName,
               whatsAppNumber: d.whatsAppNumber || '',
               kitCount: d.kitCount,
+              generalKitCount: d.generalKitCount ?? d.GeneralKitCount,
+              studentKitCount: d.studentKitCount ?? d.StudentKitCount,
+              kitStyle: d.kitStyle || d.KitStyle || 'General',
               kitUnitRate: (d.kitCount && d.totalAmount) ? Math.round(d.totalAmount / d.kitCount) : getKitUnitPrice(),
               totalAmount: d.totalAmount,
               panchayath: d.panchayath || 'Madavoor',
@@ -565,7 +568,10 @@ export const donationsApi = {
     const token = currentUser?.token;
     const cleanPhone = request.whatsAppNumber.replace(/\D/g, '');
     const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
-    const effectiveTotal = request.totalAmount !== undefined ? Number(request.totalAmount) : (Number(request.kitCount) * getKitUnitPrice());
+    const totalKits = (request.generalKitCount || 0) + (request.studentKitCount || 0) > 0
+      ? (request.generalKitCount || 0) + (request.studentKitCount || 0)
+      : Number(request.kitCount) || 1;
+    const effectiveTotal = request.totalAmount !== undefined ? Number(request.totalAmount) : (totalKits * getKitUnitPrice());
 
     const res = await fetch(`${API_BASE_URL}/Donations`, {
       method: 'POST',
@@ -573,7 +579,10 @@ export const donationsApi = {
       body: JSON.stringify({
         donorName: request.donorName.trim(),
         whatsAppNumber: formattedPhone,
-        kitCount: Number(request.kitCount),
+        kitCount: totalKits,
+        generalKitCount: request.generalKitCount,
+        studentKitCount: request.studentKitCount,
+        kitStyle: request.kitStyle,
         totalAmount: effectiveTotal,
         paymentOption: request.paymentOption || 'PayFull',
         initialAmountPaid: request.initialAmountPaid,
@@ -597,7 +606,10 @@ export const donationsApi = {
       serialNumber: data.serialNumber || data.SerialNumber,
       donorName: data.donorName,
       whatsAppNumber: formattedPhone,
-      kitCount: data.kitCount,
+      kitCount: data.kitCount || totalKits,
+      generalKitCount: data.generalKitCount ?? request.generalKitCount,
+      studentKitCount: data.studentKitCount ?? request.studentKitCount,
+      kitStyle: data.kitStyle || request.kitStyle || 'General',
       kitUnitRate: effectiveKitPrice,
       totalAmount: data.totalAmount || effectiveTotal,
       panchayath: data.panchayath || currentUser?.panchayath || 'Madavoor',
@@ -637,6 +649,9 @@ export const donationsApi = {
           donorName: d.donorName || d.DonorName,
           whatsAppNumber: d.whatsAppNumber || d.WhatsAppNumber || '',
           kitCount: rawKitCount,
+          generalKitCount: d.generalKitCount ?? d.GeneralKitCount,
+          studentKitCount: d.studentKitCount ?? d.StudentKitCount,
+          kitStyle: d.kitStyle || d.KitStyle || 'General',
           kitUnitRate: (rawKitCount > 0 && rawTotalAmount > 0) ? Math.round(rawTotalAmount / rawKitCount) : getKitUnitPrice(),
           totalAmount: rawTotalAmount,
           panchayath: d.panchayath || d.partitionKey || d.PartitionKey || 'Madavoor',
@@ -695,6 +710,9 @@ export const donationsApi = {
       donorName: d.donorName,
       whatsAppNumber: d.whatsAppNumber || '',
       kitCount: d.kitCount,
+      generalKitCount: d.generalKitCount ?? d.GeneralKitCount,
+      studentKitCount: d.studentKitCount ?? d.StudentKitCount,
+      kitStyle: d.kitStyle || d.KitStyle || 'General',
       kitUnitRate: (d.kitCount && d.totalAmount) ? Math.round(d.totalAmount / d.kitCount) : getKitUnitPrice(),
       totalAmount: d.totalAmount,
       panchayath: d.panchayath || 'Madavoor',
@@ -775,7 +793,7 @@ export const usersApi = {
               newPassword: putData.newPassword || finalPassword
             };
           }
-        } catch {}
+        } catch { }
       }
       throw err;
     }
@@ -986,8 +1004,8 @@ export const analyticsApi = {
     const collectedAmount = Number(data.collectedAmount ?? data.CollectedAmount ?? 0);
     const targetAmount = Number(data.targetAmount ?? data.TargetAmount ?? (targetKits * getKitUnitPrice()));
     const rawPct = data.achievementPercentage ?? data.AchievementPercentage;
-    const achievementPercentage = rawPct !== undefined 
-      ? Number(rawPct) 
+    const achievementPercentage = rawPct !== undefined
+      ? Number(rawPct)
       : (targetKits > 0 ? Math.round((collectedKits / targetKits) * 100) : 0);
 
     return {
@@ -1092,7 +1110,7 @@ export const sponsorshipsApi = {
     const token = getCurrentUser()?.token;
     if (token) {
       try {
-        const url = status 
+        const url = status
           ? `${API_BASE_URL}/Sponsorships?status=${encodeURIComponent(status)}`
           : `${API_BASE_URL}/Sponsorships`;
         const res = await fetch(url, {

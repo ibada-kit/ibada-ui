@@ -42,6 +42,8 @@ export interface LoginResponse {
   expiresAt: string;
 }
 
+export type KitStyle = 'General' | 'Student' | 'Mixed';
+
 export interface Donation {
   donationId: string;
   receiptToken: string;
@@ -49,6 +51,9 @@ export interface Donation {
   donorName: string;
   whatsAppNumber: string;
   kitCount: number;
+  generalKitCount?: number;
+  studentKitCount?: number;
+  kitStyle?: KitStyle | string;
   kitUnitRate: number;
   totalAmount: number;
   panchayath: string;
@@ -72,6 +77,9 @@ export interface CreateDonationRequest {
   donorName: string;
   whatsAppNumber: string;
   kitCount: number;
+  generalKitCount?: number;
+  studentKitCount?: number;
+  kitStyle?: KitStyle | string;
   totalAmount?: number;
   paymentOption?: PaymentOption;
   initialAmountPaid?: number;

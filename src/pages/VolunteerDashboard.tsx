@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
+import { formatKitBreakdownWithTotal } from '../utils/kitFormatters';
 
 interface VolunteerDashboardProps {
   user: User;
@@ -493,7 +494,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
                           {item.serialNumber && (
                             <span> • Serial: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>#{item.serialNumber}</span></span>
                           )}
-                          {' '}• {item.kitCount} {item.kitCount === 1 ? 'Kit' : 'Kits'}
+                          {' '}• {formatKitBreakdownWithTotal(item.kitCount, item.generalKitCount, item.studentKitCount, item.kitStyle)}
                           {item.whatsAppNumber && ` • ${item.whatsAppNumber}`}
                         </div>
                       </div>

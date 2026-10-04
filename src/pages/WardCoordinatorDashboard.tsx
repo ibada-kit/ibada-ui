@@ -33,6 +33,7 @@ import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPas
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { exportSponsorshipsToCSV, exportDonationsToCSV } from '../utils/exportCsv';
+import { formatKitBreakdownWithTotal } from '../utils/kitFormatters';
 
 interface WardCoordinatorDashboardProps {
   user: User;
@@ -1407,7 +1408,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
                           {tx.serialNumber && (
                             <span> • Serial: <span style={{ color: '#008A2E', fontWeight: 700 }}>#{tx.serialNumber}</span></span>
                           )}
-                          {' '}• {tx.kitCount} {tx.kitCount === 1 ? 'Kit' : 'Kits'}
+                          {' '}• {formatKitBreakdownWithTotal(tx.kitCount, tx.generalKitCount, tx.studentKitCount, tx.kitStyle)}
                         </div>
                       </div>
 
