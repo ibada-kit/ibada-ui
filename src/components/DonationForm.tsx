@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2, Share2, Clock, BookmarkCheck, GraduationCap, Plus, Minus } from 'lucide-react';
+import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2, Clock, BookmarkCheck, GraduationCap, Plus, Minus } from 'lucide-react';
 import { donationsApi, getKitUnitPrice } from '../services/api';
 import type { Donation, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
 import { SponsorshipForm } from './SponsorshipForm';
@@ -33,7 +33,6 @@ export const DonationForm: React.FC<DonationFormProps> = ({
   const [studentKitCount, setStudentKitCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recordedDonation, setRecordedDonation] = useState<Donation | null>(null);
 
   // Payment Terms & Booking State (same as Sponsorship)
   const [paymentOption, setPaymentOption] = useState<PaymentOption>('PayFull');
@@ -79,7 +78,6 @@ export const DonationForm: React.FC<DonationFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setRecordedDonation(null);
 
     const cleanPhone = whatsAppNumber.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
@@ -135,7 +133,6 @@ export const DonationForm: React.FC<DonationFormProps> = ({
         notes: notes.trim() || undefined
       });
 
-      setRecordedDonation(donation);
       setActiveDonationReceipt(donation);
       if (onSuccess) onSuccess(donation);
 
@@ -291,55 +288,6 @@ export const DonationForm: React.FC<DonationFormProps> = ({
             }}>
               <AlertCircle size={18} style={{ flexShrink: 0 }} />
               <span>{error}</span>
-            </div>
-          )}
-
-          {/* Success Alert */}
-          {recordedDonation && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 12,
-              padding: '14px 16px',
-              borderRadius: 'var(--radius-md)',
-              background: '#EBF7EE',
-              border: '1px solid #A5D6B8',
-              marginBottom: 18
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <CheckCircle size={20} style={{ color: '#008A2E', flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <span style={{ fontWeight: 800, color: '#008A2E' }}>Donation Registered Successfully!</span>
-                  <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: 3 }}>
-                    Receipt Token: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#008A2E' }}>{recordedDonation.receiptToken}</span>
-                    {recordedDonation.serialNumber && (
-                      <span> • Lucky Draw Serial: <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#008A2E' }}>#{recordedDonation.serialNumber}</span></span>
-                    )}
-                    {' '}• Automated WhatsApp receipt triggered.
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveDonationReceipt(recordedDonation)}
-                className="btn-primary"
-                style={{
-                  padding: '8px 14px',
-                  fontSize: '0.8rem',
-                  background: '#25D366',
-                  borderColor: '#20BA5C',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontWeight: 800,
-                  cursor: 'pointer'
-                }}
-              >
-                <Share2 size={14} />
-                <span>Share Receipt</span>
-              </button>
             </div>
           )}
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, User, CheckCircle, AlertCircle, RefreshCw, IndianRupee, Clock, Check, Plus, Minus, Layers, BookmarkCheck } from 'lucide-react';
+import { Building2, User, CheckCircle, AlertCircle, RefreshCw, IndianRupee, Clock, Check, Plus, Minus, Layers, BookmarkCheck, Package, Banknote } from 'lucide-react';
 import { sponsorshipsApi } from '../services/api';
-import type { SponsorshipItem, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
+import type { SponsorshipItem, SponsorshipRecord, PaymentOption, PaymentMode, CreateSponsorshipPayload } from '../types';
 
 const DEFAULT_CATALOG_ITEMS: SponsorshipItem[] = [
   {
@@ -49,6 +49,11 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   onCancel,
   hideHeader = false
 }) => {
+  // Scenario 1: Sponsorship Type Toggle (Cash vs. Kit)
+  // Default State: 'cash' based on most common lump-sum donation use case
+  const [sponsorshipType, setSponsorshipType] = useState<'cash' | 'kit'>('cash');
+  const [cashAmount, setCashAmount] = useState<number | ''>(5000);
+
   // Catalog Packages (Loaded live from server with local defaults fallback)
   const [packages, setPackages] = useState<SponsorshipItem[]>([]);
   // Item Quantities Map: itemId -> quantity
@@ -59,7 +64,7 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   const [contactPerson, setContactPerson] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [paymentOption, setPaymentOption] = useState<PaymentOption>('PayFull');
-  const [initialAmountPaid, setInitialAmountPaid] = useState<number>(0);
+  const [initialAmountPaid, setInitialAmountPaid] = useState<number>(5000);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
   const [transactionReference, setTransactionReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -81,7 +86,6 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             if (Object.keys(prev).length > 0) return prev;
             return { [activeItems[0].itemId]: 1 };
           });
-          setInitialAmountPaid((prev) => prev > 0 ? prev : activeItems[0].itemPrice);
         }
       })
       .catch((err) => {
@@ -92,7 +96,6 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             if (Object.keys(prev).length > 0) return prev;
             return { [DEFAULT_CATALOG_ITEMS[0].itemId]: 1 };
           });
-          setInitialAmountPaid((prev) => prev > 0 ? prev : DEFAULT_CATALOG_ITEMS[0].itemPrice);
         }
       });
 
@@ -102,23 +105,56 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
   }, []);
 
   const selectedItems = packages.filter((p) => (itemQuantities[p.itemId] || 0) > 0);
-  const totalQuantity = selectedItems.reduce((sum, p) => sum + (itemQuantities[p.itemId] || 0), 0);
-  const totalAmount = selectedItems.reduce((sum, p) => sum + (itemQuantities[p.itemId] || 0) * p.itemPrice, 0);
+  const totalQuantity = sponsorshipType === 'cash' ? 1 : selectedItems.reduce((sum, p) => sum + (itemQuantities[p.itemId] || 0), 0);
+  const itemizedTotalAmount = selectedItems.reduce((sum, p) => sum + (itemQuantities[p.itemId] || 0) * p.itemPrice, 0);
+
+  // Dynamic Total Amount: entered cash amount in Cash mode, or sum of selected items in Kit mode
+  const totalAmount = sponsorshipType === 'cash'
+    ? (Number(cashAmount) || 0)
+    : itemizedTotalAmount;
+
+  const balanceAmount = paymentOption === 'Book' ? totalAmount : Math.max(0, totalAmount - (initialAmountPaid || 0));
+
+  // Switch between "Accept Cash" and "Accept Kit Sponsor"
+  const handleSponsorshipTypeChange = (mode: 'cash' | 'kit') => {
+    setSponsorshipType(mode);
+    setError(null);
+
+    const targetTotal = mode === 'cash'
+      ? (Number(cashAmount) || 0)
+      : itemizedTotalAmount;
+
+    if (paymentOption === 'PayFull') {
+      setInitialAmountPaid(targetTotal);
+    } else if (paymentOption === 'Advance') {
+      setInitialAmountPaid(Math.round(targetTotal * 0.5));
+    } else if (paymentOption === 'Book') {
+      setInitialAmountPaid(0);
+    }
+  };
+
+  const handleCashAmountChange = (val: number | '') => {
+    setCashAmount(val);
+    const num = Number(val) || 0;
+    if (paymentOption === 'PayFull') {
+      setInitialAmountPaid(num);
+    } else if (paymentOption === 'Advance') {
+      setInitialAmountPaid(Math.round(num * 0.5));
+    }
+  };
 
   const handleSetItemQuantity = (itemId: string, newQty: number) => {
     const clamped = Math.max(0, Math.min(2000, Math.floor(newQty || 0)));
     const updated = { ...itemQuantities, [itemId]: clamped };
     setItemQuantities(updated);
 
-    const newTotal = packages.reduce((sum, p) => sum + (updated[p.itemId] || 0) * p.itemPrice, 0);
-    if (paymentOption === 'PayFull') {
-      setInitialAmountPaid(newTotal);
-    } else if (paymentOption === 'Advance') {
-      if (initialAmountPaid > newTotal || initialAmountPaid === 0) {
+    if (sponsorshipType === 'kit') {
+      const newTotal = packages.reduce((sum, p) => sum + (updated[p.itemId] || 0) * p.itemPrice, 0);
+      if (paymentOption === 'PayFull') {
+        setInitialAmountPaid(newTotal);
+      } else if (paymentOption === 'Advance') {
         setInitialAmountPaid(Math.round(newTotal * 0.5));
       }
-    } else if (paymentOption === 'Book') {
-      setInitialAmountPaid(0);
     }
   };
 
@@ -139,8 +175,6 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
     }
   };
 
-  const balanceAmount = paymentOption === 'Book' ? totalAmount : Math.max(0, totalAmount - (initialAmountPaid || 0));
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -157,9 +191,18 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       return;
     }
 
-    if (selectedItems.length === 0 || totalQuantity < 1) {
-      setError('Please select at least one sponsor item and set quantity to 1 or more.');
-      return;
+    if (sponsorshipType === 'cash') {
+      // Scenario 2: Save exact entered amount as a single, un-itemized cash record without requiring price validation
+      if (!cashAmount || Number(cashAmount) <= 0) {
+        setError('Please enter a valid cash donation amount greater than ₹0.');
+        return;
+      }
+    } else {
+      // Kit Mode: ensure at least one kit item is selected
+      if (selectedItems.length === 0 || totalQuantity < 1 || itemizedTotalAmount <= 0) {
+        setError('Please select at least one sponsor kit item with a quantity of 1 or more.');
+        return;
+      }
     }
 
     // Validate payment options
@@ -182,10 +225,27 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
     try {
       setSubmitting(true);
 
-      const payload = {
+      const payload: CreateSponsorshipPayload = sponsorshipType === 'cash' ? {
         donorName: donorName.trim(),
         contactPerson: contactPerson.trim() || undefined,
         mobileNumber: `+91${cleanPhone.slice(-10)}`,
+        sponsorshipType: 'Cash',
+        amount: totalAmount,
+        itemId: 'ITEM-CASH',
+        quantity: 1,
+        items: [{ itemId: 'ITEM-CASH', quantity: 1 }],
+        paymentOption,
+        initialAmountPaid: paymentOption === 'PayFull' ? totalAmount : (paymentOption === 'Book' ? 0 : initialAmountPaid),
+        balanceAmount: paymentOption === 'PayFull' ? 0 : (paymentOption === 'Book' ? totalAmount : balanceAmount),
+        paymentMode,
+        transactionReference: transactionReference.trim() || undefined,
+        notes: notes.trim() || undefined
+      } : {
+        donorName: donorName.trim(),
+        contactPerson: contactPerson.trim() || undefined,
+        mobileNumber: `+91${cleanPhone.slice(-10)}`,
+        sponsorshipType: 'Kit',
+        amount: totalAmount,
         itemId: selectedItems[0].itemId,
         quantity: totalQuantity,
         items: selectedItems.map((item) => ({
@@ -202,7 +262,14 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
 
       const result = await sponsorshipsApi.acceptSponsorship(payload);
 
-      // Construct item details from selected items
+      const cashItemDetail = [{
+        itemId: 'ITEM-CASH',
+        name: 'General Cash Sponsorship',
+        unitPrice: totalAmount,
+        quantity: 1,
+        subtotal: totalAmount
+      }];
+
       const selectedItemDetails = selectedItems.map((item) => {
         const qty = itemQuantities[item.itemId] || 1;
         return {
@@ -220,9 +287,13 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
 
       const enrichedRecord: SponsorshipRecord = {
         ...result,
-        items: (result.items && result.items.length > 0) ? result.items : selectedItemDetails,
-        itemsJson: result.itemsJson || JSON.stringify(selectedItemDetails),
-        itemName: (result.items && result.items.length > 0) ? result.itemName : combinedName
+        items: (result.items && result.items.length > 0)
+          ? result.items
+          : (sponsorshipType === 'cash' ? cashItemDetail : selectedItemDetails),
+        itemsJson: result.itemsJson || JSON.stringify(sponsorshipType === 'cash' ? cashItemDetail : selectedItemDetails),
+        itemName: (result.items && result.items.length > 0)
+          ? result.itemName
+          : (sponsorshipType === 'cash' ? 'General Cash Sponsorship' : combinedName)
       };
 
       setRecordedRecord(enrichedRecord);
@@ -234,8 +305,12 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       setDonorName('');
       setContactPerson('');
       setMobileNumber('');
+      setSponsorshipType('cash');
+      setCashAmount(5000);
       setItemQuantities(packages.length > 0 ? { [packages[0].itemId]: 1 } : {});
       setPaymentOption('PayFull');
+      setInitialAmountPaid(5000);
+      setPaymentMode('Cash');
       setTransactionReference('');
       setNotes('');
     } catch (err: any) {
@@ -353,6 +428,75 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
       )}
 
       <form onSubmit={handleSubmit}>
+        {/* Scenario 1: Sponsorship Type Toggle (Accept Cash vs Accept Kit Sponsor) */}
+        <div style={{
+          background: '#F1F5F9',
+          padding: '4px',
+          borderRadius: 'var(--radius-full)',
+          display: 'flex',
+          alignItems: 'center',
+          position: 'relative',
+          marginBottom: '20px',
+          border: '1px solid #CBD5E1',
+          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
+        }}>
+          {/* Option 1: Accept Cash */}
+          <button
+            id="btn-toggle-sponsorship-cash"
+            type="button"
+            onClick={() => handleSponsorshipTypeChange('cash')}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              background: sponsorshipType === 'cash' ? '#0F172A' : 'transparent',
+              color: sponsorshipType === 'cash' ? '#FFFFFF' : '#475569',
+              fontWeight: 800,
+              fontSize: 'clamp(0.82rem, 2.8vw, 0.9rem)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: sponsorshipType === 'cash' ? '0 2px 8px rgba(15, 23, 42, 0.25)' : 'none',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Banknote size={16} strokeWidth={2.5} />
+            <span>Accept Cash</span>
+          </button>
+
+          {/* Option 2: Accept Kit Sponsor */}
+          <button
+            id="btn-toggle-sponsorship-kit"
+            type="button"
+            onClick={() => handleSponsorshipTypeChange('kit')}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              background: sponsorshipType === 'kit' ? '#2C82C9' : 'transparent',
+              color: sponsorshipType === 'kit' ? '#FFFFFF' : '#475569',
+              fontWeight: 800,
+              fontSize: 'clamp(0.82rem, 2.8vw, 0.9rem)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: sponsorshipType === 'kit' ? '0 2px 8px rgba(44, 130, 201, 0.3)' : 'none',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Package size={16} strokeWidth={2.5} />
+            <span>Accept Kit Sponsor</span>
+          </button>
+        </div>
+
         {/* Organization / Firm Name */}
         <div style={{ marginBottom: 14 }}>
           <label style={{
@@ -450,15 +594,110 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
           </div>
         </div>
 
-        {/* Sponsor Item Selection List with Quantity Counter & Multi-Select */}
-        <div style={{
-          background: '#F8FAFC',
-          border: '1px solid #E2E8F0',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 16px',
-          marginBottom: 16
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+        {/* DYNAMIC SECTION BASED ON SPONSORSHIP TYPE */}
+        {sponsorshipType === 'cash' ? (
+          /* Scenario 2: Selecting "Accept Cash" (Lump-Sum Mode) - Item selection list is hidden */
+          <div style={{
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: 'var(--radius-lg)',
+            padding: '16px',
+            marginBottom: 16
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: '#334155',
+                margin: 0
+              }}>
+                <IndianRupee size={15} color="#008A2E" strokeWidth={2.5} />
+                <span>Sponsorship Cash Amount (₹) *</span>
+              </label>
+              <span style={{
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                color: '#008A2E',
+                background: '#EBF7EE',
+                border: '1px solid #A5D6B8',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-full)'
+              }}>
+                Lump-Sum Mode
+              </span>
+            </div>
+
+            <div style={{ position: 'relative', marginBottom: 12 }}>
+              <span style={{
+                position: 'absolute',
+                left: 14,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontWeight: 800,
+                fontSize: '1.1rem',
+                color: '#64748B'
+              }}>
+                ₹
+              </span>
+              <input
+                id="input-sponsorship-cash-amount"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                required
+                className="input-field"
+                style={{
+                  paddingLeft: 34,
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                  color: '#0F172A',
+                  background: '#FFFFFF'
+                }}
+                placeholder="e.g. 5,000"
+                value={cashAmount}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/\D/g, '');
+                  handleCashAmountChange(clean === '' ? '' : parseInt(clean, 10));
+                }}
+                onKeyDown={(e) => {
+                  if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+            </div>
+
+
+            <div style={{
+              fontSize: '0.74rem',
+              color: '#475569',
+              background: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}>
+              <CheckCircle size={15} color="#008A2E" style={{ flexShrink: 0 }} />
+              <span>Un-itemized flat donation recorded as cash without price or inventory validation.</span>
+            </div>
+          </div>
+        ) : (
+          /* Scenario 3: Selecting "Accept Kit Sponsor" (Direct Item Selection) */
+          <div style={{
+            background: '#FFFFFF',
+            border: '1px solid #CBD5E1',
+            borderRadius: 'var(--radius-lg)',
+            padding: '14px 16px',
+            marginBottom: 16
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Layers size={16} color="#2C82C9" />
               <label style={{
@@ -736,14 +975,15 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
             </div>
             <div style={{ textAlign: 'right' }}>
               <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Commitment
+                Total Sponsorship Amount
               </span>
               <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0F172A' }}>
-                ₹{totalAmount.toLocaleString('en-IN')}
+                ₹{itemizedTotalAmount.toLocaleString('en-IN')}
               </div>
             </div>
           </div>
         </div>
+      )}
 
         {/* Payment Terms Option */}
         <div style={{ marginBottom: 16 }}>
@@ -1128,8 +1368,10 @@ export const SponsorshipForm: React.FC<SponsorshipFormProps> = ({
               </>
             ) : (
               <>
-                <Building2 size={18} />
-                <span>Accept Sponsorship</span>
+                {sponsorshipType === 'cash' ? <Banknote size={18} /> : <Package size={18} />}
+                <span>
+                  {sponsorshipType === 'cash' ? 'Accept Cash' : 'Accept Kit Sponsor'} • ₹{totalAmount.toLocaleString('en-IN')}
+                </span>
               </>
             )}
           </button>

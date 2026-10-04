@@ -213,11 +213,14 @@ export interface CreateSponsorshipPayload {
   donorName: string;            // Name of firm / organization
   contactPerson?: string;       // Representative name
   mobileNumber: string;         // WhatsApp / Phone
+  sponsorshipType?: 'Cash' | 'Kit'; // 'Cash' (Lump-Sum) vs 'Kit' (Itemized)
+  amount?: number;              // Target donation amount (mandatory for Cash, validated for Kit)
   itemId?: string;              // Primary / fallback item
   quantity?: number;            // Total units
   items?: SponsorshipItemSelection[]; // Multi-item selection for single receipt
   paymentOption: PaymentOption; // 'PayFull' | 'Book' | 'Advance'
   initialAmountPaid?: number;   // Required if 'Advance', optional if 'Book'
+  balanceAmount?: number;       // Pending balance
   paymentMode?: PaymentMode;    // Default: 'Cash'
   transactionReference?: string;
   notes?: string;

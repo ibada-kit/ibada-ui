@@ -275,626 +275,620 @@ export const RecordDonationModal: React.FC<RecordDonationModalProps> = ({
           /* Form Body */
           <form onSubmit={handleSubmit} style={{ padding: '20px 24px 24px 24px' }}>
 
-          {error && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-md)',
-              background: '#FEF2F2',
-              border: '1px solid #FECACA',
-              color: '#B91C1C',
-              fontSize: '0.84rem',
-              fontWeight: 600,
-              marginBottom: 18
-            }}>
-              <AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Donor Name */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              Donor / Family Name *
-            </label>
-            <input
-              id="input-donor-name"
-              type="text"
-              className="input-field"
-              placeholder="e.g. C.P. Moidu Haji / Dr. Faisal"
-              value={donorName}
-              onChange={(e) => setDonorName(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* WhatsApp Number */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              Donor's WhatsApp Number (For instant digital receipt) *
-            </label>
-            <div style={{ display: 'flex' }}>
-              <span style={{
+            {error && (
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '0 12px',
-                background: '#F8FAFC',
-                border: '1px solid #CBD5E1',
-                borderRight: 'none',
-                borderRadius: 'var(--radius-md) 0 0 var(--radius-md)',
-                color: 'var(--text-secondary)',
-                fontSize: '0.9rem',
-                fontWeight: 600
+                gap: 8,
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#B91C1C',
+                fontSize: '0.84rem',
+                fontWeight: 600,
+                marginBottom: 18
               }}>
-                +91
-              </span>
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Donor Name */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                Donor / Family Name *
+              </label>
               <input
-                id="input-donor-phone"
-                type="tel"
+                id="input-donor-name"
+                type="text"
                 className="input-field"
-                style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }}
-                placeholder="98471 23456"
-                value={whatsAppNumber}
-                onChange={(e) => setWhatsAppNumber(e.target.value)}
-                maxLength={13}
+                placeholder="e.g. C.P. Moidu Haji / Dr. Faisal"
+                value={donorName}
+                onChange={(e) => setDonorName(e.target.value)}
                 required
               />
             </div>
-          </div>
 
-          {/* Kit Type & Quantity Selector */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#334155', margin: 0 }}>
-                Select Ibada Kits *
+            {/* WhatsApp Number */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                Donor's WhatsApp Number (For instant digital receipt) *
               </label>
-              <span style={{
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                color: totalKits > 0 ? '#008A2E' : '#94A3B8',
-                background: totalKits > 0 ? '#EBF7EE' : '#F1F5F9',
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-full)',
-                border: `1px solid ${totalKits > 0 ? '#A5D6B8' : '#CBD5E1'}`
-              }}>
-                Rate: ₹{kitPrice.toLocaleString('en-IN')} each
-              </span>
-            </div>
-
-            {/* Two Kit Cards: General Ibada Kit & Student Ibada Kit */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10 }}>
-              {/* General Ibada Kit Card */}
-              <div style={{
-                background: generalKitCount > 0 ? '#F0FDF4' : '#FFFFFF',
-                border: generalKitCount > 0 ? '2px solid #22C55E' : '1.5px solid #E2E8F0',
-                borderRadius: 'var(--radius-lg)',
-                padding: '12px 14px',
-                transition: 'all 0.15s ease',
-                boxShadow: generalKitCount > 0 ? '0 2px 8px rgba(34, 197, 94, 0.12)' : 'none'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      background: generalKitCount > 0 ? '#DCFCE7' : '#F1F5F9',
-                      color: generalKitCount > 0 ? '#16A34A' : '#64748B',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Package size={17} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: generalKitCount > 0 ? '#0F172A' : '#334155' }}>
-                        General Ibada Kit
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        Family & community relief
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#008A2E' }}>
-                    ₹{kitPrice.toLocaleString('en-IN')} / kit
-                  </span>
-
-                  {/* Stepper Counter */}
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    border: generalKitCount > 0 ? '1.5px solid #22C55E' : '1px solid #CBD5E1',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#FFFFFF',
-                    overflow: 'hidden'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateKits(generalKitCount - 1, studentKitCount)}
-                      disabled={generalKitCount <= 0}
-                      style={{
-                        width: 30,
-                        height: 30,
-                        border: 'none',
-                        background: generalKitCount > 0 ? '#F1F5F9' : '#F8FAFC',
-                        color: generalKitCount > 0 ? '#0F172A' : '#CBD5E1',
-                        cursor: generalKitCount > 0 ? 'pointer' : 'not-allowed',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="Decrease General Kits"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      value={generalKitCount}
-                      onChange={(e) => {
-                        const parsed = parseInt(e.target.value, 10);
-                        handleUpdateKits(isNaN(parsed) ? 0 : parsed, studentKitCount);
-                      }}
-                      style={{
-                        width: 44,
-                        height: 30,
-                        border: 'none',
-                        borderLeft: '1px solid #E2E8F0',
-                        borderRight: '1px solid #E2E8F0',
-                        textAlign: 'center',
-                        fontWeight: 800,
-                        fontSize: '0.86rem',
-                        color: '#0F172A',
-                        outline: 'none',
-                        MozAppearance: 'textfield'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateKits(generalKitCount + 1, studentKitCount)}
-                      style={{
-                        width: 30,
-                        height: 30,
-                        border: 'none',
-                        background: '#F1F5F9',
-                        color: '#0F172A',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="Increase General Kits"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Student Ibada Kit Card */}
-              <div style={{
-                background: studentKitCount > 0 ? '#F0F9FF' : '#FFFFFF',
-                border: studentKitCount > 0 ? '2px solid #0284C7' : '1.5px solid #E2E8F0',
-                borderRadius: 'var(--radius-lg)',
-                padding: '12px 14px',
-                transition: 'all 0.15s ease',
-                boxShadow: studentKitCount > 0 ? '0 2px 8px rgba(2, 132, 199, 0.12)' : 'none'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      background: studentKitCount > 0 ? '#E0F2FE' : '#F1F5F9',
-                      color: studentKitCount > 0 ? '#0284C7' : '#64748B',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <GraduationCap size={18} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: studentKitCount > 0 ? '#0F172A' : '#334155' }}>
-                        Student Ibada Kit
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        Student & education kit
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0284C7' }}>
-                    ₹{kitPrice.toLocaleString('en-IN')} / kit
-                  </span>
-
-                  {/* Stepper Counter */}
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    border: studentKitCount > 0 ? '1.5px solid #0284C7' : '1px solid #CBD5E1',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#FFFFFF',
-                    overflow: 'hidden'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateKits(generalKitCount, studentKitCount - 1)}
-                      disabled={studentKitCount <= 0}
-                      style={{
-                        width: 30,
-                        height: 30,
-                        border: 'none',
-                        background: studentKitCount > 0 ? '#F1F5F9' : '#F8FAFC',
-                        color: studentKitCount > 0 ? '#0F172A' : '#CBD5E1',
-                        cursor: studentKitCount > 0 ? 'pointer' : 'not-allowed',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="Decrease Student Kits"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      value={studentKitCount}
-                      onChange={(e) => {
-                        const parsed = parseInt(e.target.value, 10);
-                        handleUpdateKits(generalKitCount, isNaN(parsed) ? 0 : parsed);
-                      }}
-                      style={{
-                        width: 44,
-                        height: 30,
-                        border: 'none',
-                        borderLeft: '1px solid #E2E8F0',
-                        borderRight: '1px solid #E2E8F0',
-                        textAlign: 'center',
-                        fontWeight: 800,
-                        fontSize: '0.86rem',
-                        color: '#0F172A',
-                        outline: 'none',
-                        MozAppearance: 'textfield'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateKits(generalKitCount, studentKitCount + 1)}
-                      style={{
-                        width: 30,
-                        height: 30,
-                        border: 'none',
-                        background: '#F1F5F9',
-                        color: '#0F172A',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                      title="Increase Student Kits"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Total Calculation Card */}
-          <div style={{
-            background: '#F8FAFC',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '16px',
-            marginBottom: 20,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div>
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
-                Total Kit Donation Value
-              </span>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#008A2E' }}>
-                ₹{totalAmount.toLocaleString('en-IN')}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span className="badge badge-emerald" style={{ fontSize: '0.78rem' }}>
-                {totalKits} {totalKits === 1 ? 'Kit' : 'Kits'}{' '}
-                {generalKitCount > 0 && studentKitCount > 0
-                  ? `(${generalKitCount} Gen + ${studentKitCount} Stu)`
-                  : studentKitCount > 0
-                    ? `(Student Kit)`
-                    : `(General Kit)`}
-              </span>
-            </div>
-          </div>
-
-          {/* Glowing Payment Option Selector (Pay Full, Advance, Book) */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Payment Terms & Booking
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {/* Pay Full */}
-              <button
-                type="button"
-                onClick={() => handlePaymentOptionChange('PayFull')}
-                style={{
-                  padding: '10px 6px',
-                  borderRadius: 'var(--radius-md)',
-                  border: paymentOption === 'PayFull' ? '2px solid #008A2E' : '1px solid #CBD5E1',
-                  background: paymentOption === 'PayFull' ? '#EBF7EE' : '#FFFFFF',
-                  color: paymentOption === 'PayFull' ? '#008A2E' : '#334155',
+              <div style={{ display: 'flex' }}>
+                <span style={{
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: 4,
-                  cursor: 'pointer',
-                  boxShadow: paymentOption === 'PayFull' ? '0 0 12px rgba(0, 138, 46, 0.25)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <CheckCircle size={15} />
-                <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>Pay Full</span>
-                <span style={{ fontSize: '0.66rem', color: paymentOption === 'PayFull' ? '#0F5132' : '#64748B' }}>100% Upfront</span>
-              </button>
-
-              {/* Advance */}
-              <button
-                type="button"
-                onClick={() => handlePaymentOptionChange('Advance')}
-                style={{
-                  padding: '10px 6px',
-                  borderRadius: 'var(--radius-md)',
-                  border: paymentOption === 'Advance' ? '2px solid #D97706' : '1px solid #CBD5E1',
-                  background: paymentOption === 'Advance' ? '#FEF3C7' : '#FFFFFF',
-                  color: paymentOption === 'Advance' ? '#B45309' : '#334155',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 4,
-                  cursor: 'pointer',
-                  boxShadow: paymentOption === 'Advance' ? '0 0 12px rgba(217, 119, 6, 0.3)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Clock size={15} />
-                <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>Advance</span>
-                <span style={{ fontSize: '0.66rem', color: paymentOption === 'Advance' ? '#78350F' : '#64748B' }}>Partial Deposit</span>
-              </button>
-
-              {/* Book */}
-              <button
-                type="button"
-                onClick={() => handlePaymentOptionChange('Book')}
-                style={{
-                  padding: '10px 6px',
-                  borderRadius: 'var(--radius-md)',
-                  border: paymentOption === 'Book' ? '2px solid #2C82C9' : '1px solid #CBD5E1',
-                  background: paymentOption === 'Book' ? '#EDF4FA' : '#FFFFFF',
-                  color: paymentOption === 'Book' ? '#2C82C9' : '#334155',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 4,
-                  cursor: 'pointer',
-                  boxShadow: paymentOption === 'Book' ? '0 0 12px rgba(44, 130, 201, 0.3)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <BookmarkCheck size={15} />
-                <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>Booking</span>
-                <span style={{ fontSize: '0.66rem', color: paymentOption === 'Book' ? '#1E3A8A' : '#64748B' }}>Reserve Kits</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Dynamic Initial Amount / Balance for Advance or Book */}
-          {paymentOption !== 'PayFull' && (
-            <div style={{
-              padding: '14px',
-              borderRadius: 'var(--radius-md)',
-              background: paymentOption === 'Advance' ? '#FFFBEB' : '#F4F9FD',
-              border: paymentOption === 'Advance' ? '1px solid #FDE68A' : '1px solid #B8D4EE',
-              marginBottom: 20
-            }}>
-              {paymentOption === 'Advance' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'center' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', marginBottom: 4 }}>
-                      Advance Paid (₹) *
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className="input-field"
-                      value={initialAmountPaid || ''}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, '');
-                        setInitialAmountPaid(clean === '' ? 0 : parseInt(clean, 10));
-                      }}
-                      style={{ fontWeight: 800, fontSize: '1rem', background: '#FFFFFF' }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div style={{ textAlign: 'right', padding: '8px', background: '#FFFFFF', borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)' }}>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>
-                      Remaining Balance
-                    </span>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
-                      ₹{balanceAmount.toLocaleString('en-IN')}
-                    </div>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
-                      Total: ₹{totalAmount.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                /* Booking: No initial amount field, show balance amount filled */
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 12
+                  padding: '0 12px',
+                  background: '#F8FAFC',
+                  border: '1px solid #CBD5E1',
+                  borderRight: 'none',
+                  borderRadius: 'var(--radius-md) 0 0 var(--radius-md)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.9rem',
+                  fontWeight: 600
                 }}>
-                  <div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      fontSize: '0.76rem',
-                      fontWeight: 800,
-                      color: '#1D4ED8',
-                      textTransform: 'uppercase',
-                      marginBottom: 2
-                    }}>
-                      <BookmarkCheck size={16} />
-                      <span>Kit Reservation (Zero Advance)</span>
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: '#475569' }}>
-                      No upfront payment collected. Full amount recorded as balance due.
+                  +91
+                </span>
+                <input
+                  id="input-donor-phone"
+                  type="tel"
+                  className="input-field"
+                  style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0' }}
+                  placeholder="98471 23456"
+                  value={whatsAppNumber}
+                  onChange={(e) => setWhatsAppNumber(e.target.value)}
+                  maxLength={13}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Kit Type & Quantity Selector */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#334155', margin: 0 }}>
+                  Select Ibada Kits *
+                </label>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: totalKits > 0 ? '#008A2E' : '#94A3B8',
+                  background: totalKits > 0 ? '#EBF7EE' : '#F1F5F9',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  border: `1px solid ${totalKits > 0 ? '#A5D6B8' : '#CBD5E1'}`
+                }}>
+                  Rate: ₹{kitPrice.toLocaleString('en-IN')} each
+                </span>
+              </div>
+
+              {/* Two Kit Cards: General Ibada Kit & Student Ibada Kit */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10 }}>
+                {/* General Ibada Kit Card */}
+                <div style={{
+                  background: generalKitCount > 0 ? '#F0FDF4' : '#FFFFFF',
+                  border: generalKitCount > 0 ? '2px solid #22C55E' : '1.5px solid #E2E8F0',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '12px 14px',
+                  transition: 'all 0.15s ease',
+                  boxShadow: generalKitCount > 0 ? '0 2px 8px rgba(34, 197, 94, 0.12)' : 'none'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        background: generalKitCount > 0 ? '#DCFCE7' : '#F1F5F9',
+                        color: generalKitCount > 0 ? '#16A34A' : '#64748B',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Package size={17} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: generalKitCount > 0 ? '#0F172A' : '#334155' }}>
+                          General Ibada Kit
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{
-                    textAlign: 'right',
-                    padding: '8px 14px',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#FFFFFF',
-                    border: '1.5px solid #B8D4EE',
-                    minWidth: 130
-                  }}>
-                    <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>
-                      Balance Due
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#008A2E' }}>
+                      ₹{kitPrice.toLocaleString('en-IN')} / kit
                     </span>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#B91C1C' }}>
-                      ₹{totalAmount.toLocaleString('en-IN')}
+
+                    {/* Stepper Counter */}
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      border: generalKitCount > 0 ? '1.5px solid #22C55E' : '1px solid #CBD5E1',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#FFFFFF',
+                      overflow: 'hidden'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateKits(generalKitCount - 1, studentKitCount)}
+                        disabled={generalKitCount <= 0}
+                        style={{
+                          width: 30,
+                          height: 30,
+                          border: 'none',
+                          background: generalKitCount > 0 ? '#F1F5F9' : '#F8FAFC',
+                          color: generalKitCount > 0 ? '#0F172A' : '#CBD5E1',
+                          cursor: generalKitCount > 0 ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Decrease General Kits"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1000"
+                        value={generalKitCount}
+                        onChange={(e) => {
+                          const parsed = parseInt(e.target.value, 10);
+                          handleUpdateKits(isNaN(parsed) ? 0 : parsed, studentKitCount);
+                        }}
+                        style={{
+                          width: 44,
+                          height: 30,
+                          border: 'none',
+                          borderLeft: '1px solid #E2E8F0',
+                          borderRight: '1px solid #E2E8F0',
+                          textAlign: 'center',
+                          fontWeight: 800,
+                          fontSize: '0.86rem',
+                          color: '#0F172A',
+                          outline: 'none',
+                          MozAppearance: 'textfield'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateKits(generalKitCount + 1, studentKitCount)}
+                        style={{
+                          width: 30,
+                          height: 30,
+                          border: 'none',
+                          background: '#F1F5F9',
+                          color: '#0F172A',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Increase General Kits"
+                      >
+                        <Plus size={14} />
+                      </button>
                     </div>
-                    <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
-                      Total: ₹{totalAmount.toLocaleString('en-IN')}
-                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Payment Mode */}
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>
-              Payment Mode
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-              {(['Cash', 'UPI', 'BankTransfer', 'Cheque'] as PaymentMode[]).map((mode) => (
+                {/* Student Ibada Kit Card */}
+                <div style={{
+                  background: studentKitCount > 0 ? '#F0F9FF' : '#FFFFFF',
+                  border: studentKitCount > 0 ? '2px solid #0284C7' : '1.5px solid #E2E8F0',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '12px 14px',
+                  transition: 'all 0.15s ease',
+                  boxShadow: studentKitCount > 0 ? '0 2px 8px rgba(2, 132, 199, 0.12)' : 'none'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        background: studentKitCount > 0 ? '#E0F2FE' : '#F1F5F9',
+                        color: studentKitCount > 0 ? '#0284C7' : '#64748B',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <GraduationCap size={18} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: studentKitCount > 0 ? '#0F172A' : '#334155' }}>
+                          Student Ibada Kit
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0284C7' }}>
+                      ₹{kitPrice.toLocaleString('en-IN')} / kit
+                    </span>
+
+                    {/* Stepper Counter */}
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      border: studentKitCount > 0 ? '1.5px solid #0284C7' : '1px solid #CBD5E1',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#FFFFFF',
+                      overflow: 'hidden'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateKits(generalKitCount, studentKitCount - 1)}
+                        disabled={studentKitCount <= 0}
+                        style={{
+                          width: 30,
+                          height: 30,
+                          border: 'none',
+                          background: studentKitCount > 0 ? '#F1F5F9' : '#F8FAFC',
+                          color: studentKitCount > 0 ? '#0F172A' : '#CBD5E1',
+                          cursor: studentKitCount > 0 ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Decrease Student Kits"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1000"
+                        value={studentKitCount}
+                        onChange={(e) => {
+                          const parsed = parseInt(e.target.value, 10);
+                          handleUpdateKits(generalKitCount, isNaN(parsed) ? 0 : parsed);
+                        }}
+                        style={{
+                          width: 44,
+                          height: 30,
+                          border: 'none',
+                          borderLeft: '1px solid #E2E8F0',
+                          borderRight: '1px solid #E2E8F0',
+                          textAlign: 'center',
+                          fontWeight: 800,
+                          fontSize: '0.86rem',
+                          color: '#0F172A',
+                          outline: 'none',
+                          MozAppearance: 'textfield'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateKits(generalKitCount, studentKitCount + 1)}
+                        style={{
+                          width: 30,
+                          height: 30,
+                          border: 'none',
+                          background: '#F1F5F9',
+                          color: '#0F172A',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Increase Student Kits"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Total Calculation Card */}
+            <div style={{
+              background: '#F8FAFC',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-md)',
+              padding: '16px',
+              marginBottom: 20,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Total Kit Donation Value
+                </span>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#008A2E' }}>
+                  ₹{totalAmount.toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className="badge badge-emerald" style={{ fontSize: '0.78rem' }}>
+                  {totalKits} {totalKits === 1 ? 'Kit' : 'Kits'}{' '}
+                  {generalKitCount > 0 && studentKitCount > 0
+                    ? `(${generalKitCount} Gen + ${studentKitCount} Stu)`
+                    : studentKitCount > 0
+                      ? `(Student Kit)`
+                      : `(General Kit)`}
+                </span>
+              </div>
+            </div>
+
+            {/* Glowing Payment Option Selector (Pay Full, Advance, Book) */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 8 }}>
+                Payment Terms & Booking
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {/* Pay Full */}
                 <button
                   type="button"
-                  key={mode}
-                  onClick={() => setPaymentMode(mode)}
+                  onClick={() => handlePaymentOptionChange('PayFull')}
                   style={{
-                    padding: '8px 2px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: paymentMode === mode ? '1.5px solid #008A2E' : '1px solid #CBD5E1',
-                    background: paymentMode === mode ? '#EBF7EE' : '#FFFFFF',
-                    color: paymentMode === mode ? '#008A2E' : '#475569',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer'
+                    padding: '10px 6px',
+                    borderRadius: 'var(--radius-md)',
+                    border: paymentOption === 'PayFull' ? '2px solid #008A2E' : '1px solid #CBD5E1',
+                    background: paymentOption === 'PayFull' ? '#EBF7EE' : '#FFFFFF',
+                    color: paymentOption === 'PayFull' ? '#008A2E' : '#334155',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    cursor: 'pointer',
+                    boxShadow: paymentOption === 'PayFull' ? '0 0 12px rgba(0, 138, 46, 0.25)' : 'none',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  {mode === 'BankTransfer' ? 'Bank' : mode}
+                  <CheckCircle size={15} />
+                  <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>Pay Full</span>
+                  <span style={{ fontSize: '0.66rem', color: paymentOption === 'PayFull' ? '#0F5132' : '#64748B' }}>100% Upfront</span>
                 </button>
-              ))}
+
+                {/* Advance */}
+                <button
+                  type="button"
+                  onClick={() => handlePaymentOptionChange('Advance')}
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: 'var(--radius-md)',
+                    border: paymentOption === 'Advance' ? '2px solid #D97706' : '1px solid #CBD5E1',
+                    background: paymentOption === 'Advance' ? '#FEF3C7' : '#FFFFFF',
+                    color: paymentOption === 'Advance' ? '#B45309' : '#334155',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    cursor: 'pointer',
+                    boxShadow: paymentOption === 'Advance' ? '0 0 12px rgba(217, 119, 6, 0.3)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Clock size={15} />
+                  <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>Advance</span>
+                  <span style={{ fontSize: '0.66rem', color: paymentOption === 'Advance' ? '#78350F' : '#64748B' }}>Partial Deposit</span>
+                </button>
+
+                {/* Book */}
+                <button
+                  type="button"
+                  onClick={() => handlePaymentOptionChange('Book')}
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: 'var(--radius-md)',
+                    border: paymentOption === 'Book' ? '2px solid #2C82C9' : '1px solid #CBD5E1',
+                    background: paymentOption === 'Book' ? '#EDF4FA' : '#FFFFFF',
+                    color: paymentOption === 'Book' ? '#2C82C9' : '#334155',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    cursor: 'pointer',
+                    boxShadow: paymentOption === 'Book' ? '0 0 12px rgba(44, 130, 201, 0.3)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <BookmarkCheck size={15} />
+                  <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>Booking</span>
+                  <span style={{ fontSize: '0.66rem', color: paymentOption === 'Book' ? '#1E3A8A' : '#64748B' }}>Reserve Kits</span>
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Optional Reference & Remarks Toggle */}
-          <div style={{ marginBottom: 20 }}>
-            <button
-              type="button"
-              onClick={() => setShowExtraDetails(!showExtraDetails)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#2C82C9',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                padding: 0
-              }}
-            >
-              {showExtraDetails ? '− Hide Reference / Remarks' : '+ Add Transaction Reference / Remarks (Optional)'}
-            </button>
+            {/* Dynamic Initial Amount / Balance for Advance or Book */}
+            {paymentOption !== 'PayFull' && (
+              <div style={{
+                padding: '14px',
+                borderRadius: 'var(--radius-md)',
+                background: paymentOption === 'Advance' ? '#FFFBEB' : '#F4F9FD',
+                border: paymentOption === 'Advance' ? '1px solid #FDE68A' : '1px solid #B8D4EE',
+                marginBottom: 20
+              }}>
+                {paymentOption === 'Advance' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'center' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', marginBottom: 4 }}>
+                        Advance Paid (₹) *
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="input-field"
+                        value={initialAmountPaid || ''}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/\D/g, '');
+                          setInitialAmountPaid(clean === '' ? 0 : parseInt(clean, 10));
+                        }}
+                        style={{ fontWeight: 800, fontSize: '1rem', background: '#FFFFFF' }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div style={{ textAlign: 'right', padding: '8px', background: '#FFFFFF', borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase' }}>
+                        Remaining Balance
+                      </span>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: balanceAmount > 0 ? '#B91C1C' : '#008A2E' }}>
+                        ₹{balanceAmount.toLocaleString('en-IN')}
+                      </div>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B' }}>
+                        Total: ₹{totalAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  /* Booking: No initial amount field, show balance amount filled */
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 12
+                  }}>
+                    <div>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        color: '#1D4ED8',
+                        textTransform: 'uppercase',
+                        marginBottom: 2
+                      }}>
+                        <BookmarkCheck size={16} />
+                        <span>Kit Reservation (Zero Advance)</span>
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#475569' }}>
+                        No upfront payment collected. Full amount recorded as balance due.
+                      </div>
+                    </div>
 
-            {showExtraDetails && (
-              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="UPI Ref ID, Cheque No, Transaction ID (Optional)"
-                  value={transactionReference}
-                  onChange={(e) => setTransactionReference(e.target.value)}
-                />
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Payment Remarks / Notes (Optional)"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                    <div style={{
+                      textAlign: 'right',
+                      padding: '8px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      background: '#FFFFFF',
+                      border: '1.5px solid #B8D4EE',
+                      minWidth: 130
+                    }}>
+                      <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>
+                        Balance Due
+                      </span>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#B91C1C' }}>
+                        ₹{totalAmount.toLocaleString('en-IN')}
+                      </div>
+                      <span style={{ fontSize: '0.66rem', color: '#64748B' }}>
+                        Total: ₹{totalAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
 
-          {/* Submit */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button
-              id="btn-submit-donation"
-              type="submit"
-              className="btn-primary"
-              style={{
-                flex: 1,
-                padding: '13px',
-                background: paymentOption === 'Advance' ? '#D97706' : paymentOption === 'Book' ? '#2C82C9' : '#008A2E'
-              }}
-              disabled={loading}
-            >
-              {loading ? (
-                <RefreshCw size={18} className="animate-spin" />
-              ) : (
-                <>
-                  <Sparkles size={17} />
-                  <span>
-                    {paymentOption === 'PayFull'
-                      ? `Pay Full ₹${totalAmount.toLocaleString('en-IN')} & Submit`
-                      : paymentOption === 'Advance'
-                        ? `Pay Advance ₹${(initialAmountPaid || 0).toLocaleString('en-IN')} & Submit`
-                        : `Book Kits (${initialAmountPaid ? `₹${initialAmountPaid.toLocaleString('en-IN')} Paid` : 'Pay Later'})`}
-                  </span>
-                </>
+            {/* Payment Mode */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>
+                Payment Mode
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {(['Cash', 'UPI', 'BankTransfer', 'Cheque'] as PaymentMode[]).map((mode) => (
+                  <button
+                    type="button"
+                    key={mode}
+                    onClick={() => setPaymentMode(mode)}
+                    style={{
+                      padding: '8px 2px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: paymentMode === mode ? '1.5px solid #008A2E' : '1px solid #CBD5E1',
+                      background: paymentMode === mode ? '#EBF7EE' : '#FFFFFF',
+                      color: paymentMode === mode ? '#008A2E' : '#475569',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {mode === 'BankTransfer' ? 'Bank' : mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Optional Reference & Remarks Toggle */}
+            <div style={{ marginBottom: 20 }}>
+              <button
+                type="button"
+                onClick={() => setShowExtraDetails(!showExtraDetails)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#2C82C9',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  padding: 0
+                }}
+              >
+                {showExtraDetails ? '− Hide Reference / Remarks' : '+ Add Transaction Reference / Remarks (Optional)'}
+              </button>
+
+              {showExtraDetails && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="UPI Ref ID, Cheque No, Transaction ID (Optional)"
+                    value={transactionReference}
+                    onChange={(e) => setTransactionReference(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Payment Remarks / Notes (Optional)"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </div>
               )}
-            </button>
-            <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
-            </button>
-          </div>
-        </form>
+            </div>
+
+            {/* Submit */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                id="btn-submit-donation"
+                type="submit"
+                className="btn-primary"
+                style={{
+                  flex: 1,
+                  padding: '13px',
+                  background: paymentOption === 'Advance' ? '#D97706' : paymentOption === 'Book' ? '#2C82C9' : '#008A2E'
+                }}
+                disabled={loading}
+              >
+                {loading ? (
+                  <RefreshCw size={18} className="animate-spin" />
+                ) : (
+                  <>
+                    <Sparkles size={17} />
+                    <span>
+                      {paymentOption === 'PayFull'
+                        ? `Pay Full ₹${totalAmount.toLocaleString('en-IN')} & Submit`
+                        : paymentOption === 'Advance'
+                          ? `Pay Advance ₹${(initialAmountPaid || 0).toLocaleString('en-IN')} & Submit`
+                          : `Book Kits (${initialAmountPaid ? `₹${initialAmountPaid.toLocaleString('en-IN')} Paid` : 'Pay Later'})`}
+                    </span>
+                  </>
+                )}
+              </button>
+              <button type="button" onClick={onClose} className="btn-secondary">
+                Cancel
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>
