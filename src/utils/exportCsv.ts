@@ -168,6 +168,9 @@ export function exportDonationsToCSV(
     'Donor Name',
     'WhatsApp Number',
     'Kit Count',
+    'General Kits',
+    'Student Kits',
+    'Kit Style',
     'Total Amount (INR)',
     'Amount Paid (INR)',
     'Balance Amount (INR)',
@@ -225,6 +228,9 @@ export function exportDonationsToCSV(
       // keep raw string
     }
 
+    const genKits = d.generalKitCount !== undefined ? d.generalKitCount : (d.kitStyle === 'Student' ? 0 : kits);
+    const stuKits = d.studentKitCount !== undefined ? d.studentKitCount : (d.kitStyle === 'Student' ? kits : 0);
+
     return [
       index + 1,
       formatCell(d.receiptToken),
@@ -233,6 +239,9 @@ export function exportDonationsToCSV(
       formatCell(d.donorName),
       formatCell(d.whatsAppNumber || '-'),
       kits,
+      genKits,
+      stuKits,
+      formatCell(d.kitStyle || (stuKits > 0 && genKits > 0 ? 'Mixed' : stuKits > 0 ? 'Student' : 'General')),
       committed,
       paid,
       bal,
