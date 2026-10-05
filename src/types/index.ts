@@ -337,3 +337,26 @@ export interface SponsorshipLeaderboardResponse {
   generatedAt: string;
 }
 
+export interface WardDonorDto {
+  donorName: string;
+  kitCount: number;
+}
+
+export interface WardDonorsResponse {
+  wardNumber: number;
+  totalDonors: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage?: boolean;
+  hasNextPage?: boolean;
+  donors: WardDonorDto[];
+}
+
+export interface WardDonorsQueryParams {
+  search?: string;
+  pageNumber?: number;
+  pageSize?: number;
+  wardNumber?: number;
+}
+

@@ -12,8 +12,10 @@ import {
   User as UserIcon,
   Building2,
   MapPin,
-  KeyRound
+  KeyRound,
+  Users
 } from 'lucide-react';
+import { WardDonorsDirectory } from '../components/WardDonorsDirectory';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
 import { formatKitBreakdownWithTotal } from '../utils/kitFormatters';
@@ -35,7 +37,8 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   onOpenPayBalance,
   onOpenPayDonationBalance
 }) => {
-  const [activeTab, setActiveTab] = useState<'record' | 'history' | 'leaderboard' | 'profile'>('record');
+  const [activeTab, setActiveTab] = useState<'record' | 'history' | 'donors' | 'leaderboard' | 'profile'>('record');
+  const isWardVolunteer = Boolean(user.wardNumber && Number(user.wardNumber) > 0);
   const [leaderboardMode, setLeaderboardMode] = useState<'individual' | 'sponsorship'>('individual');
   const [receiptsType, setReceiptsType] = useState<'donations' | 'sponsorships'>('donations');
   const [sponsorshipHistory, setSponsorshipHistory] = useState<SponsorshipRecord[]>([]);
@@ -237,7 +240,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
               fontWeight: 800,
               textTransform: 'uppercase'
             }}>
-              Ward {user.wardNumber} Volunteer
+              {isWardVolunteer ? `Ward ${user.wardNumber} Volunteer` : 'Drive Volunteer'}
             </span>
             <span style={{ fontSize: '0.76rem', color: '#64748B' }}>Panchayath: {user.panchayath}</span>
           </div>
@@ -343,6 +346,17 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
           <History size={14} />
           <span>Receipts ({history.length + sponsorshipHistory.length})</span>
         </button>
+
+        {isWardVolunteer && (
+          <button
+            id="vol-tab-donors"
+            onClick={() => setActiveTab('donors')}
+            className={`tab-strip-btn ${activeTab === 'donors' ? 'active' : ''}`}
+          >
+            <Users size={14} />
+            <span>Ward Donors</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('leaderboard')}
@@ -634,6 +648,15 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
             )
           )}
         </div>
+      )}
+
+      {/* TAB: WARD DONORS DIRECTORY (Only for ward volunteers) */}
+      {isWardVolunteer && activeTab === 'donors' && (
+        <WardDonorsDirectory
+          user={user}
+          onSelectDonor={(_name) => setActiveTab('record')}
+          onNavigateToRecord={() => setActiveTab('record')}
+        />
       )}
 
       {/* TAB 3: LEADERBOARDS */}

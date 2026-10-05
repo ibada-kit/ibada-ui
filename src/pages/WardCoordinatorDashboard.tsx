@@ -27,8 +27,10 @@ import {
   Target,
   Edit3,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  UserCheck
 } from 'lucide-react';
+import { WardDonorsDirectory } from '../components/WardDonorsDirectory';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
 import { ScrollableTabStrip } from '../components/ScrollableTabStrip';
@@ -52,7 +54,7 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
   onOpenPayBalance,
   onOpenPayDonationBalance
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'record' | 'transactions' | 'ranks' | 'profile'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'donors' | 'record' | 'transactions' | 'ranks' | 'profile'>('overview');
   const [ranksMode, setRanksMode] = useState<'individual' | 'sponsorship'>('individual');
   const [receiptsType, setReceiptsType] = useState<'donations' | 'sponsorships'>('donations');
   const [wardSponsorships, setWardSponsorships] = useState<SponsorshipRecord[]>([]);
@@ -596,7 +598,21 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
             color: activeTab === 'team' ? '#FFFFFF' : '#334155'
           }}
         >
+          <Users size={14} />
           <span>Volunteers ({wardVolunteers.length})</span>
+        </button>
+
+        <button
+          id="ward-tab-donors"
+          onClick={() => setActiveTab('donors')}
+          className={`tab-strip-btn ${activeTab === 'donors' ? 'active' : ''}`}
+          style={{
+            background: activeTab === 'donors' ? '#008A2E' : 'transparent',
+            color: activeTab === 'donors' ? '#FFFFFF' : '#334155'
+          }}
+        >
+          <UserCheck size={14} />
+          <span>Ward Donors</span>
         </button>
 
         <button
@@ -1202,6 +1218,15 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
             )}
           </div>
         </div>
+      )}
+
+      {/* TAB: WARD DONORS DIRECTORY */}
+      {activeTab === 'donors' && (
+        <WardDonorsDirectory
+          user={user}
+          onSelectDonor={(_name) => handleNavigateToRecord()}
+          onNavigateToRecord={handleNavigateToRecord}
+        />
       )}
 
       {/* TAB 3: RECORD DONATION */}

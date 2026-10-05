@@ -14,7 +14,9 @@ import type {
   CreateSponsorshipPayload,
   SponsorshipRecord,
   UpdatePaymentPayload,
-  SponsorshipLeaderboardResponse
+  SponsorshipLeaderboardResponse,
+  WardDonorsResponse,
+  WardDonorsQueryParams
 } from '../types';
 
 // Live API Base URL: checks Vercel/env variables (VITE_API_BASE_URL, API_BASE_URL, VITE_API_URL, API_URL, BACKEND_URL, etc.)
@@ -731,6 +733,51 @@ export const donationsApi = {
       updateDate: d.updateDate,
       updatedBy: d.updatedBy,
       timestamp: d.timestamp
+    };
+  },
+
+  // Get Ward Donors Directory (GET /api/Donations/ward-donors)
+  // Strict Ward Isolation: Only returns unique donors and kit counts under the caller's assigned ward
+  getWardDonors: async (
+    params?: WardDonorsQueryParams
+  ): Promise<WardDonorsResponse> => {
+    const currentUser = getCurrentUser();
+    const token = currentUser?.token;
+    const query = new URLSearchParams();
+    if (params?.search?.trim()) query.append('search', params.search.trim());
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.wardNumber) query.append('wardNumber', params.wardNumber.toString());
+
+    const qs = query.toString();
+    const url = `${API_BASE_URL}/Donations/ward-donors${qs ? `?${qs}` : ''}`;
+    const res = await fetch(url, {
+      headers: getAuthHeaders(token, false)
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to load ward donors directory');
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const totalDonors = Number(data.totalDonors ?? data.TotalDonors ?? 0);
+    const pageSize = Number(data.pageSize ?? data.PageSize ?? 10);
+    const pageNumber = Number(data.pageNumber ?? data.PageNumber ?? 1);
+    const totalPages = Number(data.totalPages ?? data.TotalPages ?? (totalDonors > 0 ? Math.ceil(totalDonors / pageSize) : 0));
+
+    return {
+      wardNumber: Number(data.wardNumber ?? data.WardNumber ?? 0),
+      totalDonors,
+      pageNumber,
+      pageSize,
+      totalPages,
+      hasPreviousPage: data.hasPreviousPage ?? data.HasPreviousPage ?? (pageNumber > 1),
+      hasNextPage: data.hasNextPage ?? data.HasNextPage ?? (pageNumber < totalPages),
+      donors: (data.donors || data.Donors || []).map((d: any) => ({
+        donorName: String(d.donorName || d.DonorName || '').trim(),
+        kitCount: Number(d.kitCount ?? d.KitCount ?? 0)
+      }))
     };
   }
 };
