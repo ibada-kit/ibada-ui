@@ -360,3 +360,43 @@ export interface WardDonorsQueryParams {
   wardNumber?: number;
 }
 
+export interface PublicWardRank {
+  position: number;
+  wardNumber: number;
+  wardName: string;
+  wardNameMalayalam: string;
+  wardLeadName: string;
+  totalKitsCollected: number;
+  donorsCount: number;
+  sponsorsCount: number;
+  volunteerCount: number;
+  targetKits: number;
+  achievementPercentage: number;
+  rankBadge: string;
+}
+
+export interface PublicVolunteerRank {
+  position: number;
+  userId: string;
+  name: string;
+  role: string;
+  wardNumber: number;
+  wardName: string;
+  wardLeadName: string;
+  totalKitsCollected: number;
+  donorsCount: number;
+  sponsorsCount: number;
+  targetKits: number;
+  achievementPercentage: number;
+  rankBadge: string;
+}
+
+export interface PublicWardsResponse {
+  totalKitsCollected: number;
+  totalDonors: number;
+  totalSponsors: number;
+  wards: PublicWardRank[];
+  topVolunteers?: PublicVolunteerRank[];
+  generatedAt: string;
+}
+

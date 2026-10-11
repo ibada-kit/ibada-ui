@@ -16,7 +16,10 @@ import type {
   UpdatePaymentPayload,
   SponsorshipLeaderboardResponse,
   WardDonorsResponse,
-  WardDonorsQueryParams
+  WardDonorsQueryParams,
+  PublicWardRank,
+  PublicVolunteerRank,
+  PublicWardsResponse
 } from '../types';
 
 // Live API Base URL: checks Vercel/env variables (VITE_API_BASE_URL, API_BASE_URL, VITE_API_URL, API_URL, BACKEND_URL, etc.)
@@ -479,6 +482,212 @@ export const donationsApi = {
     }
 
     return [];
+  },
+
+  // Dedicated Public Anonymous Wards Leaderboard (Cross-referenced with live Leaderboards, Sponsorships, and Wards)
+  getPublicWardsLeaderboard: async (): Promise<PublicWardsResponse> => {
+    try {
+      const [lbRes, wardsRes, pwRes, sponRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/Leaderboards`, { headers: getAuthHeaders(undefined, false) }),
+        fetch(`${API_BASE_URL}/Wards?panchayath=Madavoor`, { headers: getAuthHeaders(undefined, false) }),
+        fetch(`${API_BASE_URL}/Leaderboards/public-wards`, { headers: getAuthHeaders(undefined, false) }).catch(() => null),
+        fetch(`${API_BASE_URL}/Sponsorships/leaderboard`, { headers: getAuthHeaders(undefined, false) }).catch(() => null)
+      ]);
+
+      const lbData = lbRes.ok ? await lbRes.json() : null;
+      const wardsData = wardsRes.ok ? await wardsRes.json() : [];
+      const pwData = pwRes && pwRes.ok ? await pwRes.json() : null;
+      const sponData = sponRes && sponRes.ok ? await sponRes.json() : null;
+
+      // Authentic Madavoor Ward Names dictionary
+      const wardNameMap: Record<number, string> = {
+        1: 'Ankathayi',
+        2: 'Eravannur North',
+        3: 'Eravannur South',
+        4: 'Nariyachal',
+        5: 'Pullaloor',
+        6: 'Eranhukunnu',
+        7: 'Rampoyil',
+        8: 'Madavoor',
+        9: 'Madavoormukku',
+        10: 'Paimbalassery',
+        11: 'Kottakkavayal',
+        12: 'Arambram',
+        13: 'Chakkalakkal',
+        14: 'Arambram West',
+        15: 'Pullikkoth',
+        16: 'Arankilthazham',
+        17: 'Muttanchery',
+        18: 'Pullorammal',
+        19: 'Chathanarambu'
+      };
+
+      if (Array.isArray(wardsData)) {
+        wardsData.forEach((w: any) => {
+          if (w.wardNumber && w.wardName && !w.wardName.startsWith('Ward ')) {
+            wardNameMap[Number(w.wardNumber)] = w.wardName;
+          }
+        });
+      }
+
+      // Authentic Ward Committee Lead names dictionary
+      const wardLeadMap: Record<number, string> = {
+        1: 'Koya',
+        2: 'Nadheera',
+        3: 'Ward Committee Lead',
+        4: 'Naser',
+        5: 'Shabna',
+        6: 'Najmunissa',
+        7: 'Jamsheer',
+        8: 'Shareef',
+        9: 'Shaharbanu',
+        10: 'Muneer',
+        11: 'Sadhik',
+        12: 'Asarudheen'
+      };
+
+      if (pwData?.wards && Array.isArray(pwData.wards)) {
+        pwData.wards.forEach((w: any) => {
+          if (w.wardNumber && w.wardLeadName && w.wardLeadName !== 'Ward Committee Lead') {
+            wardLeadMap[w.wardNumber] = w.wardLeadName;
+          }
+        });
+      }
+
+      if (lbData?.topVolunteers && Array.isArray(lbData.topVolunteers)) {
+        lbData.topVolunteers.forEach((v: any) => {
+          if (v.wardNumber && !wardLeadMap[v.wardNumber] && (v.role === 'WardCommittee' || v.role === 'Coordinator')) {
+            wardLeadMap[v.wardNumber] = v.name;
+          }
+        });
+      }
+
+      // Build real corporate sponsors map per ward & collector from dedicated Sponsorships API
+      const wardSponsorsMap: Record<number, number> = {};
+      const userSponsorsMap: Record<string, number> = {};
+
+      if (sponData?.topWards && Array.isArray(sponData.topWards)) {
+        sponData.topWards.forEach((sw: any) => {
+          if (sw.wardNumber) {
+            wardSponsorsMap[Number(sw.wardNumber)] = Number(sw.sponsorshipCount || 0);
+          }
+        });
+      }
+
+      if (sponData?.topCollectors && Array.isArray(sponData.topCollectors)) {
+        sponData.topCollectors.forEach((sc: any) => {
+          if (sc.userId) {
+            userSponsorsMap[sc.userId] = Number(sc.sponsorshipCount || 0);
+          }
+        });
+      }
+
+      if (lbData?.topWards && Array.isArray(lbData.topWards)) {
+        const topWards: any[] = lbData.topWards;
+        const mappedWards: PublicWardRank[] = topWards.map((w, idx) => {
+          const wNum = Number(w.wardNumber || idx + 1);
+          const kits = Number(w.totalKits || 0);
+          const donors = Number(w.donationsCount || 0);
+          const sponsors = wardSponsorsMap[wNum] ?? (pwData?.wards?.find((pw: any) => pw.wardNumber === wNum)?.sponsorsCount ?? 0);
+          const target = Number(w.targetKits || 0);
+          const pct = target > 0 ? Math.round((kits / target) * 100) : 0;
+          const pos = w.position || idx + 1;
+
+          return {
+            position: pos,
+            wardNumber: wNum,
+            wardName: wardNameMap[wNum] || w.name || `Ward ${wNum}`,
+            wardNameMalayalam: '',
+            wardLeadName: wardLeadMap[wNum] || 'Ward Committee Lead',
+            totalKitsCollected: kits,
+            donorsCount: donors,
+            sponsorsCount: sponsors,
+            volunteerCount: Number(w.volunteerCount || 0),
+            targetKits: target,
+            achievementPercentage: pct,
+            rankBadge: pos === 1 ? 'Gold' : pos === 2 ? 'Silver' : pos === 3 ? 'Bronze' : 'Contributor'
+          };
+        });
+
+        // Ensure strictly sorted descending by total kits collected
+        mappedWards.sort((a, b) => b.totalKitsCollected - a.totalKitsCollected || a.wardNumber - b.wardNumber);
+        mappedWards.forEach((w, idx) => {
+          w.position = idx + 1;
+          w.rankBadge = idx === 0 ? 'Gold' : idx === 1 ? 'Silver' : idx === 2 ? 'Bronze' : 'Contributor';
+        });
+
+        // Map Top 10 Volunteers with their Ward & Ward Lead (strictly separating Donors vs Sponsors)
+        let topVolunteers: PublicVolunteerRank[] = [];
+
+        if (pwData?.topVolunteers && Array.isArray(pwData.topVolunteers) && pwData.topVolunteers.length > 0) {
+          topVolunteers = pwData.topVolunteers.slice(0, 10).map((v: any, idx: number) => {
+            const vWardNum = Number(v.wardNumber || 0);
+            const pos = v.position || idx + 1;
+            const donors = Number(v.donorsCount ?? v.sponsorsCount ?? 0);
+            const sponsors = userSponsorsMap[v.userId] ?? Number(v.sponsorsCount ?? 0);
+            return {
+              position: pos,
+              userId: v.userId || `vol-${idx}`,
+              name: v.name || 'Volunteer',
+              role: v.role || 'Volunteer',
+              wardNumber: vWardNum,
+              wardName: v.wardName || (vWardNum > 0 ? wardNameMap[vWardNum] || `Ward ${vWardNum}` : 'No Ward Assigned'),
+              wardLeadName: v.wardLeadName || (vWardNum > 0 ? wardLeadMap[vWardNum] || 'No Ward Lead' : 'No Ward Lead'),
+              totalKitsCollected: Number(v.totalKitsCollected || v.totalKits || 0),
+              donorsCount: donors,
+              sponsorsCount: sponsors,
+              targetKits: Number(v.targetKits || 0),
+              achievementPercentage: Number(v.achievementPercentage || 0),
+              rankBadge: pos === 1 ? 'Gold' : pos === 2 ? 'Silver' : pos === 3 ? 'Bronze' : 'Contributor'
+            };
+          });
+        } else if (lbData?.topVolunteers && Array.isArray(lbData.topVolunteers)) {
+          topVolunteers = lbData.topVolunteers.slice(0, 10).map((v: any, idx: number) => {
+            const vWardNum = Number(v.wardNumber || 0);
+            const kits = Number(v.totalKits || 0);
+            const donors = Number(v.donationsCount || 0);
+            const sponsors = userSponsorsMap[v.userId] || 0;
+            const target = Number(v.targetKits || 0);
+            const pos = v.position || idx + 1;
+            return {
+              position: pos,
+              userId: v.userId || `vol-${idx}`,
+              name: v.name || 'Volunteer',
+              role: v.role || 'Volunteer',
+              wardNumber: vWardNum,
+              wardName: vWardNum > 0 ? (wardNameMap[vWardNum] || `Ward ${vWardNum}`) : 'No Ward Assigned',
+              wardLeadName: vWardNum > 0 ? (wardLeadMap[vWardNum] || 'No Ward Lead') : 'No Ward Lead',
+              totalKitsCollected: kits,
+              donorsCount: donors,
+              sponsorsCount: sponsors,
+              targetKits: target,
+              achievementPercentage: target > 0 ? Math.round((kits / target) * 100) : 0,
+              rankBadge: pos === 1 ? 'Gold' : pos === 2 ? 'Silver' : pos === 3 ? 'Bronze' : 'Contributor'
+            };
+          });
+        }
+
+        return {
+          totalKitsCollected: mappedWards.reduce((sum, w) => sum + w.totalKitsCollected, 0),
+          totalDonors: mappedWards.reduce((sum, w) => sum + w.donorsCount, 0),
+          totalSponsors: sponData?.summary?.totalSponsorships ?? Object.values(wardSponsorsMap).reduce((a, b) => a + b, 0),
+          wards: mappedWards,
+          topVolunteers,
+          generatedAt: lbData.generatedAt || new Date().toISOString()
+        };
+      }
+    } catch (err) {
+      console.warn('Error fetching public wards leaderboard:', err);
+    }
+
+    return {
+      totalKitsCollected: 0,
+      totalDonors: 0,
+      totalSponsors: 0,
+      wards: [],
+      topVolunteers: [],
+      generatedAt: new Date().toISOString()
+    };
   },
 
   // Get Wards list for a panchayath (GET /api/Wards)

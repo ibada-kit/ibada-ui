@@ -14,9 +14,26 @@ import { SponsorshipReceiptModal } from './components/SponsorshipReceiptModal';
 import { CollectBalanceModal } from './components/CollectBalanceModal';
 import { DonorPosterGenerator } from './components/DonorPosterGenerator';
 import { PublicReceiptView } from './pages/PublicReceiptView';
+import { PublicWardsView } from './pages/PublicWardsView';
 
 export const App: React.FC = () => {
   const [currentUser, setCurUser] = useState<User | null>(() => getCurrentUser());
+  const [isWardsPublicView, setIsWardsPublicView] = useState<boolean>(() => {
+    const path = window.location.pathname.toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    return (
+      path.includes('/public-wards') ||
+      path.includes('/wards-ranking') ||
+      path.includes('/wards-leaderboard') ||
+      path === '/wards' ||
+      path.startsWith('/wards') ||
+      params.get('view') === 'wards' ||
+      params.get('view') === 'public-wards' ||
+      params.get('view') === 'kiosk' ||
+      params.has('public-wards') ||
+      params.has('wards')
+    );
+  });
   const [isPosterView, setIsPosterView] = useState<boolean>(() => {
     const path = window.location.pathname.toLowerCase();
     const params = new URLSearchParams(window.location.search);
@@ -130,6 +147,18 @@ export const App: React.FC = () => {
       setIsPosterView(path.startsWith('/poster') || p.get('view') === 'poster' || p.has('poster'));
       const r = p.get('receipt') || p.get('token');
       setPublicReceiptToken(r && r !== 'sample' && r !== 'sponsor' ? r.trim() : null);
+      setIsWardsPublicView(
+        path.includes('/public-wards') ||
+        path.includes('/wards-ranking') ||
+        path.includes('/wards-leaderboard') ||
+        path === '/wards' ||
+        path.startsWith('/wards') ||
+        p.get('view') === 'wards' ||
+        p.get('view') === 'public-wards' ||
+        p.get('view') === 'kiosk' ||
+        p.has('public-wards') ||
+        p.has('wards')
+      );
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -184,6 +213,11 @@ export const App: React.FC = () => {
     window.history.pushState({}, '', `${window.location.origin}/?${params.toString()}`);
     setIsPosterView(true);
   };
+
+  // Dedicated Public Wards Leaderboard View (strictly anonymous, no back button, cannot navigate to other pages)
+  if (isWardsPublicView) {
+    return <PublicWardsView />;
+  }
 
   // Public Donor Poster Generator view (no auth required)
   if (isPosterView) {

@@ -1,0 +1,1015 @@
+/* ==========================================================================
+   PUBLIC WARDS KIOSK / LIVE SCOREBOARD STYLES (Vanilla CSS)
+   Ibada App Light/White Theme (#F4F9FD / #FFFFFF cards / #008A2E Emerald)
+   Strictly locked kiosk navigation, kit counts only, 100% English
+   ========================================================================== */
+
+.public-kiosk-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: #F4F9FD;
+  background-image: 
+    radial-gradient(circle at 12% 10%, rgba(0, 138, 46, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 88% 85%, rgba(44, 130, 201, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(217, 119, 6, 0.02) 0%, transparent 50%);
+  color: #0F172A;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Header (Kiosk Navigation Lock - Clean Ibada White Style)
+   -------------------------------------------------------------------------- */
+.kiosk-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid #E2E8F0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  padding: 14px 24px;
+}
+
+.kiosk-header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.kiosk-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kiosk-logo-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #008A2E, #2C82C9);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 138, 46, 0.2);
+}
+
+.kiosk-logo-inner {
+  width: 100%;
+  height: 100%;
+  background: #FFFFFF;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #008A2E;
+}
+
+.kiosk-tagline-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #008A2E;
+  background: #EBF7EE;
+  border: 1px solid #BBF7D0;
+  padding: 3px 9px;
+  border-radius: 6px;
+  margin-bottom: 3px;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #008A2E;
+  box-shadow: 0 0 8px rgba(0, 138, 46, 0.6);
+  animation: pulse-glow 1.8s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.5; }
+}
+
+.kiosk-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.kiosk-subtitle {
+  font-size: 0.8rem;
+  color: #64748B;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* Header Controls */
+.kiosk-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kiosk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #334155;
+  border: 1px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kiosk-btn:hover {
+  background: #F8FAFC;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+.kiosk-btn.btn-active {
+  background: #EBF7EE;
+  color: #008A2E;
+  border-color: #86EFAC;
+}
+
+.kiosk-btn.btn-celebrate {
+  background: linear-gradient(135deg, #008A2E, #2C82C9);
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 3px 12px rgba(0, 138, 46, 0.25);
+}
+
+.kiosk-btn.btn-celebrate:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 138, 46, 0.35);
+}
+
+.spin-icon {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* --------------------------------------------------------------------------
+   Main Content Layout
+   -------------------------------------------------------------------------- */
+.kiosk-main {
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Main View Switcher Tabs (Wards vs Volunteers)
+   -------------------------------------------------------------------------- */
+.main-view-switcher-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.view-switch-nav {
+  display: inline-flex;
+  align-items: center;
+  background: #E2E8F0;
+  padding: 4px;
+  border-radius: 14px;
+  gap: 4px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.view-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.view-tab-btn:hover {
+  color: #0F172A;
+}
+
+.view-tab-btn.active {
+  background: #FFFFFF;
+  color: #008A2E;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.view-tab-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #F1F5F9;
+  color: #64748B;
+  transition: all 0.2s ease;
+}
+
+.view-tab-btn.active .view-tab-badge {
+  background: #EBF7EE;
+  color: #008A2E;
+}
+
+/* Volunteer role badges inside cards */
+.volunteer-role-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.role-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #EFF6FF;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+}
+
+.standing-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #F8FAFC;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+/* --------------------------------------------------------------------------
+   KPI Summary Banner (Ibada App White Style)
+   -------------------------------------------------------------------------- */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
+  border-color: #CBD5E1;
+}
+
+.kpi-card.kpi-kits {
+  background: linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 60%);
+  border-color: #BBF7D0;
+}
+
+.kpi-card.kpi-donors {
+  background: linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 60%);
+  border-color: #BAE6FD;
+}
+
+.kpi-card.kpi-sponsors {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FFFFFF 60%);
+  border-color: #FDE68A;
+}
+
+.kpi-card.kpi-leader {
+  background: linear-gradient(135deg, #FFFDF0 0%, #FFFFFF 60%);
+  border-color: #FCD34D;
+}
+
+.kpi-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.kpi-kits .kpi-label { color: #008A2E; }
+.kpi-donors .kpi-label { color: #0284C7; }
+.kpi-sponsors .kpi-label { color: #D97706; }
+.kpi-leader .kpi-label { color: #D97706; }
+
+.kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.kpi-value {
+  font-size: 2.3rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #0F172A;
+  line-height: 1;
+}
+
+.kpi-unit {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.kpi-subtext {
+  font-size: 0.76rem;
+  color: #64748B;
+  margin-top: 6px;
+}
+
+.kpi-icon-bubble {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-kits .kpi-icon-bubble {
+  background: #DCFCE7;
+  color: #008A2E;
+  border: 1px solid #86EFAC;
+}
+
+.kpi-sponsors .kpi-icon-bubble {
+  background: #E0F2FE;
+  color: #0284C7;
+  border: 1px solid #7DD3FC;
+}
+
+.kpi-leader .kpi-icon-bubble {
+  background: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FCD34D;
+}
+
+/* --------------------------------------------------------------------------
+   Filter & Interactive Search / Sort Bar (No Tabs, Clean White Bar)
+   -------------------------------------------------------------------------- */
+.filter-bar {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.filter-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #475569;
+  background: #F8FAFC;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+}
+
+.summary-count {
+  font-weight: 800;
+  color: #008A2E;
+  background: #EBF7EE;
+  padding: 1px 7px;
+  border-radius: 6px;
+}
+
+.filter-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sort-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-icon {
+  color: #64748B;
+}
+
+.sort-select {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0F172A;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sort-select:focus {
+  border-color: #008A2E;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(0, 138, 46, 0.15);
+}
+
+.search-box {
+  position: relative;
+  min-width: 250px;
+}
+
+.search-box input {
+  width: 100%;
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 8px 32px 8px 34px;
+  font-size: 0.82rem;
+  color: #0F172A;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-box input::placeholder {
+  color: #94A3B8;
+}
+
+.search-box input:focus {
+  border-color: #008A2E;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(0, 138, 46, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748B;
+  pointer-events: none;
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear-btn:hover {
+  color: #0F172A;
+}
+
+/* --------------------------------------------------------------------------
+   State Cards (Loading / Error / Empty in White Theme)
+   -------------------------------------------------------------------------- */
+.kiosk-state-card {
+  text-align: center;
+  padding: 60px 20px;
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.kiosk-error-card {
+  padding: 24px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 16px;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   Wards Leaderboard Cards Grid (Ibada White Cards)
+   -------------------------------------------------------------------------- */
+.wards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 20px;
+}
+
+.ward-card {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.ward-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  border-color: #CBD5E1;
+}
+
+/* Podium Rank Themes on White */
+.ward-card.rank-1 {
+  background: linear-gradient(180deg, #FFFDF0 0%, #FFFFFF 100%);
+  border: 2px solid #F59E0B;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.12);
+}
+
+.ward-card.rank-2 {
+  background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
+  border: 2px solid #94A3B8;
+  box-shadow: 0 4px 16px rgba(148, 163, 184, 0.12);
+}
+
+.ward-card.rank-3 {
+  background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
+  border: 2px solid #F97316;
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.12);
+}
+
+/* Card Header */
+.ward-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ward-rank-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rank-badge-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #475569;
+}
+
+.rank-1 .rank-badge-icon {
+  background: #FEF3C7;
+  border-color: #FCD34D;
+  color: #D97706;
+}
+
+.rank-2 .rank-badge-icon {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #475569;
+}
+
+.rank-3 .rank-badge-icon {
+  background: #FFEDD5;
+  border-color: #FDBA74;
+  color: #EA580C;
+}
+
+.rank-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #F1F5F9;
+  color: #475569;
+}
+
+.rank-1 .rank-tag {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.rank-2 .rank-tag {
+  background: #F1F5F9;
+  color: #334155;
+  border: 1px solid #CBD5E1;
+}
+
+.rank-3 .rank-tag {
+  background: #FFEDD5;
+  color: #C2410C;
+  border: 1px solid #FED7AA;
+}
+
+/* Prominent Kit Count Pill (Strictly Kit Count) */
+.kit-pill {
+  text-align: right;
+  background: #EBF7EE;
+  border: 1.5px solid #86EFAC;
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
+.kit-pill-val {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #008A2E;
+  letter-spacing: -0.02em;
+}
+
+.kit-pill-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #166534;
+  margin-top: 2px;
+}
+
+/* Ward Title */
+.ward-name-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0F172A;
+  margin-bottom: 2px;
+}
+
+.ward-number-sub {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748B;
+  margin-bottom: 14px;
+}
+
+/* Key Metrics Box (Ward Lead & Sponsors Count) */
+.metrics-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.metric-value-bold {
+  font-weight: 700;
+  color: #0F172A;
+  max-width: 170px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.metric-value-highlight {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #008A2E;
+}
+
+/* Progress Section */
+.progress-section {
+  padding-top: 12px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  margin-bottom: 6px;
+}
+
+.progress-target-text {
+  color: #64748B;
+}
+
+.progress-target-text strong {
+  color: #0F172A;
+}
+
+.progress-pct-text {
+  font-weight: 800;
+  color: #008A2E;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: #E2E8F0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #008A2E, #42B06F);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progress-bar-fill.gold {
+  background: linear-gradient(90deg, #F59E0B, #FBBF24);
+}
+
+/* Card Action / Cheer Button */
+.card-cheer-btn {
+  margin-top: 14px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card-cheer-btn:hover {
+  background: #EBF7EE;
+  color: #008A2E;
+  border-color: #86EFAC;
+}
+
+/* --------------------------------------------------------------------------
+   Modal / Ward Quick Details Dialog (Ibada Light Style)
+   -------------------------------------------------------------------------- */
+.ward-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
+
+.ward-modal-content {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.25s ease;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.modal-subtitle {
+  font-size: 0.78rem;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-btn:hover {
+  color: #0F172A;
+}
+
+.modal-grid-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.modal-stat-box {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+}
+
+.modal-stat-box.green {
+  background: #EBF7EE;
+  border-color: #BBF7D0;
+}
+
+.modal-stat-box.blue {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+}
+
+.modal-stat-box.gold {
+  background: #FFFBEB;
+  border-color: #FDE68A;
+}
+
+.modal-stat-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal-stat-box.green .modal-stat-label { color: #008A2E; }
+.modal-stat-box.blue .modal-stat-label { color: #0284C7; }
+.modal-stat-box.gold .modal-stat-label { color: #D97706; }
+
+.modal-stat-value {
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #0F172A;
+  margin-top: 4px;
+}
+
+.modal-details-card {
+  background: #F8FAFC;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.84rem;
+}
+
+.modal-detail-lbl {
+  color: #64748B;
+  font-weight: 600;
+}
+
+.modal-detail-val {
+  font-weight: 800;
+  color: #0F172A;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   Footer (Ibada Light Style)
+   -------------------------------------------------------------------------- */
+.kiosk-footer {
+  margin-top: auto;
+  border-top: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  padding: 18px 24px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: #64748B;
+}
+
+.kiosk-footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .kiosk-header {
+    padding: 12px 16px;
+  }
+  .kiosk-title {
+    font-size: 1.15rem;
+  }
+  .kiosk-main {
+    padding: 16px;
+    gap: 16px;
+  }
+  .kpi-value {
+    font-size: 1.9rem;
+  }
+  .search-box {
+    min-width: 100%;
+  }
+}
