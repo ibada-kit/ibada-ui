@@ -398,5 +398,12 @@ export interface PublicWardsResponse {
   wards: PublicWardRank[];
   topVolunteers?: PublicVolunteerRank[];
   generatedAt: string;
+  filterPeriod?: string;
+  filterFromDate?: string | null;
+  filterToDate?: string | null;
+  isFallbackToLastTransactionDate?: boolean;
+  lastActiveTransactionDate?: string | null;
+  topperWard?: PublicWardRank | null;
+  topperVolunteer?: PublicVolunteerRank | null;
 }
 

@@ -564,7 +564,7 @@
   justify-content: space-between;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
+  cursor: default;
 }
 
 .ward-card:hover {
@@ -993,6 +993,377 @@
 }
 
 /* --------------------------------------------------------------------------
+   Date & Topper Filter Controls
+   -------------------------------------------------------------------------- */
+.date-filter-section {
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.date-filter-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.date-filter-label-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0F172A;
+}
+
+.date-filter-icon {
+  color: #008A2E;
+}
+
+.date-filter-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #1E293B;
+}
+
+.date-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.date-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.date-pill-btn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+.date-pill-btn.active {
+  background: #EBF7EE;
+  color: #008A2E;
+  border-color: #86EFAC;
+  box-shadow: 0 2px 6px rgba(0, 138, 46, 0.12);
+}
+
+/* Custom Calendar Date Picker Panel */
+.custom-calendar-panel {
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 12px;
+  padding: 14px 18px;
+  animation: fadeIn 0.25s ease;
+}
+
+.calendar-inputs-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.calendar-input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.calendar-input-field label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.calendar-input-field input[type="date"] {
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.calendar-input-field input[type="date"]:focus {
+  border-color: #008A2E;
+  box-shadow: 0 0 0 3px rgba(0, 138, 46, 0.12);
+}
+
+.calendar-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.calendar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.calendar-btn.btn-apply {
+  background: #008A2E;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 138, 46, 0.25);
+}
+
+.calendar-btn.btn-apply:hover:not(:disabled) {
+  background: #007326;
+  transform: translateY(-1px);
+}
+
+.calendar-btn.btn-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calendar-btn.btn-single {
+  background: #FFFFFF;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+}
+
+.calendar-btn.btn-single:hover:not(:disabled) {
+  background: #F0F9FF;
+}
+
+.calendar-btn.btn-clear {
+  background: #FFFFFF;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.calendar-btn.btn-clear:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+/* Active Date Range Notice Banner */
+.date-active-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.date-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.date-banner-icon-bubble {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #DCFCE7;
+  color: #008A2E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.date-banner-title {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #065F46;
+}
+
+.date-banner-subtitle {
+  font-size: 0.76rem;
+  color: #047857;
+  margin-top: 1px;
+}
+
+.date-banner-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #065F46;
+  background: #FFFFFF;
+  border: 1px solid #A7F3D0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.date-banner-reset-btn:hover {
+  background: #DCFCE7;
+}
+
+/* --------------------------------------------------------------------------
+   Date Toppers Spotlight Showcase
+   -------------------------------------------------------------------------- */
+.topper-spotlight-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+.topper-spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.topper-spotlight-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.topper-spotlight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.topper-spotlight-card.gold-border {
+  border: 2px solid #FDE68A;
+  background: linear-gradient(135deg, #FFFFFF 85%, #FEF9C3 100%);
+}
+
+.topper-spotlight-card.emerald-border {
+  border: 2px solid #A7F3D0;
+  background: linear-gradient(135deg, #FFFFFF 85%, #ECFDF5 100%);
+}
+
+.topper-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.topper-card-badge.gold {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
+.topper-card-badge.emerald {
+  background: #DCFCE7;
+  color: #047857;
+}
+
+.topper-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.topper-main-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.01em;
+}
+
+.topper-sub-lead {
+  font-size: 0.82rem;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.topper-sub-lead strong {
+  color: #1E293B;
+}
+
+.topper-metrics-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.topper-metric-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.topper-metric-pill.green {
+  background: #EBF7EE;
+  color: #008A2E;
+  border: 1px solid #BBF7D0;
+}
+
+.topper-metric-pill.blue {
+  background: #F0F9FF;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+}
+
+.topper-card-empty {
+  font-size: 0.84rem;
+  color: #94A3B8;
+  font-style: italic;
+  padding: 12px 0;
+}
+
+/* --------------------------------------------------------------------------
    Responsive Design
    -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
@@ -1011,5 +1382,12 @@
   }
   .search-box {
     min-width: 100%;
+  }
+  .topper-spotlight-grid {
+    grid-template-columns: 1fr;
+  }
+  .calendar-inputs-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
