@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { User, ManagedUser, LeaderboardEntry, WardLeaderboardEntry } from '../types';
+import type { User, ManagedUser, ManagedUserRole, LeaderboardEntry, WardLeaderboardEntry } from '../types';
 import { adminApi, donationsApi, analyticsApi, sponsorshipsApi, generateRandomPassword, type UserProgress } from '../services/api';
 import { 
   ShieldCheck, 
@@ -18,7 +18,12 @@ import {
   Check,
   AlertTriangle,
   X,
-  Building2
+  Building2,
+  Search,
+  CheckCircle2,
+  XCircle,
+  UserCheck,
+  UserX
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
@@ -48,22 +53,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [loading, setLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
+  // User Management Filter & Search State
+  const [userRoleFilter, setUserRoleFilter] = useState<'All' | 'WardCommittee' | 'Coordinator' | 'Volunteer'>('All');
+  const [userStatusFilter, setUserStatusFilter] = useState<'All' | 'active' | 'disabled'>('All');
+  const [userWardFilter, setUserWardFilter] = useState<number | 'All'>('All');
+  const [userSearchQuery, setUserSearchQuery] = useState<string>('');
+
   // Add User Modal / Form State
   const [showAddModal, setShowAddModal] = useState(false);
   const [newFullName, setNewFullName] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [newRole, setNewRole] = useState<'Coordinator' | 'WardCommittee'>('Coordinator');
+  const [newRole, setNewRole] = useState<ManagedUserRole>('Volunteer');
   const [newWard, setNewWard] = useState<number>(1);
   const [newTarget, _setNewTarget] = useState<number>(50);
   void _setNewTarget;
+  const [newVolunteerAssignType, setNewVolunteerAssignType] = useState<'ward' | 'coordinator'>('ward');
+  const [newAssignedCoordinatorId, setNewAssignedCoordinatorId] = useState<string>('');
 
   // Edit User Modal / Form State
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editRole, setEditRole] = useState<'Coordinator' | 'WardCommittee'>('Coordinator');
+  const [editRole, setEditRole] = useState<ManagedUserRole>('Volunteer');
   const [editWard, setEditWard] = useState<number>(1);
   const [editTarget, setEditTarget] = useState<number>(0);
+  const [editAssignedParentId, setEditAssignedParentId] = useState<string>('');
+  const [editIsActive, setEditIsActive] = useState<boolean>(true);
   const [editPassword, setEditPassword] = useState('');
   const [passwordFeedback, setPasswordFeedback] = useState<string | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
@@ -92,6 +107,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     totalPaidAmount: number;
     totalCommittedAmount: number;
   } | null>(null);
+
+  // Helper to find existing active coordinator for a ward
+  const getActiveWardCoordinator = (wardNum: number, excludeUserId?: string): ManagedUser | undefined => {
+    return coordinators.find(u => 
+      u.role === 'WardCommittee' && 
+      u.wardNumber === wardNum && 
+      u.isActive !== false && 
+      u.userId !== excludeUserId
+    );
+  };
 
   const loadData = async () => {
     try {
@@ -136,21 +161,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
+    // Check single active Ward Coordinator rule
+    if (newRole === 'WardCommittee') {
+      const existing = getActiveWardCoordinator(Number(newWard));
+      if (existing) {
+        setFeedbackMsg({
+          text: `Ward ${newWard} already has an active Ward Coordinator (${existing.fullName}). Each ward can only have one active coordinator.`,
+          isError: true
+        });
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       const generatedPass = generateRandomPassword(6);
+      let assignedParent: string | undefined = undefined;
+      let wardToAssign: number = 0;
+
+      if (newRole === 'WardCommittee') {
+        wardToAssign = Number(newWard);
+      } else if (newRole === 'Coordinator') {
+        wardToAssign = 0;
+      } else if (newRole === 'Volunteer') {
+        if (newVolunteerAssignType === 'coordinator') {
+          if (!newAssignedCoordinatorId) {
+            setFeedbackMsg({ text: 'Please select a Drive Coordinator to assign this volunteer.', isError: true });
+            setLoading(false);
+            return;
+          }
+          assignedParent = newAssignedCoordinatorId;
+          const parentUser = coordinators.find(c => c.userId === newAssignedCoordinatorId);
+          wardToAssign = parentUser?.wardNumber || 0;
+        } else {
+          wardToAssign = Number(newWard);
+          const wardCoord = getActiveWardCoordinator(Number(newWard));
+          if (wardCoord) {
+            assignedParent = wardCoord.userId;
+          }
+        }
+      }
+
       const created = await adminApi.createManagedUser({
         fullName: newFullName.trim(),
         phoneNumber: `+91${clean.slice(-10)}`,
         role: newRole,
-        wardNumber: newRole === 'WardCommittee' ? Number(newWard) : 0,
-        targetKits: Number(newTarget),
-        defaultPassword: generatedPass
+        wardNumber: wardToAssign,
+        targetKits: Number(newTarget) || 50,
+        defaultPassword: generatedPass,
+        assignedParentUserId: assignedParent
       });
 
       setCoordinators(prev => [created, ...prev]);
       setFeedbackMsg({ 
-        text: `Registered ${created.fullName} as ${created.role}! Default password: ${generatedPass}`, 
+        text: `Registered ${created.fullName} as ${created.role === 'WardCommittee' ? 'Ward Coordinator' : created.role}! Default password: ${generatedPass}`, 
         isError: false 
       });
       
@@ -169,9 +233,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setEditingUser(user);
     setEditFullName(user.fullName);
     setEditPhone(user.phoneNumber.replace('+91', ''));
-    setEditRole(user.role);
-    setEditWard(user.wardNumber);
+    setEditRole((user.role === 'Admin' ? 'Coordinator' : user.role) as any);
+    setEditWard(user.wardNumber || 1);
     setEditTarget(user.targetKits || 50);
+    setEditAssignedParentId(user.parentUserId || '');
+    setEditIsActive(user.isActive !== false);
     setEditPassword('');
     setPasswordFeedback(null);
     setCopiedPassword(false);
@@ -205,14 +271,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
+    // Enforce single active coordinator per ward
+    if (editRole === 'WardCommittee' && editIsActive) {
+      const existing = getActiveWardCoordinator(Number(editWard), editingUser.userId);
+      if (existing) {
+        setFeedbackMsg({
+          text: `Ward ${editWard} already has an active Ward Coordinator (${existing.fullName}). Each ward can only have one active coordinator.`,
+          isError: true
+        });
+        return;
+      }
+    }
+
     try {
       setLoading(true);
+      let assignedParent: string | undefined = undefined;
+      let wardToAssign: number = 0;
+
+      if (editRole === 'WardCommittee') {
+        wardToAssign = Number(editWard);
+      } else if (editRole === 'Coordinator') {
+        wardToAssign = 0;
+      } else if (editRole === 'Volunteer') {
+        wardToAssign = Number(editWard);
+        assignedParent = editAssignedParentId || undefined;
+      }
+
       const res = await adminApi.updateManagedUser(editingUser.userId, {
         fullName: editFullName.trim(),
         phoneNumber: `+91${clean.slice(-10)}`,
         role: editRole,
-        wardNumber: editRole === 'WardCommittee' ? Number(editWard) : 0,
+        wardNumber: wardToAssign,
         targetKits: Number(editTarget),
+        isActive: editIsActive,
+        assignedParentUserId: assignedParent,
         newPassword: editPassword.trim() ? editPassword.trim() : undefined
       });
 
@@ -229,6 +321,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Handle Quick Toggle User Active / Disabled status
+  const handleToggleUserStatus = async (user: ManagedUser) => {
+    const nextStatus = user.isActive === false ? true : false;
+    setFeedbackMsg(null);
+
+    // If activating a WardCommittee, check if another active coordinator already exists in that ward
+    if (nextStatus && user.role === 'WardCommittee') {
+      const existing = getActiveWardCoordinator(user.wardNumber, user.userId);
+      if (existing) {
+        setFeedbackMsg({
+          text: `Cannot activate: Ward ${user.wardNumber} already has an active Ward Coordinator (${existing.fullName}).`,
+          isError: true
+        });
+        return;
+      }
+    }
+
+    try {
+      setLoading(true);
+      const res = await adminApi.toggleUserStatus(user.userId, nextStatus);
+      setCoordinators(prev => prev.map(u => u.userId === user.userId ? { ...u, isActive: nextStatus } : u));
+      setFeedbackMsg({
+        text: res.message || `User "${user.fullName}" is now ${nextStatus ? 'active' : 'disabled'}.`,
+        isError: false
+      });
+    } catch (err: any) {
+      setFeedbackMsg({ text: err.message || `Failed to change status for ${user.fullName}`, isError: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle Delete User
   const handleDeleteUser = async () => {
     if (!deletingUser) return;
@@ -238,7 +362,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setLoading(true);
       await adminApi.deleteManagedUser(deletingUser.userId);
       setCoordinators(prev => prev.filter(u => u.userId !== deletingUser.userId));
-      setFeedbackMsg({ text: `User "${deletingUser.fullName}" deleted successfully.`, isError: false });
+      setFeedbackMsg({ text: `User "${deletingUser.fullName}" deactivated successfully.`, isError: false });
       setDeletingUser(null);
     } catch (err: any) {
       setFeedbackMsg({ text: err.message || 'Failed to delete user.', isError: true });
@@ -366,7 +490,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#008A2E' }}
         >
           <UserPlus size={16} />
-          <span>Add Coordinator</span>
+          <span>Add New User</span>
         </button>
       </div>
 
@@ -517,7 +641,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </button>
       </ScrollableTabStrip>
 
-      {/* MODAL: ADD COORDINATOR */}
+      {/* MODAL: REGISTER NEW USER (Volunteer / Coordinator / Ward Committee) */}
       {showAddModal && (
         <div style={{
           position: 'fixed',
@@ -536,17 +660,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             background: '#FFFFFF',
             borderRadius: 'var(--radius-xl)',
             padding: '24px clamp(14px, 4vw, 24px)',
-            maxWidth: 480,
+            maxWidth: 520,
             width: '100%',
             maxHeight: '90dvh',
             overflowY: 'auto',
             boxShadow: 'var(--shadow-lg)'
           }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: 14 }}>
-              Register Coordinator / Ward Committee
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Register New User
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748B', padding: 4 }}
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-            <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                   Full Name
@@ -575,51 +707,163 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: newRole === 'WardCommittee' ? '1fr 1fr' : '1fr', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                  Role Assignment
+                </label>
+                <select
+                  className="input-field"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as any)}
+                >
+                  <option value="Volunteer">Volunteer (Relief Kit Collector)</option>
+                  <option value="WardCommittee">Ward Committee (Ward Coordinator)</option>
+                  <option value="Coordinator">Drive Coordinator (General Lead)</option>
+                </select>
+              </div>
+
+              {/* SPECIFIC TO WARD COMMITTEE */}
+              {newRole === 'WardCommittee' && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                    Role Assignment
+                    Assigned Ward Number
                   </label>
                   <select
                     className="input-field"
-                    value={newRole}
-                    onChange={(e) => setNewRole(e.target.value as any)}
+                    value={newWard}
+                    onChange={(e) => setNewWard(Number(e.target.value))}
                   >
-                    <option value="Coordinator">Drive Coordinator</option>
-                    <option value="WardCommittee">Ward Committee</option>
+                    {wardOptions.map((w) => {
+                      const existing = getActiveWardCoordinator(w.wardNumber);
+                      return (
+                        <option key={w.wardNumber} value={w.wardNumber}>
+                          {w.wardName} (Ward {w.wardNumber}){existing ? ` - [Occupied: ${existing.fullName}]` : ' - [Vacant]'}
+                        </option>
+                      );
+                    })}
                   </select>
+
+                  {/* Single Coordinator Constraint Warning */}
+                  {(() => {
+                    const existing = getActiveWardCoordinator(Number(newWard));
+                    if (existing) {
+                      return (
+                        <div style={{
+                          marginTop: 8,
+                          padding: '10px 12px',
+                          background: '#FEF3C7',
+                          border: '1px solid #FCD34D',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '0.75rem',
+                          color: '#92400E',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 6
+                        }}>
+                          <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                          <span>
+                            <strong>Ward {newWard} Already Assigned:</strong> Currently led by <strong>{existing.fullName}</strong> ({existing.phoneNumber}). Each ward is strictly limited to 1 active Ward Coordinator.
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
+              )}
 
-                {newRole === 'WardCommittee' && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                      Ward Name
+              {/* SPECIFIC TO VOLUNTEER: ASSIGN TO WARD OR COORDINATOR */}
+              {newRole === 'Volunteer' && (
+                <div style={{
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '12px 14px'
+                }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+                    Volunteer Hierarchy & Reporting
+                  </label>
+
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="volunteerAssignType"
+                        checked={newVolunteerAssignType === 'ward'}
+                        onChange={() => setNewVolunteerAssignType('ward')}
+                      />
+                      <span>Assign to Ward</span>
                     </label>
-                    <select
-                      className="input-field"
-                      value={newWard}
-                      onChange={(e) => setNewWard(Number(e.target.value))}
-                    >
-                      {wardOptions.map((w) => (
-                        <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} ({w.wardNumber})</option>
-                      ))}
-                    </select>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="volunteerAssignType"
+                        checked={newVolunteerAssignType === 'coordinator'}
+                        onChange={() => setNewVolunteerAssignType('coordinator')}
+                      />
+                      <span>Assign to Drive Coordinator</span>
+                    </label>
                   </div>
-                )}
-              </div>
 
-              {/* <div>
+                  {newVolunteerAssignType === 'ward' ? (
+                    <div>
+                      <select
+                        className="input-field"
+                        value={newWard}
+                        onChange={(e) => setNewWard(Number(e.target.value))}
+                      >
+                        {wardOptions.map((w) => (
+                          <option key={w.wardNumber} value={w.wardNumber}>
+                            {w.wardName} (Ward {w.wardNumber})
+                          </option>
+                        ))}
+                      </select>
+                      {(() => {
+                        const wardCoord = getActiveWardCoordinator(Number(newWard));
+                        return (
+                          <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748B', marginTop: 4 }}>
+                            {wardCoord 
+                              ? `Will report to Ward Lead: ${wardCoord.fullName} (${wardCoord.phoneNumber})` 
+                              : `No Ward Coordinator appointed yet; volunteer will report directly to Central Admin.`}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <div>
+                      <select
+                        className="input-field"
+                        value={newAssignedCoordinatorId}
+                        onChange={(e) => setNewAssignedCoordinatorId(e.target.value)}
+                      >
+                        <option value="">-- Choose Drive Coordinator --</option>
+                        {coordinators.filter(c => c.role === 'Coordinator' && c.isActive !== false).map((c) => (
+                          <option key={c.userId} value={c.userId}>
+                            {c.fullName} ({c.phoneNumber})
+                          </option>
+                        ))}
+                      </select>
+                      <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748B', marginTop: 4 }}>
+                        Volunteer collections will contribute directly to this coordinator's team tally.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                   Target Relief Kits
                 </label>
                 <input
                   type="number"
-                  min={10}
+                  min={1}
                   className="input-field"
+                  placeholder="e.g. 50"
                   value={newTarget}
-                  onChange={(e) => setNewTarget(Number(e.target.value))}
+                  onChange={(e) => _setNewTarget(Number(e.target.value))}
                 />
-              </div> */}
+              </div>
 
               <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                 <button
@@ -644,7 +888,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* MODAL: EDIT USER & REGENERATE PASSWORD */}
+      {/* MODAL: EDIT USER & ROLE & STATUS */}
       {editingUser && (
         <div style={{
           position: 'fixed',
@@ -663,7 +907,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             background: '#FFFFFF',
             borderRadius: 'var(--radius-xl)',
             padding: '24px clamp(16px, 4vw, 24px)',
-            maxWidth: 500,
+            maxWidth: 520,
             width: '100%',
             maxHeight: '90dvh',
             overflowY: 'auto',
@@ -672,10 +916,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                  Edit User Details
+                  Edit User: {editingUser.fullName}
                 </h3>
                 <p style={{ fontSize: '0.76rem', color: '#64748B', margin: '2px 0 0 0' }}>
-                  Update profile, role, targets, or regenerate login password.
+                  Update role assignment, status, reporting hierarchy, or password.
                 </p>
               </div>
               <button
@@ -721,7 +965,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: editRole === 'WardCommittee' ? '1fr 1fr' : '1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: (editRole === 'WardCommittee' || editRole === 'Volunteer') ? '1fr 1fr' : '1fr', gap: 10 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     Role Assignment
@@ -731,42 +975,121 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     value={editRole}
                     onChange={(e) => setEditRole(e.target.value as any)}
                   >
-                    <option value="Coordinator">Coordinator</option>
-                    <option value="WardCommittee">Ward Committee Lead</option>
+                    <option value="Volunteer">Volunteer</option>
+                    <option value="Coordinator">Drive Coordinator</option>
+                    <option value="WardCommittee">Ward Committee (Ward Coordinator)</option>
                   </select>
                 </div>
 
-                {editRole === 'WardCommittee' && (
+                {(editRole === 'WardCommittee' || editRole === 'Volunteer') && (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                      Ward Name
+                      Ward Number
                     </label>
                     <select
                       className="input-field"
                       value={editWard}
                       onChange={(e) => setEditWard(Number(e.target.value))}
                     >
-                      {wardOptions.map((w) => (
-                        <option key={w.wardNumber} value={w.wardNumber}>{w.wardName} ({w.wardNumber})</option>
-                      ))}
+                      {wardOptions.map((w) => {
+                        const existing = getActiveWardCoordinator(w.wardNumber, editingUser.userId);
+                        return (
+                          <option key={w.wardNumber} value={w.wardNumber}>
+                            {w.wardName} ({w.wardNumber}){existing && editRole === 'WardCommittee' ? ' [Occupied]' : ''}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 )}
               </div>
 
-              {/* <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                  Target Relief Kits
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  required
-                  className="input-field"
-                  value={editTarget}
-                  onChange={(e) => setEditTarget(Number(e.target.value))}
-                />
-              </div> */}
+              {/* Conflict Alert in Edit modal when changing role or ward to WardCommittee */}
+              {editRole === 'WardCommittee' && editIsActive && (() => {
+                const existing = getActiveWardCoordinator(Number(editWard), editingUser.userId);
+                if (existing) {
+                  return (
+                    <div style={{
+                      padding: '10px 12px',
+                      background: '#FEF3C7',
+                      border: '1px solid #FCD34D',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.75rem',
+                      color: '#92400E',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 6
+                    }}>
+                      <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                      <span>
+                        <strong>Conflict Warning:</strong> Ward {editWard} already has an active coordinator (<strong>{existing.fullName}</strong>). Saving this will be rejected by the system.
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Volunteer Parent Coordinator Selection */}
+              {editRole === 'Volunteer' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
+                    Reporting Coordinator / Lead
+                  </label>
+                  <select
+                    className="input-field"
+                    value={editAssignedParentId}
+                    onChange={(e) => setEditAssignedParentId(e.target.value)}
+                  >
+                    <option value="">-- Direct Central Administration --</option>
+                    {coordinators
+                      .filter(c => (c.role === 'Coordinator' || c.role === 'WardCommittee') && c.userId !== editingUser.userId)
+                      .map(c => (
+                        <option key={c.userId} value={c.userId}>
+                          {c.fullName} ({c.role === 'WardCommittee' ? `Ward ${c.wardNumber} Lead` : 'Drive Coordinator'})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Active / Disabled Account Status Toggle */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: editIsActive ? '#F0FDF4' : '#FEF2F2',
+                border: editIsActive ? '1px solid #BBF7D0' : '1px solid #FECACA'
+              }}>
+                <div>
+                  <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: editIsActive ? '#166534' : '#991B1B' }}>
+                    Account Status: {editIsActive ? 'Active' : 'Disabled / Suspended'}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: editIsActive ? '#15803D' : '#B91C1C' }}>
+                    {editIsActive ? 'User can log in and submit collections.' : 'User is blocked from logging in.'}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setEditIsActive(prev => !prev)}
+                  className="btn-secondary"
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    background: editIsActive ? '#DC2626' : '#008A2E',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {editIsActive ? 'Disable User' : 'Activate User'}
+                </button>
+              </div>
 
               {/* Password & Credentials Box */}
               <div style={{
@@ -841,11 +1164,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {passwordFeedback && (
                   <span style={{ display: 'block', fontSize: '0.74rem', color: '#008A2E', fontWeight: 600, marginTop: 6 }}>
                     {passwordFeedback}
-                  </span>
-                )}
-                {!passwordFeedback && (
-                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748B', marginTop: 6 }}>
-                    Default formula: first 3 letters of name + last 3 digits of phone (e.g. <code>jas458</code>).
                   </span>
                 )}
               </div>
@@ -956,123 +1274,358 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {/* TAB 1: USER MANAGEMENT */}
-      {activeTab === 'users' && (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: 'var(--radius-xl)',
-          padding: 20,
-          border: '1px solid var(--border-subtle)',
-          boxShadow: 'var(--shadow-sm)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
-              Coordinators & Ward Committees
-            </h3>
-            <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
-              {coordinators.length} registered leads
-            </span>
-          </div>
+      {activeTab === 'users' && (() => {
+        const wardCoordinatorsCount = coordinators.filter(u => u.role === 'WardCommittee').length;
+        const driveCoordinatorsCount = coordinators.filter(u => u.role === 'Coordinator').length;
+        const volunteersCount = coordinators.filter(u => u.role === 'Volunteer').length;
+        const activeUsersCount = coordinators.filter(u => u.isActive !== false).length;
+        const disabledUsersCount = coordinators.filter(u => u.isActive === false).length;
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {coordinators.map(u => (
-              <div
-                key={u.userId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '14px 16px',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#F8FAFC',
-                  border: '1px solid var(--border-subtle)',
-                  flexWrap: 'wrap',
-                  gap: 12
-                }}
+        const filteredUsers = coordinators.filter(u => {
+          if (userRoleFilter !== 'All' && u.role !== userRoleFilter) return false;
+          if (userStatusFilter === 'active' && u.isActive === false) return false;
+          if (userStatusFilter === 'disabled' && u.isActive !== false) return false;
+          if (userWardFilter !== 'All' && u.wardNumber !== userWardFilter) return false;
+          if (userSearchQuery.trim()) {
+            const q = userSearchQuery.trim().toLowerCase();
+            const matchName = u.fullName?.toLowerCase().includes(q);
+            const matchPhone = u.phoneNumber?.includes(q);
+            if (!matchName && !matchPhone) return false;
+          }
+          return true;
+        });
+
+        return (
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: 'var(--radius-xl)',
+            padding: 20,
+            border: '1px solid var(--border-subtle)',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            {/* Header & Quick Action */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  User Management
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                  {coordinators.length} registered members ({activeUsersCount} active, {disabledUsersCount} disabled)
+                </span>
+              </div>
+
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#008A2E', padding: '8px 14px', fontSize: '0.82rem' }}
               >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
-                      {u.fullName}
-                    </span>
-                    <span style={{
-                      background: u.role === 'Coordinator' ? '#EDF4FA' : '#EBF7EE',
-                      color: u.role === 'Coordinator' ? '#2C82C9' : '#008A2E',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)'
-                    }}>
-                      {u.role === 'Coordinator' ? 'Coordinator' : `Ward ${u.wardNumber} Committee`}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.76rem', color: '#64748B', display: 'block', marginTop: 2 }}>
-                    {u.phoneNumber} • Panchayath: {u.panchayath}
-                  </span>
+                <UserPlus size={15} />
+                <span>Register User</span>
+              </button>
+            </div>
+
+            {/* Search & Filter Controls */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              padding: 14,
+              background: '#F8FAFC',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-subtle)',
+              marginBottom: 16
+            }}>
+              {/* Search Bar */}
+              <div style={{ position: 'relative' }}>
+                <Search size={16} color="#64748B" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="input-field"
+                  style={{ paddingLeft: 36, background: '#FFFFFF' }}
+                  placeholder="Search volunteers, coordinators by name or mobile number..."
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                />
+                {userSearchQuery && (
+                  <button
+                    onClick={() => setUserSearchQuery('')}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Pills & Selectors */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                {/* Role Filter Tabs */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {[
+                    { key: 'All', label: 'All Users', count: coordinators.length },
+                    { key: 'WardCommittee', label: 'Ward Coordinators', count: wardCoordinatorsCount },
+                    { key: 'Coordinator', label: 'Drive Coordinators', count: driveCoordinatorsCount },
+                    { key: 'Volunteer', label: 'Volunteers', count: volunteersCount }
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setUserRoleFilter(tab.key as any)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-full)',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: '1px solid',
+                        borderColor: userRoleFilter === tab.key ? '#008A2E' : '#CBD5E1',
+                        background: userRoleFilter === tab.key ? '#008A2E' : '#FFFFFF',
+                        color: userRoleFilter === tab.key ? '#FFFFFF' : '#475569',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {tab.label} ({tab.count})
+                    </button>
+                  ))}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <div style={{ textAlign: 'right', minWidth: 90 }}>
-                    <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.92rem', display: 'block' }}>
-                      {u.kitsCollected || 0} / {u.targetKits || 50} Kits
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>
-                      ₹{(u.totalAmount || 0).toLocaleString('en-IN')} Raised
-                    </span>
-                  </div>
+                {/* Status & Ward Filter Dropdowns */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <select
+                    className="input-field"
+                    style={{ width: 'auto', padding: '6px 10px', fontSize: '0.76rem', background: '#FFFFFF' }}
+                    value={userStatusFilter}
+                    onChange={(e) => setUserStatusFilter(e.target.value as any)}
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="active">Active Only ({activeUsersCount})</option>
+                    <option value="disabled">Disabled Only ({disabledUsersCount})</option>
+                  </select>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <button
-                      onClick={() => handleOpenEdit(u)}
-                      className="btn-secondary"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        color: '#0F172A',
-                        background: '#FFFFFF',
-                        border: '1px solid #CBD5E1',
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer'
-                      }}
-                      title="Edit User Details"
-                    >
-                      <Edit3 size={13} color="#008A2E" />
-                      <span>Edit</span>
-                    </button>
-
-                   
-
-                    <button
-                      onClick={() => setDeletingUser(u)}
-                      className="btn-secondary"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '6px 10px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        color: '#DC2626',
-                        background: '#FEF2F2',
-                        border: '1px solid #FECACA',
-                        borderRadius: 'var(--radius-md)',
-                        cursor: 'pointer'
-                      }}
-                      title="Delete User"
-                    >
-                      <Trash2 size={13} />
-                      <span>Delete</span>
-                    </button>
-                  </div>
+                  <select
+                    className="input-field"
+                    style={{ width: 'auto', padding: '6px 10px', fontSize: '0.76rem', background: '#FFFFFF' }}
+                    value={userWardFilter}
+                    onChange={(e) => setUserWardFilter(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                  >
+                    <option value="All">All Wards</option>
+                    {wardOptions.map(w => (
+                      <option key={w.wardNumber} value={w.wardNumber}>Ward {w.wardNumber}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* User Cards List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {filteredUsers.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '36px 16px', color: '#64748B' }}>
+                  <Users size={36} style={{ margin: '0 auto 10px auto', opacity: 0.4 }} />
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.92rem' }}>No users found matching your filters.</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem' }}>Try resetting the search or filter options above.</p>
+                </div>
+              ) : (
+                filteredUsers.map(u => {
+                  const isActive = u.isActive !== false;
+                  const parentUser = u.parentUserId ? coordinators.find(c => c.userId === u.parentUserId) : null;
+
+                  return (
+                    <div
+                      key={u.userId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        background: isActive ? '#FFFFFF' : '#F8FAFC',
+                        border: isActive ? '1px solid var(--border-subtle)' : '1px dashed #CBD5E1',
+                        opacity: isActive ? 1 : 0.8,
+                        flexWrap: 'wrap',
+                        gap: 12,
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                    >
+                      {/* Identity & Role */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 240 }}>
+                        <div style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 'var(--radius-full)',
+                          background: u.role === 'WardCommittee' ? '#EBF7EE' : u.role === 'Coordinator' ? '#EDF4FA' : '#F5F3FF',
+                          color: u.role === 'WardCommittee' ? '#008A2E' : u.role === 'Coordinator' ? '#2C82C9' : '#7C3AED',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '0.85rem'
+                        }}>
+                          {u.fullName?.slice(0, 2).toUpperCase() || 'U'}
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.94rem' }}>
+                              {u.fullName}
+                            </span>
+
+                            {/* Role Badge */}
+                            <span style={{
+                              background: u.role === 'WardCommittee' ? '#EBF7EE' : u.role === 'Coordinator' ? '#EDF4FA' : '#F5F3FF',
+                              color: u.role === 'WardCommittee' ? '#008A2E' : u.role === 'Coordinator' ? '#2C82C9' : '#7C3AED',
+                              fontSize: '0.7rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)'
+                            }}>
+                              {u.role === 'WardCommittee' ? `Ward ${u.wardNumber} Lead` : u.role === 'Coordinator' ? 'Drive Coordinator' : `Volunteer (Ward ${u.wardNumber || '-'})`}
+                            </span>
+
+                            {/* Status Badge */}
+                            <span style={{
+                              background: isActive ? '#DCFCE7' : '#FEE2E2',
+                              color: isActive ? '#15803D' : '#B91C1C',
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '1px 7px',
+                              borderRadius: 'var(--radius-full)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 3
+                            }}>
+                              {isActive ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
+                              <span>{isActive ? 'Active' : 'Disabled'}</span>
+                            </span>
+                          </div>
+
+                          <span style={{ fontSize: '0.76rem', color: '#64748B', display: 'block', marginTop: 2 }}>
+                            {u.phoneNumber} • {u.panchayath}
+                            {parentUser && (
+                              <span> • Reports to: <strong>{parentUser.fullName}</strong></span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Stats & Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                        <div style={{ textAlign: 'right', minWidth: 90 }}>
+                          <span style={{ fontWeight: 800, color: '#008A2E', fontSize: '0.92rem', display: 'block' }}>
+                            {u.kitsCollected || 0} / {u.targetKits || 50} Kits
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block' }}>
+                            ₹{(u.totalAmount || 0).toLocaleString('en-IN')} Raised
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          {/* Edit Details */}
+                          <button
+                            onClick={() => handleOpenEdit(u)}
+                            className="btn-secondary"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '6px 10px',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              color: '#0F172A',
+                              background: '#FFFFFF',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: 'var(--radius-md)',
+                              cursor: 'pointer'
+                            }}
+                            title="Edit User Details & Role"
+                          >
+                            <Edit3 size={13} color="#008A2E" />
+                            <span>Edit</span>
+                          </button>
+
+                          {/* Toggle Active/Disabled Status */}
+                          <button
+                            onClick={() => handleToggleUserStatus(u)}
+                            disabled={loading}
+                            className="btn-secondary"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '6px 10px',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              color: isActive ? '#B45309' : '#008A2E',
+                              background: isActive ? '#FFFBEB' : '#ECFDF5',
+                              border: isActive ? '1px solid #FCD34D' : '1px solid #A7F3D0',
+                              borderRadius: 'var(--radius-md)',
+                              cursor: 'pointer'
+                            }}
+                            title={isActive ? 'Disable User (Block Login)' : 'Activate User (Allow Login)'}
+                          >
+                            {isActive ? <UserX size={13} /> : <UserCheck size={13} />}
+                            <span>{isActive ? 'Disable' : 'Activate'}</span>
+                          </button>
+
+                          {/* Reset / Change Password */}
+                          <button
+                            onClick={() => setResetTargetUser({
+                              id: u.userId,
+                              name: u.fullName,
+                              phone: u.phoneNumber,
+                              role: u.role,
+                              wardNumber: u.wardNumber
+                            })}
+                            className="btn-secondary"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '6px 10px',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              color: '#0284C7',
+                              background: '#F0F9FF',
+                              border: '1px solid #BAE6FD',
+                              borderRadius: 'var(--radius-md)',
+                              cursor: 'pointer'
+                            }}
+                            title="Change / Reset User Password"
+                          >
+                            <Key size={13} />
+                            <span>Password</span>
+                          </button>
+
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => setDeletingUser(u)}
+                            className="btn-secondary"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '6px 8px',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              color: '#DC2626',
+                              background: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              borderRadius: 'var(--radius-md)',
+                              cursor: 'pointer'
+                            }}
+                            title="Delete User"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* TAB 2: TARGET MANAGEMENT */}
       {activeTab === 'targets' && (

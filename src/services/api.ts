@@ -878,17 +878,30 @@ export const usersApi = {
 // Admin API (Live Azure Backend)
 // ============================================================================
 export const adminApi = {
-  // Get Coordinators & Ward Committees (GET /api/Users/coordinators)
-  getManagedUsers: async (): Promise<ManagedUser[]> => {
+  // Get All Users (GET /api/Users with optional filtering)
+  getManagedUsers: async (filters?: { role?: string; wardNumber?: number; isActive?: boolean; search?: string }): Promise<ManagedUser[]> => {
     const user = getCurrentUser();
     const token = user?.token;
 
-    const res = await fetch(`${API_BASE_URL}/Users/coordinators`, {
+    const params = new URLSearchParams();
+    if (filters?.role && filters.role !== 'All') params.append('role', filters.role);
+    if (filters?.wardNumber && filters.wardNumber > 0) params.append('wardNumber', String(filters.wardNumber));
+    if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
+    if (filters?.search) params.append('search', filters.search);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    let res = await fetch(`${API_BASE_URL}/Users${queryString}`, {
       headers: getAuthHeaders(token, false)
     });
 
+    if (!res.ok && res.status === 404) {
+      res = await fetch(`${API_BASE_URL}/Users/coordinators`, {
+        headers: getAuthHeaders(token, false)
+      });
+    }
+
     if (!res.ok) {
-      const msg = await extractErrorMessage(res, 'Failed to load coordinators');
+      const msg = await extractErrorMessage(res, 'Failed to load users');
       throw new Error(msg);
     }
 
@@ -899,37 +912,45 @@ export const adminApi = {
       fullName: u.fullName,
       phoneNumber: u.phoneNumber,
       role: u.role,
-      wardNumber: u.wardNumber,
+      wardNumber: u.wardNumber ?? 0,
       panchayath: u.panchayath || 'Madavoor',
       district: u.district || 'Kozhikode',
       targetKits: u.targetKits || 50,
       kitsCollected: Number(u.kitsCollected ?? u.KitsCollected ?? 0),
       totalAmount: Number(u.totalAmount ?? u.TotalAmount ?? u.collectedAmount ?? u.CollectedAmount ?? 0),
       donationsCount: 0,
+      isActive: u.isActive ?? u.IsActive ?? true,
+      parentUserId: u.parentUserId ?? u.ParentUserId ?? '',
       createdAt: new Date().toISOString()
     }));
   },
 
-  // Register Coordinator / Ward Committee (POST /api/Users)
+  // Register Coordinator / Ward Committee / Volunteer (POST /api/Users)
   createManagedUser: async (data: CreateManagedUserRequest): Promise<ManagedUser> => {
     const token = getCurrentUser()?.token;
     const defaultPassword = data.defaultPassword || generateDefaultPassword(data.fullName, data.phoneNumber);
     const cleanPhone = data.phoneNumber.replace(/\D/g, '');
     const formattedPhone = cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone.slice(-10)}`;
 
+    const payload: any = {
+      fullName: data.fullName.trim(),
+      phoneNumber: formattedPhone,
+      role: data.role,
+      wardNumber: Number(data.wardNumber) || 0,
+      panchayath: data.panchayath || 'Madavoor',
+      district: data.district || 'Kozhikode',
+      targetKits: Number(data.targetKits) || 50,
+      defaultPassword: defaultPassword
+    };
+
+    if (data.assignedParentUserId) {
+      payload.assignedParentUserId = data.assignedParentUserId;
+    }
+
     const res = await fetch(`${API_BASE_URL}/Users`, {
       method: 'POST',
       headers: getAuthHeaders(token),
-      body: JSON.stringify({
-        fullName: data.fullName.trim(),
-        phoneNumber: formattedPhone,
-        role: data.role,
-        wardNumber: Number(data.wardNumber),
-        panchayath: data.panchayath || 'Madavoor',
-        district: data.district || 'Kozhikode',
-        targetKits: Number(data.targetKits) || 50,
-        defaultPassword: defaultPassword
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!res.ok) {
@@ -944,13 +965,15 @@ export const adminApi = {
       fullName: data.fullName.trim(),
       phoneNumber: formattedPhone,
       role: data.role,
-      wardNumber: Number(data.wardNumber),
+      wardNumber: Number(data.wardNumber) || 0,
       panchayath: data.panchayath || 'Madavoor',
       district: data.district || 'Kozhikode',
       targetKits: Number(data.targetKits) || 50,
       kitsCollected: 0,
       totalAmount: 0,
       donationsCount: 0,
+      isActive: true,
+      parentUserId: data.assignedParentUserId || '',
       createdAt: new Date().toISOString()
     };
   },
@@ -991,6 +1014,8 @@ export const adminApi = {
     if (formattedPhone) payload.phoneNumber = formattedPhone;
     if (data.wardNumber !== undefined) payload.wardNumber = Number(data.wardNumber);
     if (data.targetKits !== undefined) payload.targetKits = Number(data.targetKits);
+    if (data.assignedParentUserId !== undefined) payload.assignedParentUserId = data.assignedParentUserId;
+    if (data.isActive !== undefined) payload.isActive = data.isActive;
 
     const res = await fetch(`${API_BASE_URL}/Users/${userId}`, {
       method: 'PUT',
@@ -1015,12 +1040,51 @@ export const adminApi = {
         panchayath: u.panchayath || data.panchayath || 'Madavoor',
         district: u.district || data.district || 'Kozhikode',
         targetKits: u.targetKits ?? data.targetKits ?? 0,
-        kitsCollected: 0,
-        totalAmount: 0,
+        kitsCollected: Number(u.kitsCollected ?? 0),
+        totalAmount: Number(u.collectedAmount ?? u.totalAmount ?? 0),
         donationsCount: 0,
+        isActive: u.isActive ?? u.IsActive ?? data.isActive ?? true,
+        parentUserId: u.parentUserId ?? u.ParentUserId ?? data.assignedParentUserId ?? '',
         createdAt: new Date().toISOString()
       },
       newPassword: resData.newPassword
+    };
+  },
+
+  // Toggle User Active / Disabled status (PATCH /api/Users/{userId}/status)
+  toggleUserStatus: async (userId: string, isActive: boolean): Promise<{ message: string; user: ManagedUser }> => {
+    const token = getCurrentUser()?.token;
+    const res = await fetch(`${API_BASE_URL}/Users/${userId}/status`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ isActive })
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, `Failed to ${isActive ? 'activate' : 'disable'} user`);
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const u = data.user || {};
+    return {
+      message: data.message || `User is now ${isActive ? 'active' : 'disabled'}.`,
+      user: {
+        userId: u.userId || userId,
+        fullName: u.fullName || '',
+        phoneNumber: u.phoneNumber || '',
+        role: u.role || 'Volunteer',
+        wardNumber: u.wardNumber ?? 0,
+        panchayath: u.panchayath || 'Madavoor',
+        district: u.district || 'Kozhikode',
+        targetKits: u.targetKits || 0,
+        kitsCollected: Number(u.kitsCollected ?? 0),
+        totalAmount: Number(u.collectedAmount ?? u.totalAmount ?? 0),
+        donationsCount: 0,
+        isActive: u.isActive ?? isActive,
+        parentUserId: u.parentUserId || '',
+        createdAt: new Date().toISOString()
+      }
     };
   },
 

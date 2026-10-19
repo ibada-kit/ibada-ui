@@ -137,7 +137,7 @@ export interface WardOption {
   panchayath: string;
 }
 
-export type ManagedUserRole = 'WardCommittee' | 'Coordinator';
+export type ManagedUserRole = 'WardCommittee' | 'Coordinator' | 'Volunteer' | 'Admin';
 
 export interface ManagedUser {
   userId: string;
@@ -152,17 +152,20 @@ export interface ManagedUser {
   totalAmount: number;
   donationsCount: number;
   createdAt: string;
+  isActive?: boolean;
+  parentUserId?: string;
 }
 
 export interface CreateManagedUserRequest {
   fullName: string;
   phoneNumber: string;
   role: ManagedUserRole;
-  wardNumber: number;
+  wardNumber?: number;
   panchayath?: string;
   district?: string;
-  targetKits: number;
+  targetKits?: number;
   defaultPassword?: string;
+  assignedParentUserId?: string;
 }
 
 export interface UpdateManagedUserRequest {
@@ -175,6 +178,7 @@ export interface UpdateManagedUserRequest {
   targetKits?: number;
   newPassword?: string;
   isActive?: boolean;
+  assignedParentUserId?: string;
 }
 
 // ============================================================================
