@@ -271,6 +271,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
+    if (!editIsActive) {
+      const isSelf = 
+        editingUser.userId === currentUser.userId ||
+        (!!editingUser.phoneNumber && !!currentUser.phoneNumber && 
+         editingUser.phoneNumber.replace(/\D/g, '').slice(-10) === currentUser.phoneNumber.replace(/\D/g, '').slice(-10));
+      if (isSelf) {
+        setFeedbackMsg({ text: 'You cannot disable your own admin account.', isError: true });
+        return;
+      }
+    }
+
     // Enforce single active coordinator per ward
     if (editRole === 'WardCommittee' && editIsActive) {
       const existing = getActiveWardCoordinator(Number(editWard), editingUser.userId);
@@ -323,6 +334,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Handle Quick Toggle User Active / Disabled status
   const handleToggleUserStatus = async (user: ManagedUser) => {
+    const isSelf = 
+      user.userId === currentUser.userId ||
+      (!!user.phoneNumber && !!currentUser.phoneNumber && 
+       user.phoneNumber.replace(/\D/g, '').slice(-10) === currentUser.phoneNumber.replace(/\D/g, '').slice(-10));
+
+    if (isSelf) {
+      setFeedbackMsg({ text: 'You cannot disable your own admin account.', isError: true });
+      return;
+    }
+
     const nextStatus = user.isActive === false ? true : false;
     setFeedbackMsg(null);
 
@@ -357,6 +378,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleDeleteUser = async () => {
     if (!deletingUser) return;
     setFeedbackMsg(null);
+
+    const isSelf = 
+      deletingUser.userId === currentUser.userId ||
+      (!!deletingUser.phoneNumber && !!currentUser.phoneNumber && 
+       deletingUser.phoneNumber.replace(/\D/g, '').slice(-10) === currentUser.phoneNumber.replace(/\D/g, '').slice(-10));
+
+    if (isSelf) {
+      setFeedbackMsg({ text: 'You cannot delete your own admin account.', isError: true });
+      setDeletingUser(null);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -1054,42 +1086,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
 
               {/* Active / Disabled Account Status Toggle */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
-                background: editIsActive ? '#F0FDF4' : '#FEF2F2',
-                border: editIsActive ? '1px solid #BBF7D0' : '1px solid #FECACA'
-              }}>
-                <div>
-                  <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: editIsActive ? '#166534' : '#991B1B' }}>
-                    Account Status: {editIsActive ? 'Active' : 'Disabled / Suspended'}
+              {editingUser && (editingUser.userId === currentUser.userId || 
+                (!!editingUser.phoneNumber && !!currentUser.phoneNumber &&
+                 editingUser.phoneNumber.replace(/\D/g, '').slice(-10) === currentUser.phoneNumber.replace(/\D/g, '').slice(-10))) ? (
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: '#F0FDF4',
+                  border: '1px solid #BBF7D0'
+                }}>
+                  <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#166534' }}>
+                    Account Status: Active (Your Administrator Account)
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: editIsActive ? '#15803D' : '#B91C1C' }}>
-                    {editIsActive ? 'User can log in and submit collections.' : 'User is blocked from logging in.'}
+                  <span style={{ fontSize: '0.72rem', color: '#15803D' }}>
+                    You cannot disable or suspend your own active administrator account.
                   </span>
                 </div>
+              ) : (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: editIsActive ? '#F0FDF4' : '#FEF2F2',
+                  border: editIsActive ? '1px solid #BBF7D0' : '1px solid #FECACA'
+                }}>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: editIsActive ? '#166534' : '#991B1B' }}>
+                      Account Status: {editIsActive ? 'Active' : 'Disabled / Suspended'}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: editIsActive ? '#15803D' : '#B91C1C' }}>
+                      {editIsActive ? 'User can log in and submit collections.' : 'User is blocked from logging in.'}
+                    </span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => setEditIsActive(prev => !prev)}
-                  className="btn-secondary"
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '0.76rem',
-                    fontWeight: 700,
-                    background: editIsActive ? '#DC2626' : '#008A2E',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: 'var(--radius-md)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {editIsActive ? 'Disable User' : 'Activate User'}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditIsActive(prev => !prev)}
+                    className="btn-secondary"
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      background: editIsActive ? '#DC2626' : '#008A2E',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {editIsActive ? 'Disable User' : 'Activate User'}
+                  </button>
+                </div>
+              )}
 
               {/* Password & Credentials Box */}
               <div style={{
@@ -1428,6 +1478,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 filteredUsers.map(u => {
                   const isActive = u.isActive !== false;
                   const parentUser = u.parentUserId ? coordinators.find(c => c.userId === u.parentUserId) : null;
+                  const isSelf = 
+                    u.userId === currentUser.userId ||
+                    (!!u.phoneNumber && !!currentUser.phoneNumber && 
+                     u.phoneNumber.replace(/\D/g, '').slice(-10) === currentUser.phoneNumber.replace(/\D/g, '').slice(-10));
 
                   return (
                     <div
@@ -1439,7 +1493,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         padding: '14px 16px',
                         borderRadius: 'var(--radius-md)',
                         background: isActive ? '#FFFFFF' : '#F8FAFC',
-                        border: isActive ? '1px solid var(--border-subtle)' : '1px dashed #CBD5E1',
+                        border: isSelf ? '1.5px solid #008A2E' : isActive ? '1px solid var(--border-subtle)' : '1px dashed #CBD5E1',
                         opacity: isActive ? 1 : 0.8,
                         flexWrap: 'wrap',
                         gap: 12,
@@ -1452,8 +1506,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           width: 40,
                           height: 40,
                           borderRadius: 'var(--radius-full)',
-                          background: u.role === 'WardCommittee' ? '#EBF7EE' : u.role === 'Coordinator' ? '#EDF4FA' : '#F5F3FF',
-                          color: u.role === 'WardCommittee' ? '#008A2E' : u.role === 'Coordinator' ? '#2C82C9' : '#7C3AED',
+                          background: u.role === 'Admin' ? '#FEF3C7' : u.role === 'WardCommittee' ? '#EBF7EE' : u.role === 'Coordinator' ? '#EDF4FA' : '#F5F3FF',
+                          color: u.role === 'Admin' ? '#B45309' : u.role === 'WardCommittee' ? '#008A2E' : u.role === 'Coordinator' ? '#2C82C9' : '#7C3AED',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1471,14 +1525,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                             {/* Role Badge */}
                             <span style={{
-                              background: u.role === 'WardCommittee' ? '#EBF7EE' : u.role === 'Coordinator' ? '#EDF4FA' : '#F5F3FF',
-                              color: u.role === 'WardCommittee' ? '#008A2E' : u.role === 'Coordinator' ? '#2C82C9' : '#7C3AED',
+                              background: u.role === 'Admin' ? '#FEF3C7' : u.role === 'WardCommittee' ? '#EBF7EE' : u.role === 'Coordinator' ? '#EDF4FA' : '#F5F3FF',
+                              color: u.role === 'Admin' ? '#B45309' : u.role === 'WardCommittee' ? '#008A2E' : u.role === 'Coordinator' ? '#2C82C9' : '#7C3AED',
                               fontSize: '0.7rem',
                               fontWeight: 800,
                               padding: '2px 8px',
                               borderRadius: 'var(--radius-full)'
                             }}>
-                              {u.role === 'WardCommittee' ? `Ward ${u.wardNumber} Lead` : u.role === 'Coordinator' ? 'Drive Coordinator' : `Volunteer (Ward ${u.wardNumber || '-'})`}
+                              {u.role === 'Admin' ? 'System Admin' : u.role === 'WardCommittee' ? `Ward ${u.wardNumber} Lead` : u.role === 'Coordinator' ? 'Drive Coordinator' : `Volunteer (Ward ${u.wardNumber || '-'})`}
                             </span>
 
                             {/* Status Badge */}
@@ -1496,6 +1550,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               {isActive ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
                               <span>{isActive ? 'Active' : 'Disabled'}</span>
                             </span>
+
+                            {isSelf && (
+                              <span style={{
+                                background: '#E0F2FE',
+                                color: '#0369A1',
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                padding: '1px 7px',
+                                borderRadius: 'var(--radius-full)'
+                              }}>
+                                You
+                              </span>
+                            )}
                           </div>
 
                           <span style={{ fontSize: '0.76rem', color: '#64748B', display: 'block', marginTop: 2 }}>
@@ -1542,29 +1609,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <span>Edit</span>
                           </button>
 
-                          {/* Toggle Active/Disabled Status */}
-                          <button
-                            onClick={() => handleToggleUserStatus(u)}
-                            disabled={loading}
-                            className="btn-secondary"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              padding: '6px 10px',
-                              fontSize: '0.76rem',
-                              fontWeight: 700,
-                              color: isActive ? '#B45309' : '#008A2E',
-                              background: isActive ? '#FFFBEB' : '#ECFDF5',
-                              border: isActive ? '1px solid #FCD34D' : '1px solid #A7F3D0',
-                              borderRadius: 'var(--radius-md)',
-                              cursor: 'pointer'
-                            }}
-                            title={isActive ? 'Disable User (Block Login)' : 'Activate User (Allow Login)'}
-                          >
-                            {isActive ? <UserX size={13} /> : <UserCheck size={13} />}
-                            <span>{isActive ? 'Disable' : 'Activate'}</span>
-                          </button>
+                          {/* Toggle Active/Disabled Status (Hidden for self: Admin cannot disable themselves) */}
+                          {!isSelf && (
+                            <button
+                              onClick={() => handleToggleUserStatus(u)}
+                              disabled={loading}
+                              className="btn-secondary"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '6px 10px',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                color: isActive ? '#B45309' : '#008A2E',
+                                background: isActive ? '#FFFBEB' : '#ECFDF5',
+                                border: isActive ? '1px solid #FCD34D' : '1px solid #A7F3D0',
+                                borderRadius: 'var(--radius-md)',
+                                cursor: 'pointer'
+                              }}
+                              title={isActive ? 'Disable User (Block Login)' : 'Activate User (Allow Login)'}
+                            >
+                              {isActive ? <UserX size={13} /> : <UserCheck size={13} />}
+                              <span>{isActive ? 'Disable' : 'Activate'}</span>
+                            </button>
+                          )}
 
                           {/* Reset / Change Password */}
                           <button
@@ -1595,27 +1664,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <span>Password</span>
                           </button>
 
-                          {/* Delete Button */}
-                          <button
-                            onClick={() => setDeletingUser(u)}
-                            className="btn-secondary"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              padding: '6px 8px',
-                              fontSize: '0.76rem',
-                              fontWeight: 700,
-                              color: '#DC2626',
-                              background: '#FEF2F2',
-                              border: '1px solid #FECACA',
-                              borderRadius: 'var(--radius-md)',
-                              cursor: 'pointer'
-                            }}
-                            title="Delete User"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {/* Delete Button (Hidden for self: Admin cannot delete themselves) */}
+                          {!isSelf && (
+                            <button
+                              onClick={() => setDeletingUser(u)}
+                              className="btn-secondary"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '6px 8px',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                color: '#DC2626',
+                                background: '#FEF2F2',
+                                border: '1px solid #FECACA',
+                                borderRadius: 'var(--radius-md)',
+                                cursor: 'pointer'
+                              }}
+                              title="Delete User"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
