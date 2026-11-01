@@ -1142,8 +1142,27 @@
 
   .pw-tab-group {
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .pw-tab-btn {
+    flex: 1 1 calc(33.333% - 4px);
+    min-width: 95px;
+    justify-content: center;
+    font-size: 0.76rem;
+    padding: 6px 6px;
+  }
+
+  .pw-view-toggle-group {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pw-view-toggle-btn {
+    flex: 1 1 50%;
+    justify-content: center;
   }
 
   .pw-tab-btn {
@@ -1210,4 +1229,359 @@
   .pw-ward-card {
     padding: 14px 16px;
   }
+}
+
+/* ==========================================================================
+   8. Top Contributors Styles (Hero Amount, Badges, Tables, Sections)
+   ========================================================================== */
+
+/* Hero Amount Pill for Kit Purchases & Sponsor Firms */
+.pw-hero-amount-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  background: var(--pw-primary-light);
+  border: 1px solid var(--pw-primary-border);
+  padding: 4px 10px;
+  border-radius: var(--pw-radius-sm);
+  color: var(--pw-primary);
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(0, 138, 46, 0.08);
+}
+
+.pw-hero-amount-pill .pw-currency-symbol {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pw-primary);
+}
+
+.pw-hero-amount-pill .pw-hero-amount-num {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #065F20;
+}
+
+.pw-hero-amount-pill .pw-hero-amount-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--pw-primary);
+  margin-left: 2px;
+}
+
+/* Location styling for contributor */
+.pw-contributor-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--pw-text-muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Card meta footer (date) */
+.pw-card-meta-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  margin-top: 6px;
+  border-top: 1px solid var(--pw-border-subtle);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--pw-text-muted);
+}
+
+/* Text status helpers */
+.text-emerald {
+  color: #059669 !important;
+}
+
+.text-amber {
+  color: #D97706 !important;
+}
+
+.pw-cell-icon.purple {
+  background: #F3E8FF;
+  color: #7E22CE;
+}
+
+.pw-cell-icon.amber {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+/* View toggle group (Cards vs List) */
+.pw-view-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--pw-bg);
+  border: 1px solid var(--pw-border);
+  border-radius: var(--pw-radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.pw-view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pw-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pw-view-toggle-btn:hover {
+  color: var(--pw-text-primary);
+}
+
+.pw-view-toggle-btn.active {
+  background: #FFFFFF;
+  color: var(--pw-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Contributor Sections */
+.pw-contributors-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.pw-contributor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pw-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--pw-border-subtle);
+}
+
+.pw-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pw-section-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pw-section-icon-badge.emerald {
+  background: #EBF7EE;
+  color: #008A2E;
+}
+
+.pw-section-icon-badge.blue {
+  background: #EBF4FC;
+  color: #2C82C9;
+}
+
+.pw-section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pw-text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.pw-section-desc {
+  font-size: 0.76rem;
+  color: var(--pw-text-muted);
+  font-weight: 500;
+  margin: 2px 0 0 0;
+}
+
+.pw-section-count-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #FFFFFF;
+  border: 1px solid var(--pw-border);
+  color: var(--pw-text-secondary);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.pw-empty-substate {
+  padding: 24px;
+  text-align: center;
+  background: #FFFFFF;
+  border: 1px dashed var(--pw-border);
+  border-radius: var(--pw-radius-md);
+  color: var(--pw-text-muted);
+  font-size: 0.85rem;
+}
+
+/* List Table Style (for "use list type style") */
+.pw-list-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  background: #FFFFFF;
+  border: 1px solid var(--pw-border);
+  border-radius: var(--pw-radius-md);
+  box-shadow: var(--pw-shadow-sm);
+  -webkit-overflow-scrolling: touch;
+}
+
+.pw-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.pw-list-table thead th {
+  background: #F8FAFC;
+  color: var(--pw-text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--pw-border);
+  white-space: nowrap;
+}
+
+.pw-list-table tbody tr {
+  border-bottom: 1px solid var(--pw-border-subtle);
+  transition: background-color 0.15s ease;
+}
+
+.pw-list-table tbody tr:hover {
+  background-color: #F8FAFC;
+}
+
+.pw-list-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.pw-list-table td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+.pw-table-rank-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.pw-table-rank-pill.gold {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.pw-table-rank-pill.silver {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.pw-table-rank-pill.bronze {
+  background: #FFEDD5;
+  color: #C2410C;
+  border: 1px solid #FED7AA;
+}
+
+.pw-table-rank-pill.standard {
+  background: #F8FAFC;
+  color: #64748B;
+  border: 1px solid var(--pw-border);
+}
+
+.pw-table-name-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.pw-table-donor-name {
+  font-weight: 800;
+  color: var(--pw-text-primary);
+  font-size: 0.88rem;
+}
+
+.pw-table-ward-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--pw-secondary);
+  background: #F0F7FD;
+  border: 1px solid #D1E5F8;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.pw-table-kits {
+  font-size: 0.82rem;
+  color: var(--pw-text-secondary);
+}
+
+.pw-table-kits strong {
+  font-weight: 800;
+  color: var(--pw-text-primary);
+}
+
+.pw-table-amount {
+  font-weight: 900;
+  color: #065F20;
+  font-size: 0.95rem;
+}
+
+.pw-status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.pw-status-pill.paid {
+  background: #EBF7EE;
+  color: #059669;
+  border: 1px solid #BBF7D0;
+}
+
+.pw-status-pill.partial {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.pw-table-date {
+  font-size: 0.74rem;
+  color: var(--pw-text-muted);
+  white-space: nowrap;
 }

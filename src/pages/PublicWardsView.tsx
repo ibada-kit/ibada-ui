@@ -23,7 +23,7 @@ import {
   ChevronDown,
   Target,
   TrendingUp,
-  HeartHandshake
+  HeartHandshake,
 } from 'lucide-react';
 import type { PublicWardsResponse } from '../types';
 import { donationsApi } from '../services/api';
@@ -33,7 +33,7 @@ export const PublicWardsView: React.FC = () => {
   const [data, setData] = useState<PublicWardsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'wards' | 'volunteers'>('wards');
+  const [activeTab, setActiveTab] = useState<'wards' | 'volunteers' | 'contributors'>('wards');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'kits' | 'donors' | 'wardNum' | 'target'>('kits');
   const [quickFilter, setQuickFilter] = useState<'all' | 'top3' | 'top10' | 'achieved'>('all');
@@ -211,6 +211,49 @@ export const PublicWardsView: React.FC = () => {
     );
   }, [top10Volunteers, searchQuery]);
 
+  // 7. Contributors (Kit Donors & Sponsor Firms) logic
+  const top10KitPurchases = useMemo(() => {
+    return data?.topKitDonors || [];
+  }, [data]);
+
+  const top10SponsorFirms = useMemo(() => {
+    return data?.topSponsorFirms || [];
+  }, [data]);
+
+  const displayedKitPurchases = useMemo(() => {
+    let list = [...top10KitPurchases];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (k) =>
+          k.donorName.toLowerCase().includes(q) ||
+          k.wardName.toLowerCase().includes(q) ||
+          (k.wardNumber > 0 && `ward ${k.wardNumber}`.includes(q))
+      );
+    }
+    return list.sort((a, b) => {
+      if (b.amountPaid !== a.amountPaid) return b.amountPaid - a.amountPaid;
+      return a.position - b.position;
+    });
+  }, [top10KitPurchases, searchQuery]);
+
+  const displayedSponsorFirms = useMemo(() => {
+    let list = [...top10SponsorFirms];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          s.firmName.toLowerCase().includes(q) ||
+          s.wardName.toLowerCase().includes(q) ||
+          (s.wardNumber > 0 && `ward ${s.wardNumber}`.includes(q))
+      );
+    }
+    return list.sort((a, b) => {
+      if (b.amountPaid !== a.amountPaid) return b.amountPaid - a.amountPaid;
+      return a.position - b.position;
+    });
+  }, [top10SponsorFirms, searchQuery]);
+
   const topWard = useMemo(() => {
     if (data?.topperWard && data.topperWard.totalKitsCollected > 0) return data.topperWard;
     if (data?.wards && data.wards.length > 0) {
@@ -353,9 +396,28 @@ export const PublicWardsView: React.FC = () => {
                 <span>Volunteers</span>
                 <span className="pw-tab-count">{top10Volunteers.length}</span>
               </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'contributors'}
+                onClick={() => {
+                  setActiveTab('contributors');
+                  setSearchQuery('');
+                  if (selectedPeriod !== 'all') {
+                    handleSelectPeriod('all');
+                  }
+                }}
+                className={`pw-tab-btn ${activeTab === 'contributors' ? 'active' : ''}`}
+              >
+                <HeartHandshake size={16} />
+                <span>Top Contributors</span>
+                <span className="pw-tab-count">{top10KitPurchases.length + top10SponsorFirms.length}</span>
+              </button>
             </div>
 
-            {/* Time Period Selector */}
+            {/* Time Period Selector - Only visible for Wards & Volunteers */}
+            {activeTab !== 'contributors' && (
             <div className="pw-period-group">
               <button
                 type="button"
@@ -396,6 +458,7 @@ export const PublicWardsView: React.FC = () => {
                 <ChevronDown size={13} className={isCalendarOpen ? 'pw-rotate-180' : ''} />
               </button>
             </div>
+            )}
           </div>
 
           {/* Row B: Search + Quick Chips + Sort */}
@@ -407,7 +470,7 @@ export const PublicWardsView: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={activeTab === 'wards' ? 'Search ward name, number, or lead...' : 'Search volunteer, ward...'}
+                placeholder={activeTab === 'wards' ? 'Search ward name, number, or lead...' : activeTab === 'volunteers' ? 'Search volunteer, ward...' : 'Search donor, firm, or ward...'}
                 className="pw-search-input"
               />
               {searchQuery && (
@@ -424,6 +487,7 @@ export const PublicWardsView: React.FC = () => {
             </div>
 
             {/* Quick Filter Chips (No scrollbar issues, clean wraps) */}
+
             {activeTab === 'wards' && (
               <div className="pw-quick-chips">
                 <button
@@ -811,6 +875,178 @@ export const PublicWardsView: React.FC = () => {
               </div>
             )}
           </>
+        )}
+
+        {/* ========================================================
+            7. MAIN CONTENT: TOP CONTRIBUTORS (KIT DONORS & SPONSOR FIRMS)
+            ======================================================== */}
+        {activeTab === 'contributors' && !loading && (
+          <div className="pw-contributors-container">
+            {displayedKitPurchases.length === 0 && displayedSponsorFirms.length === 0 ? (
+              <div className="pw-state-box">
+                <p>No contributors match your search.</p>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="pw-btn-reset-filter"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Section A: Kit Purchases */}
+                  <section className="pw-contributor-section">
+                    <div className="pw-section-header">
+                      <div className="pw-section-title-wrap">
+                        <div className="pw-section-icon-badge emerald">
+                          <Package size={18} />
+                        </div>
+                        <div>
+                          <h2 className="pw-section-title">Top 10 Kit Purchases</h2>
+                          <p className="pw-section-desc">
+                            All-time leaders ranked by collected amount & sorted by latest date
+                          </p>
+                        </div>
+                      </div>
+                      <span className="pw-section-count-pill">
+                        {displayedKitPurchases.length} {displayedKitPurchases.length === 1 ? 'Purchase' : 'Purchases'}
+                      </span>
+                    </div>
+
+                    {displayedKitPurchases.length === 0 ? (
+                      <div className="pw-empty-substate">
+                        <p>No kit purchases recorded.</p>
+                      </div>
+                    ) : (
+                      <div className="pw-list-table-wrap">
+                        <table className="pw-list-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '64px' }}>Rank</th>
+                              <th>Donor Name</th>
+                              <th>Ward</th>
+                              <th>Kits</th>
+                              <th>Amount Paid</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {displayedKitPurchases.map((item) => {
+                              const isRank1 = item.position === 1;
+                              const isRank2 = item.position === 2;
+                              const isRank3 = item.position === 3;
+
+                              return (
+                                <tr key={`kit-list-${item.position}-${item.donorName}`}>
+                                  <td>
+                                    <span className={`pw-table-rank-pill ${isRank1 ? 'gold' : isRank2 ? 'silver' : isRank3 ? 'bronze' : 'standard'}`}>
+                                      #{item.position}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div className="pw-table-name-cell">
+                                      <span className="pw-table-donor-name">{item.donorName}</span>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <span className="pw-table-ward-pill">
+                                      <MapPin size={11} />
+                                      {item.wardNumber > 0 ? `Ward ${item.wardNumber} • ${item.wardName}` : item.wardName}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="pw-table-kits">
+                                      <strong>{item.kitCount}</strong> Kits
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="pw-table-amount">
+                                      ₹{item.amountPaid.toLocaleString()}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </section>
+
+                {/* Section B: Sponsor Firms */}
+                  <section className="pw-contributor-section">
+                    <div className="pw-section-header">
+                      <div className="pw-section-title-wrap">
+                        <div className="pw-section-icon-badge blue">
+                          <Building size={18} />
+                        </div>
+                        <div>
+                          <h2 className="pw-section-title">Top 10 Sponsoring Firms</h2>
+                          <p className="pw-section-desc">
+                            All-time leaders ranked by collected amount & sorted by latest date
+                          </p>
+                        </div>
+                      </div>
+                      <span className="pw-section-count-pill">
+                        {displayedSponsorFirms.length} {displayedSponsorFirms.length === 1 ? 'Firm' : 'Firms'}
+                      </span>
+                    </div>
+
+                    {displayedSponsorFirms.length === 0 ? (
+                      <div className="pw-empty-substate">
+                        <p>No sponsoring firms recorded.</p>
+                      </div>
+                    ) : (
+                      <div className="pw-list-table-wrap">
+                        <table className="pw-list-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '64px' }}>Rank</th>
+                              <th>Firm / Organization</th>
+                              <th>Ward</th>
+                              <th>Amount Paid</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {displayedSponsorFirms.map((item) => {
+                              const isRank1 = item.position === 1;
+                              const isRank2 = item.position === 2;
+                              const isRank3 = item.position === 3;
+
+                              return (
+                                <tr key={`spon-list-${item.position}-${item.firmName}`}>
+                                  <td>
+                                    <span className={`pw-table-rank-pill ${isRank1 ? 'gold' : isRank2 ? 'silver' : isRank3 ? 'bronze' : 'standard'}`}>
+                                      #{item.position}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div className="pw-table-name-cell">
+                                      <span className="pw-table-donor-name">{item.firmName}</span>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <span className="pw-table-ward-pill">
+                                      <Building size={11} />
+                                      {item.wardNumber > 0 ? `Ward ${item.wardNumber} • ${item.wardName}` : item.wardName}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="pw-table-amount">
+                                      ₹{item.amountPaid.toLocaleString()}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </section>
+              </>
+            )}
+          </div>
         )}
       </main>
 
