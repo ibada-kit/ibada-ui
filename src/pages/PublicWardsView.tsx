@@ -13,14 +13,17 @@ import {
   ArrowUpDown,
   MapPin,
   Building,
-  Calendar,
   CalendarDays,
   CalendarRange,
   Clock,
   Sparkles,
   Check,
   RotateCcw,
-  X
+  X,
+  ChevronDown,
+  Target,
+  TrendingUp,
+  HeartHandshake
 } from 'lucide-react';
 import type { PublicWardsResponse } from '../types';
 import { donationsApi } from '../services/api';
@@ -30,16 +33,17 @@ export const PublicWardsView: React.FC = () => {
   const [data, setData] = useState<PublicWardsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'wards' | 'volunteers'>('wards');
+  const [activeTab, setActiveTab] = useState<'wards' | 'volunteers'>('wards');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'kits' | 'donors' | 'wardNum'>('kits');
+  const [sortBy, setSortBy] = useState<'kits' | 'donors' | 'wardNum' | 'target'>('kits');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'top3' | 'top10' | 'achieved'>('all');
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [selectedPeriod, setSelectedPeriod] = useState<'all' | 'today' | 'week' | 'custom'>('all');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
 
-  // 1. STRICT NAVIGATION BLOCK: Trap browser back navigation
+  // 1. STRICT NAVIGATION BLOCK: Trap browser back navigation for kiosk mode
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
 
@@ -129,6 +133,7 @@ export const PublicWardsView: React.FC = () => {
     if (!customStartDate) return;
     const to = customEndDate || customStartDate;
     setSelectedPeriod('custom');
+    setIsCalendarOpen(false);
     fetchWardsData(false, { period: 'custom', fromDate: customStartDate, toDate: to });
   };
 
@@ -140,7 +145,7 @@ export const PublicWardsView: React.FC = () => {
     fetchWardsData(false, { period: 'all' });
   };
 
-  // 6. Sort & Filter logic for Wards (Strictly separating Donors and Sponsors)
+  // 5. Sorted & Filtered Wards Logic
   const sortedWards = useMemo(() => {
     if (!data?.wards) return [];
     const list = [...data.wards];
@@ -150,6 +155,8 @@ export const PublicWardsView: React.FC = () => {
         return list.sort((a, b) => (b.donorsCount || 0) - (a.donorsCount || 0) || b.totalKitsCollected - a.totalKitsCollected);
       case 'wardNum':
         return list.sort((a, b) => a.wardNumber - b.wardNumber);
+      case 'target':
+        return list.sort((a, b) => (b.achievementPercentage || 0) - (a.achievementPercentage || 0) || b.totalKitsCollected - a.totalKitsCollected);
       case 'kits':
       default:
         return list.sort((a, b) => b.totalKitsCollected - a.totalKitsCollected || a.wardNumber - b.wardNumber);
@@ -157,32 +164,45 @@ export const PublicWardsView: React.FC = () => {
   }, [data, sortBy]);
 
   const displayedWards = useMemo(() => {
-    if (!searchQuery.trim()) return sortedWards;
+    let list = sortedWards;
+
+    // Apply quick filters
+    if (quickFilter === 'top3') {
+      list = list.filter((w) => w.position <= 3);
+    } else if (quickFilter === 'top10') {
+      list = list.filter((w) => w.position <= 10);
+    } else if (quickFilter === 'achieved') {
+      list = list.filter((w) => (w.achievementPercentage || 0) >= 100);
+    }
+
+    // Apply text search
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return sortedWards.filter(
+    return list.filter(
       (w) =>
         w.wardName.toLowerCase().includes(q) ||
         w.wardLeadName.toLowerCase().includes(q) ||
         w.wardNumber.toString() === q ||
         `ward ${w.wardNumber}`.includes(q)
     );
-  }, [sortedWards, searchQuery]);
+  }, [sortedWards, quickFilter, searchQuery]);
 
-  const topWard = useMemo(() => {
-    if (data?.topperWard && data.topperWard.totalKitsCollected > 0) return data.topperWard;
-    if (!data?.wards || data.wards.length === 0) return null;
-    return [...data.wards].sort((a, b) => b.totalKitsCollected - a.totalKitsCollected)[0];
+  // Max Kits Collected for relative bar scaling
+  const maxKitsCollected = useMemo(() => {
+    if (!data?.wards || data.wards.length === 0) return 1;
+    return Math.max(...data.wards.map((w) => w.totalKitsCollected), 1);
   }, [data]);
 
-  // 7. Volunteers List & Filter logic (Top 10 Volunteers)
+  // 6. Volunteers List & Filter logic
   const top10Volunteers = useMemo(() => {
     return data?.topVolunteers || [];
   }, [data]);
 
   const displayedVolunteers = useMemo(() => {
-    if (!searchQuery.trim()) return top10Volunteers;
+    let list = top10Volunteers;
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return top10Volunteers.filter(
+    return list.filter(
       (v) =>
         v.name.toLowerCase().includes(q) ||
         v.wardName.toLowerCase().includes(q) ||
@@ -191,98 +211,175 @@ export const PublicWardsView: React.FC = () => {
     );
   }, [top10Volunteers, searchQuery]);
 
-  const topVolunteer = useMemo(() => {
-    if (data?.topperVolunteer && data.topperVolunteer.totalKitsCollected > 0) return data.topperVolunteer;
-    if (!top10Volunteers || top10Volunteers.length === 0) return null;
-    return top10Volunteers[0];
-  }, [data, top10Volunteers]);
+  const topWard = useMemo(() => {
+    if (data?.topperWard && data.topperWard.totalKitsCollected > 0) return data.topperWard;
+    if (data?.wards && data.wards.length > 0) {
+      return [...data.wards].sort((a, b) => b.totalKitsCollected - a.totalKitsCollected)[0];
+    }
+    return null;
+  }, [data]);
 
   return (
-    <div className="public-kiosk-page">
-      {/* KIOSK HEADER: Locked, no navbar, no back button */}
-      <header className="kiosk-header">
-        <div className="kiosk-header-inner">
-          {/* Branding */}
-          <div className="kiosk-brand">
-            <div className="kiosk-logo-badge">
-              <div className="kiosk-logo-inner">
-                <Trophy size={24} />
-              </div>
+    <div className="pw-kiosk-page">
+      {/* ========================================================
+          1. COMPACT STICKY HEADER
+          ======================================================== */}
+      <header className="pw-header">
+        <div className="pw-header-inner">
+          <div className="pw-brand">
+            <div className="pw-logo-badge">
+              <Trophy size={20} className="pw-gold-icon" />
             </div>
-            <div>
-              <div className="kiosk-tagline-pill">
-                <span className="pulse-dot" />
-                <span>Live Campaign Kiosk</span>
+            <div className="pw-brand-text">
+              <div className="pw-brand-top">
+                <span className="pw-live-indicator">
+                  <span className="pw-pulse-dot" />
+                  Live Campaign
+                </span>
+                <span className="pw-last-updated">
+                  Updated: {lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
-              <h1 className="kiosk-title">
-                Community Kit Challenge Scoreboard
-              </h1>
-              <p className="kiosk-subtitle">
-                Official Live Standings • Relief Kits & Sponsorships
-              </p>
+              <h1 className="pw-title">Ward Leaderboard & Standings</h1>
             </div>
           </div>
 
-          {/* Header Action Controls: Refresh only */}
-          <div className="kiosk-actions">
+          <div className="pw-header-actions">
             <button
               type="button"
               onClick={() => fetchWardsData(false)}
               disabled={loading}
-              className="kiosk-btn"
-              title="Refresh Data Now"
+              className="pw-refresh-btn"
+              title="Refresh live standings"
+              aria-label="Refresh live standings"
             >
-              <RefreshCw size={15} className={loading ? 'spin-icon' : ''} />
-              <span>Refresh</span>
+              <RefreshCw size={15} className={loading ? 'pw-spin' : ''} />
+              <span className="pw-btn-text">Refresh</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
-      <main className="kiosk-main">
-        {/* DATE & TOPPER FILTER CONTROLS */}
-        <section className="date-filter-section" aria-label="Standings Period Selector">
-          <div className="date-filter-header-row">
-            <div className="date-filter-label-group">
-              <Calendar size={18} className="date-filter-icon" />
-              <span className="date-filter-title">Standings Period:</span>
+      <main className="pw-main">
+        {/* ========================================================
+            2. ULTRA-COMPACT METRIC RIBBON (4 Key Metrics)
+            ======================================================== */}
+        <section className="pw-metrics-ribbon" aria-label="Campaign Summary Metrics">
+          <div className="pw-metric-tile pw-metric-kits">
+            <div className="pw-metric-icon">
+              <Package size={20} />
+            </div>
+            <div className="pw-metric-info">
+              <div className="pw-metric-value">
+                {(data?.totalKitsCollected || 0).toLocaleString()}
+              </div>
+              <div className="pw-metric-label">Kits Sponsored</div>
+            </div>
+          </div>
+
+          <div className="pw-metric-tile pw-metric-donors">
+            <div className="pw-metric-icon">
+              <Users size={20} />
+            </div>
+            <div className="pw-metric-info">
+              <div className="pw-metric-value">
+                {(data?.totalDonors || 0).toLocaleString()}
+              </div>
+              <div className="pw-metric-label">Kit Donors</div>
+            </div>
+          </div>
+
+          <div className="pw-metric-tile pw-metric-sponsors">
+            <div className="pw-metric-icon">
+              <Award size={20} />
+            </div>
+            <div className="pw-metric-info">
+              <div className="pw-metric-value">
+                {(data?.totalSponsors || 0).toLocaleString()}
+              </div>
+              <div className="pw-metric-label">Item Sponsors</div>
+            </div>
+          </div>
+
+          <div className="pw-metric-tile pw-metric-leader">
+            <div className="pw-metric-icon">
+              <Flame size={20} />
+            </div>
+            <div className="pw-metric-info">
+              <div className="pw-metric-value truncate">
+                {topWard ? `Ward ${topWard.wardNumber}` : '---'}
+              </div>
+              <div className="pw-metric-label truncate">
+                {topWard ? topWard.wardName : 'Leaderboard Leader'}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================
+            3. UNIFIED COMMAND & FILTER TOOLBAR
+            ======================================================== */}
+        <section className="pw-toolbar-section">
+          {/* Row A: Tab Switcher (Wards vs Volunteers) & Period Selector */}
+          <div className="pw-toolbar-row">
+            {/* Tab Switcher */}
+            <div className="pw-tab-group" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'wards'}
+                onClick={() => {
+                  setActiveTab('wards');
+                  setSearchQuery('');
+                }}
+                className={`pw-tab-btn ${activeTab === 'wards' ? 'active' : ''}`}
+              >
+                <Building size={16} />
+                <span>Wards</span>
+                <span className="pw-tab-count">{data?.wards?.length || 0}</span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'volunteers'}
+                onClick={() => {
+                  setActiveTab('volunteers');
+                  setSearchQuery('');
+                }}
+                className={`pw-tab-btn ${activeTab === 'volunteers' ? 'active' : ''}`}
+              >
+                <Users size={16} />
+                <span>Volunteers</span>
+                <span className="pw-tab-count">{top10Volunteers.length}</span>
+              </button>
             </div>
 
-            <div className="date-pills-row">
-              {/* All Time Pill (Default) */}
+            {/* Time Period Selector */}
+            <div className="pw-period-group">
               <button
                 type="button"
                 onClick={() => handleSelectPeriod('all')}
-                className={`date-pill-btn ${selectedPeriod === 'all' ? 'active' : ''}`}
-                title="View overall campaign standings"
+                className={`pw-period-chip ${selectedPeriod === 'all' ? 'active' : ''}`}
               >
-                <span>All Time</span>
+                All Time
               </button>
-
-              {/* Today / Latest Day Topper Pill */}
               <button
                 type="button"
                 onClick={() => handleSelectPeriod('today')}
-                className={`date-pill-btn ${selectedPeriod === 'today' ? 'active' : ''}`}
-                title="Find today's topper (or whole 24h day of latest transactions)"
+                className={`pw-period-chip ${selectedPeriod === 'today' ? 'active' : ''}`}
               >
-                <Clock size={14} />
-                <span>Today's Topper</span>
+                <Clock size={13} />
+                <span>Today</span>
               </button>
-
-              {/* Weekly Topper Pill */}
               <button
                 type="button"
                 onClick={() => handleSelectPeriod('week')}
-                className={`date-pill-btn ${selectedPeriod === 'week' ? 'active' : ''}`}
-                title="Find weekly topper (last 7 days)"
+                className={`pw-period-chip ${selectedPeriod === 'week' ? 'active' : ''}`}
               >
-                <CalendarDays size={14} />
-                <span>Weekly Topper</span>
+                <CalendarDays size={13} />
+                <span>Week</span>
               </button>
-
-              {/* Custom Date Range / Calendar Pill */}
               <button
                 type="button"
                 onClick={() => {
@@ -292,71 +389,129 @@ export const PublicWardsView: React.FC = () => {
                     handleSelectPeriod('custom');
                   }
                 }}
-                className={`date-pill-btn ${selectedPeriod === 'custom' ? 'active' : ''}`}
-                title="Select custom date range or calendar date"
+                className={`pw-period-chip ${selectedPeriod === 'custom' ? 'active' : ''}`}
               >
-                <CalendarRange size={14} />
-                <span>Custom Date</span>
-                {isCalendarOpen ? <X size={12} /> : null}
+                <CalendarRange size={13} />
+                <span>Custom</span>
+                <ChevronDown size={13} className={isCalendarOpen ? 'pw-rotate-180' : ''} />
               </button>
             </div>
           </div>
 
-          {/* Expandable Custom Date Range Picker */}
+          {/* Row B: Search + Quick Chips + Sort */}
+          <div className="pw-filter-row">
+            {/* Search Input */}
+            <div className="pw-search-wrapper">
+              <Search size={15} className="pw-search-icon" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={activeTab === 'wards' ? 'Search ward name, number, or lead...' : 'Search volunteer, ward...'}
+                className="pw-search-input"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="pw-search-clear"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Quick Filter Chips (No scrollbar issues, clean wraps) */}
+            {activeTab === 'wards' && (
+              <div className="pw-quick-chips">
+                <button
+                  type="button"
+                  onClick={() => setQuickFilter('all')}
+                  className={`pw-quick-chip ${quickFilter === 'all' ? 'active' : ''}`}
+                >
+                  All ({sortedWards.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickFilter('top3')}
+                  className={`pw-quick-chip ${quickFilter === 'top3' ? 'active' : ''}`}
+                >
+                  Top 3 Podium
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickFilter('top10')}
+                  className={`pw-quick-chip ${quickFilter === 'top10' ? 'active' : ''}`}
+                >
+                  Top 10
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickFilter('achieved')}
+                  className={`pw-quick-chip ${quickFilter === 'achieved' ? 'active' : ''}`}
+                >
+                  🎯 100%+ Target
+                </button>
+              </div>
+            )}
+
+            {/* Sort Selector */}
+            {activeTab === 'wards' && (
+              <div className="pw-sort-wrapper">
+                <ArrowUpDown size={14} className="pw-sort-icon" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="pw-sort-select"
+                  aria-label="Sort wards"
+                >
+                  <option value="kits">Sort: Kits (High-Low)</option>
+                  <option value="donors">Sort: Donors (Most)</option>
+                  <option value="target">Sort: % Target Met</option>
+                  <option value="wardNum">Sort: Ward #</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Expandable Custom Date Picker Popover */}
           {isCalendarOpen && (
-            <div className="custom-calendar-panel">
-              <div className="calendar-inputs-row">
-                <div className="calendar-input-field">
-                  <label htmlFor="fromDateInput">From Date:</label>
+            <div className="pw-custom-date-popover">
+              <div className="pw-calendar-grid">
+                <div className="pw-date-field">
+                  <label htmlFor="pwFromDate">From Date:</label>
                   <input
-                    id="fromDateInput"
+                    id="pwFromDate"
                     type="date"
                     value={customStartDate}
                     onChange={(e) => setCustomStartDate(e.target.value)}
                   />
                 </div>
-
-                <div className="calendar-input-field">
-                  <label htmlFor="toDateInput">To Date:</label>
+                <div className="pw-date-field">
+                  <label htmlFor="pwToDate">To Date:</label>
                   <input
-                    id="toDateInput"
+                    id="pwToDate"
                     type="date"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
                   />
                 </div>
-
-                <div className="calendar-actions-row">
+                <div className="pw-calendar-actions">
                   <button
                     type="button"
                     onClick={handleApplyCustomDates}
                     disabled={!customStartDate}
-                    className="calendar-btn btn-apply"
+                    className="pw-btn-apply"
                   >
                     <Check size={14} />
-                    <span>Apply Date</span>
+                    <span>Apply</span>
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (customStartDate) {
-                        setCustomEndDate(customStartDate);
-                        setSelectedPeriod('custom');
-                        fetchWardsData(false, { period: 'custom', fromDate: customStartDate, toDate: customStartDate });
-                      }
-                    }}
-                    disabled={!customStartDate}
-                    className="calendar-btn btn-single"
-                    title="Filter for this single day only"
-                  >
-                    <span>Single Day</span>
-                  </button>
-
                   <button
                     type="button"
                     onClick={handleResetToAllTime}
-                    className="calendar-btn btn-clear"
+                    className="pw-btn-reset"
                   >
                     <RotateCcw size={14} />
                     <span>Reset</span>
@@ -366,604 +521,310 @@ export const PublicWardsView: React.FC = () => {
             </div>
           )}
 
-          {/* Active Date Range Notice Banner */}
+          {/* Active Period Notice Ribbon */}
           {selectedPeriod !== 'all' && (
-            <div className="date-active-banner">
-              <div className="date-banner-content">
-                <div className="date-banner-icon-bubble">
-                  <Sparkles size={16} />
-                </div>
-                <div>
-                  <div className="date-banner-title">
-                    {data?.isFallbackToLastTransactionDate ? (
-                      <>
-                        Latest Active Day Topper (Full 24h Day — {formatDateDisplay(data?.lastActiveTransactionDate || data?.filterFromDate)})
-                      </>
-                    ) : selectedPeriod === 'today' ? (
-                      <>
-                        Current Day Topper (Full Day — {formatDateDisplay(data?.filterFromDate || new Date().toISOString())})
-                      </>
-                    ) : selectedPeriod === 'week' ? (
-                      <>
-                        Weekly Standings ({formatDateDisplay(data?.filterFromDate)} – {formatDateDisplay(data?.filterToDate)})
-                      </>
-                    ) : (
-                      <>
-                        Custom Date Range ({formatDateDisplay(data?.filterFromDate || customStartDate)} – {formatDateDisplay(data?.filterToDate || customEndDate || customStartDate)})
-                      </>
-                    )}
-                  </div>
-                  <div className="date-banner-subtitle">
-                    {data?.isFallbackToLastTransactionDate ? (
-                      'No transactions recorded today yet. Showing whole full day standings of the last active transaction date.'
-                    ) : (
-                      'Displaying standings and toppers for the selected time window.'
-                    )}
-                  </div>
-                </div>
+            <div className="pw-period-notice-strip">
+              <div className="pw-notice-left">
+                <Sparkles size={14} className="pw-notice-sparkle" />
+                <span>
+                  {data?.isFallbackToLastTransactionDate ? (
+                    <>Latest Active Day Standings: <strong>{formatDateDisplay(data?.lastActiveTransactionDate || data?.filterFromDate)}</strong> (No transactions today)</>
+                  ) : selectedPeriod === 'today' ? (
+                    <>Today's Standings: <strong>{formatDateDisplay(data?.filterFromDate || new Date().toISOString())}</strong></>
+                  ) : selectedPeriod === 'week' ? (
+                    <>Weekly Standings: <strong>{formatDateDisplay(data?.filterFromDate)} – {formatDateDisplay(data?.filterToDate)}</strong></>
+                  ) : (
+                    <>Custom Range: <strong>{formatDateDisplay(data?.filterFromDate || customStartDate)} – {formatDateDisplay(data?.filterToDate || customEndDate || customStartDate)}</strong></>
+                  )}
+                </span>
               </div>
-
               <button
                 type="button"
                 onClick={handleResetToAllTime}
-                className="date-banner-reset-btn"
-                title="Return to overall campaign standings"
+                className="pw-notice-clear-btn"
+                title="Reset to All Time"
               >
-                <X size={14} />
+                <X size={13} />
                 <span>Reset to All Time</span>
               </button>
             </div>
           )}
         </section>
 
-        {/* DATE TOPPERS SPOTLIGHT (Displayed when filtered by date or date range) */}
-        {selectedPeriod !== 'all' && (
-          <div className="topper-spotlight-section">
-            <div className="topper-spotlight-grid">
-              {/* Top Ward Card */}
-              <div className="topper-spotlight-card gold-border">
-                <div className="topper-card-badge gold">
-                  <Trophy size={14} />
-                  <span>
-                    {selectedPeriod === 'today' ? "Today's Top Ward" : selectedPeriod === 'week' ? "Weekly Top Ward" : "Period Top Ward"}
-                  </span>
-                </div>
-                {topWard && topWard.totalKitsCollected > 0 ? (
-                  <div className="topper-card-body">
-                    <div className="topper-main-name">
-                      Ward {topWard.wardNumber} • {topWard.wardName}
-                    </div>
-                    <div className="topper-sub-lead">
-                      Ward Committee Lead: <strong>{topWard.wardLeadName}</strong>
-                    </div>
-                    <div className="topper-metrics-row">
-                      <div className="topper-metric-pill green">
-                        <Package size={15} />
-                        <strong>{topWard.totalKitsCollected.toLocaleString()}</strong> Kits Collected
-                      </div>
-                      <div className="topper-metric-pill blue">
-                        <Users size={15} />
-                        <strong>{topWard.donorsCount.toLocaleString()}</strong> Donors
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="topper-card-empty">
-                    <span>No ward kit collections recorded in this period</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Top Volunteer Card */}
-              <div className="topper-spotlight-card emerald-border">
-                <div className="topper-card-badge emerald">
-                  <Award size={14} />
-                  <span>
-                    {selectedPeriod === 'today' ? "Today's Top Volunteer" : selectedPeriod === 'week' ? "Weekly Top Volunteer" : "Period Top Volunteer"}
-                  </span>
-                </div>
-                {topVolunteer && topVolunteer.totalKitsCollected > 0 ? (
-                  <div className="topper-card-body">
-                    <div className="topper-main-name">
-                      {topVolunteer.name}
-                    </div>
-                    <div className="topper-sub-lead">
-                      {topVolunteer.wardNumber > 0 ? `Ward ${topVolunteer.wardNumber} (${topVolunteer.wardName}) • Lead: ${topVolunteer.wardLeadName}` : 'General Volunteer'}
-                    </div>
-                    <div className="topper-metrics-row">
-                      <div className="topper-metric-pill green">
-                        <Package size={15} />
-                        <strong>{topVolunteer.totalKitsCollected.toLocaleString()}</strong> Kits Collected
-                      </div>
-                      <div className="topper-metric-pill blue">
-                        <Users size={15} />
-                        <strong>{topVolunteer.donorsCount.toLocaleString()}</strong> Donors
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="topper-card-empty">
-                    <span>No volunteer kit collections recorded in this period</span>
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* ========================================================
+            4. LOADING / ERROR / EMPTY STATES
+            ======================================================== */}
+        {loading && !data && (
+          <div className="pw-state-box">
+            <RefreshCw size={36} className="pw-spin pw-state-spinner" />
+            <h3>Connecting to Live Standings...</h3>
+            <p>Fetching real-time ward data from campaign server</p>
           </div>
         )}
 
-        {/* VIEW SWITCHER: Wards Scoreboard vs Top 10 Volunteers */}
-        <div className="main-view-switcher-bar">
-          <div className="view-switch-nav">
+        {error && (
+          <div className="pw-state-box pw-state-error">
+            <p>{error}</p>
             <button
               type="button"
-              onClick={() => {
-                setActiveView('wards');
-                setSearchQuery('');
-              }}
-              className={`view-tab-btn ${activeView === 'wards' ? 'active' : ''}`}
+              onClick={() => fetchWardsData(false)}
+              className="pw-btn-retry"
             >
-              <Building size={18} />
-              <span>Wards Leaderboard</span>
-              <span className="view-tab-badge">{data?.wards?.length || 0}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveView('volunteers');
-                setSearchQuery('');
-              }}
-              className={`view-tab-btn ${activeView === 'volunteers' ? 'active' : ''}`}
-            >
-              <Users size={18} />
-              <span>Top 10 Volunteers</span>
-              <span className="view-tab-badge">{top10Volunteers.length}</span>
+              Retry Connection
             </button>
           </div>
-        </div>
+        )}
 
         {/* ========================================================
-            TAB 1: WARDS LEADERBOARD VIEW
+            5. MAIN CONTENT: WARDS CARDS GRID (Enhanced & Styled)
             ======================================================== */}
-        {activeView === 'wards' && (
+        {activeTab === 'wards' && !loading && (
           <>
-            {/* KPI SUMMARY CARDS: Kits, Donors & Sponsors strictly distinct */}
-            <div className="kpi-grid">
-              {/* Total Kits Sponsored */}
-              <div className="kpi-card kpi-kits">
-                <div>
-                  <div className="kpi-label">
-                    {selectedPeriod !== 'all' ? 'Period Kits Sponsored' : 'Total Kits Sponsored'}
-                  </div>
-                  <div className="kpi-value-row">
-                    <span className="kpi-value">
-                      {(data?.totalKitsCollected || 0).toLocaleString()}
-                    </span>
-                    <span className="kpi-unit">Kits</span>
-                  </div>
-                  <div className="kpi-subtext">
-                    {selectedPeriod !== 'all' ? 'Kits collected in selected window' : 'Across all active campaign wards'}
-                  </div>
-                </div>
-                <div className="kpi-icon-bubble">
-                  <Package size={28} />
-                </div>
-              </div>
-
-              {/* Kit Donors Count (Strictly Individual Kit Donors) */}
-              <div className="kpi-card kpi-donors">
-                <div>
-                  <div className="kpi-label">
-                    {selectedPeriod !== 'all' ? 'Period Kit Donors' : 'Kit Donors'}
-                  </div>
-                  <div className="kpi-value-row">
-                    <span className="kpi-value">
-                      {(data?.totalDonors || 0).toLocaleString()}
-                    </span>
-                    <span className="kpi-unit">Donors</span>
-                  </div>
-                  <div className="kpi-subtext">
-                    {selectedPeriod !== 'all' ? 'Contributors in selected window' : 'Individual relief kit contributors'}
-                  </div>
-                </div>
-                <div className="kpi-icon-bubble">
-                  <Users size={28} />
-                </div>
-              </div>
-
-              {/* Corporate Item Sponsors Count (Strictly Sponsors) */}
-              <div className="kpi-card kpi-sponsors">
-                <div>
-                  <div className="kpi-label">
-                    {selectedPeriod !== 'all' ? 'Period Item Sponsors' : 'Item Sponsors'}
-                  </div>
-                  <div className="kpi-value-row">
-                    <span className="kpi-value">
-                      {(data?.totalSponsors || 0).toLocaleString()}
-                    </span>
-                    <span className="kpi-unit">Sponsors</span>
-                  </div>
-                  <div className="kpi-subtext">
-                    {selectedPeriod !== 'all' ? 'Item sponsors in selected window' : 'Firms & corporate item sponsors'}
-                  </div>
-                </div>
-                <div className="kpi-icon-bubble">
-                  <Award size={28} />
-                </div>
-              </div>
-
-              {/* Rank #1 Ward Banner */}
-              <div className="kpi-card kpi-leader">
-                <div>
-                  <div className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Flame size={14} />
-                    <span>{selectedPeriod !== 'all' ? 'Period Leading Ward' : 'Rank #1 Leading Ward'}</span>
-                  </div>
-                  <div className="kpi-value-row">
-                    <span className="kpi-value" style={{ fontSize: '1.75rem' }}>
-                      {topWard ? `Ward ${topWard.wardNumber}` : 'Loading...'}
-                    </span>
-                    {topWard && (
-                      <span className="kpi-unit" style={{ color: '#D97706' }}>
-                        {topWard.wardName}
-                      </span>
-                    )}
-                  </div>
-                  <div className="kpi-subtext">
-                    {topWard ? `${topWard.totalKitsCollected.toLocaleString()} Kits • Lead: ${topWard.wardLeadName}` : 'Computing totals...'}
-                  </div>
-                </div>
-                <div className="kpi-icon-bubble">
-                  <Trophy size={28} />
-                </div>
-              </div>
-            </div>
-
-            {/* CONTROLS: Count Pill, Search & Sort */}
-            <div className="filter-bar">
-              <div className="filter-summary-pill">
-                <span className="summary-count">{displayedWards.length}</span>
-                <span>{displayedWards.length === 1 ? 'Ward' : 'Wards'} Ranked</span>
-              </div>
-
-              <div className="filter-controls-right">
-                {/* Sort Selector: Kits, Donors, Sponsors, Target % */}
-                <div className="sort-box">
-                  <ArrowUpDown size={14} className="sort-icon" />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="sort-select"
-                    aria-label="Sort wards"
-                  >
-                    <option value="kits">Sort: Highest Kits</option>
-                    <option value="donors">Sort: Most Donors</option>
-                    <option value="wardNum">Sort: Ward Number</option>
-                  </select>
-                </div>
-
-                {/* Instant Search Box */}
-                <div className="search-box">
-                  <Search size={15} className="search-icon" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search ward or lead name..."
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="search-clear-btn"
-                      title="Clear search"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* LOADING INDICATOR */}
-            {loading && !data && (
-              <div className="kiosk-state-card">
-                <RefreshCw size={36} className="spin-icon" style={{ color: '#008A2E', margin: '0 auto 16px' }} />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>Loading Ward Standings...</h3>
-                <p style={{ fontSize: '0.85rem', color: '#64748B', marginTop: 4 }}>
-                  Connecting to live campaign tally
-                </p>
-              </div>
-            )}
-
-            {/* ERROR MESSAGE */}
-            {error && (
-              <div className="kiosk-error-card">
-                <p style={{ color: '#DC2626', fontWeight: 700 }}>{error}</p>
+            {displayedWards.length === 0 ? (
+              <div className="pw-state-box">
+                <p>No wards match your search or filter.</p>
                 <button
                   type="button"
-                  onClick={() => fetchWardsData(false)}
-                  className="kiosk-btn"
-                  style={{ marginTop: 12, background: '#DC2626', color: '#FFFFFF', border: 'none' }}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setQuickFilter('all');
+                  }}
+                  className="pw-btn-reset-filter"
                 >
-                  Retry
+                  Clear Filters
                 </button>
               </div>
-            )}
+            ) : (
+              <div className="pw-cards-grid">
+                {displayedWards.map((ward) => {
+                  const isRank1 = ward.position === 1;
+                  const isRank2 = ward.position === 2;
+                  const isRank3 = ward.position === 3;
+                  const isPodium = isRank1 || isRank2 || isRank3;
+                  const progressRatio = Math.min(100, Math.round((ward.totalKitsCollected / maxKitsCollected) * 100));
+                  const isTargetAchieved = (ward.achievementPercentage || 0) >= 100;
 
-            {/* NO RESULTS */}
-            {!loading && displayedWards.length === 0 && (
-              <div className="kiosk-state-card">
-                <p style={{ color: '#334155', fontSize: '1.1rem', fontWeight: 700 }}>No wards matched your search</p>
-                <p style={{ color: '#64748B', fontSize: '0.85rem', marginTop: 6 }}>Try clearing your search query</p>
-              </div>
-            )}
+                  return (
+                    <div
+                      key={ward.wardNumber}
+                      className={`pw-ward-card ${isRank1 ? 'rank-1' : isRank2 ? 'rank-2' : isRank3 ? 'rank-3' : 'rank-standard'}`}
+                    >
+                      {/* Top Accent Stripe for Top 3 */}
+                      {isPodium && (
+                        <div className={`pw-card-accent-bar ${isRank1 ? 'gold' : isRank2 ? 'silver' : 'bronze'}`} />
+                      )}
 
-            {/* WARDS CARDS GRID: Kit Counts, Donors & Sponsors Distinctly Displayed */}
-            <div className="wards-grid">
-              {displayedWards.map((ward) => {
-                const isRank1 = ward.position === 1;
-                const isRank2 = ward.position === 2;
-                const isRank3 = ward.position === 3;
-                const rankClass = isRank1 ? 'rank-1' : isRank2 ? 'rank-2' : isRank3 ? 'rank-3' : 'rank-other';
-
-                return (
-                  <div
-                    key={ward.wardNumber}
-                    className={`ward-card ${rankClass}`}
-                  >
-                    <div>
-                      {/* Card Header: Rank & Total Kits Count Pill */}
-                      <div className="ward-card-header">
-                        <div className="ward-rank-box">
-                          <div className="rank-badge-icon">
-                            {isRank1 ? (
-                              <Trophy size={22} style={{ color: '#D97706' }} />
-                            ) : isRank2 ? (
-                              <Medal size={22} style={{ color: '#475569' }} />
-                            ) : isRank3 ? (
-                              <Award size={22} style={{ color: '#EA580C' }} />
-                            ) : (
-                              <span>#{ward.position}</span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="rank-tag">
-                              {isRank1 ? 'Gold • Rank 1' : isRank2 ? 'Silver • Rank 2' : isRank3 ? 'Bronze • Rank 3' : `Rank #${ward.position}`}
-                            </div>
-                          </div>
+                      {/* Header Row: Rank Badge (Left) & Hero Kits Counter (Right) */}
+                      <div className="pw-card-header">
+                        <div className={`pw-rank-badge ${isRank1 ? 'gold' : isRank2 ? 'silver' : isRank3 ? 'bronze' : 'standard'}`}>
+                          {isRank1 ? <Trophy size={14} /> : isRank2 ? <Medal size={14} /> : isRank3 ? <Award size={14} /> : null}
+                          <span className="pw-rank-badge-num">#{ward.position}</span>
+                          {isPodium && (
+                            <span className="pw-rank-badge-label">
+                              {isRank1 ? 'Gold' : isRank2 ? 'Silver' : 'Bronze'}
+                            </span>
+                          )}
                         </div>
 
-                        {/* Total Kits Collected Pill (Strictly Kit Count) */}
-                        <div className="kit-pill">
-                          <div className="kit-pill-val">
-                            <Package size={18} />
-                            <span>{ward.totalKitsCollected.toLocaleString()}</span>
+                        {/* Hero Metric Pill */}
+                        <div className="pw-hero-kit-pill">
+                          <Package size={17} className="pw-hero-kit-icon" />
+                          <div className="pw-hero-kit-data">
+                            <span className="pw-hero-kit-num">{ward.totalKitsCollected.toLocaleString()}</span>
+                            <span className="pw-hero-kit-unit">KITS</span>
                           </div>
-                          <div className="kit-pill-label">Kits Sponsored</div>
                         </div>
                       </div>
 
-                      {/* Ward Title */}
-                      <h3 className="ward-name-title">{ward.wardName}</h3>
-                      <div className="ward-number-sub">Ward {ward.wardNumber}</div>
+                      {/* Title & Ward Identity */}
+                      <div className="pw-card-identity">
+                        <div className="pw-card-title-row">
+                          <h3 className="pw-card-title">{ward.wardName}</h3>
+                          <span className="pw-card-ward-pill">Ward {ward.wardNumber}</span>
+                        </div>
+                      </div>
 
-                      {/* Metrics Box: Ward Lead & Donors Count */}
-                      <div className="metrics-box">
-                        {/* Ward Lead */}
-                        <div className="metric-row">
-                          <div className="metric-label">
-                            <UserCheck size={15} style={{ color: '#0284C7' }} />
-                            <span>Ward Lead:</span>
+                      {/* Two-Column Mini Stat Cells (Lead & Donors) */}
+                      <div className="pw-card-stat-cells">
+                        {/* Cell 1: Ward Lead */}
+                        <div className="pw-stat-cell">
+                          <div className="pw-cell-icon blue">
+                            <UserCheck size={14} />
                           </div>
-                          <div className="metric-value-bold" title={ward.wardLeadName}>
-                            {ward.wardLeadName || 'Ward Committee Lead'}
+                          <div className="pw-cell-content">
+                            <span className="pw-cell-value" title={ward.wardLeadName || 'Ward Committee Lead'}>
+                              {ward.wardLeadName || 'Committee'}
+                            </span>
+                            <span className="pw-cell-label">Ward Lead</span>
                           </div>
                         </div>
 
-                        {/* Kit Donors Count */}
-                        <div className="metric-row">
-                          <div className="metric-label">
-                            <Users size={15} style={{ color: '#008A2E' }} />
-                            <span>Donors:</span>
+                        {/* Cell 2: Donors & Sponsors */}
+                        <div className="pw-stat-cell">
+                          <div className="pw-cell-icon emerald">
+                            <Users size={14} />
                           </div>
-                          <div className="metric-value-highlight">
-                            {ward.donorsCount.toLocaleString()} Donors
+                          <div className="pw-cell-content">
+                            <span className="pw-cell-value">
+                              {ward.donorsCount.toLocaleString()} Donors
+                            </span>
+                            <span className="pw-cell-label">
+                              {ward.sponsorsCount > 0 ? `+${ward.sponsorsCount} Sponsors` : 'Contributions'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Achievement & Progress Section */}
+                      <div className="pw-card-progress-section">
+                        <div className="pw-progress-header">
+                          <div className="pw-target-label">
+                            <Target size={12} className="pw-target-icon" />
+                            <span>
+                              Target: <strong>{ward.targetKits > 0 ? `${ward.targetKits} Kits` : 'Relative'}</strong>
+                            </span>
+                          </div>
+
+                          <div className={`pw-progress-badge ${isTargetAchieved ? 'achieved' : ''}`}>
+                            {isTargetAchieved && <TrendingUp size={11} />}
+                            <span>{ward.achievementPercentage ? `${ward.achievementPercentage}%` : `${progressRatio}%`}</span>
                           </div>
                         </div>
 
-                        {/* Item Sponsors Count (only shown when sponsors exist) */}
-                        {ward.sponsorsCount > 0 && (
-                          <div className="metric-row">
-                            <div className="metric-label">
-                              <Award size={15} style={{ color: '#D97706' }} />
-                              <span>Sponsors:</span>
-                            </div>
-                            <div className="metric-value-bold" style={{ color: '#D97706' }}>
-                              {ward.sponsorsCount.toLocaleString()} Sponsors
-                            </div>
-                          </div>
-                        )}
+                        <div className="pw-progress-track">
+                          <div
+                            className={`pw-progress-fill ${isRank1 ? 'gold' : isTargetAchieved ? 'achieved' : 'standard'}`}
+                            style={{ width: `${Math.min(100, Math.max(6, progressRatio))}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 
         {/* ========================================================
-            TAB 2: TOP 10 VOLUNTEERS VIEW
+            6. MAIN CONTENT: VOLUNTEERS CARDS GRID
             ======================================================== */}
-        {activeView === 'volunteers' && (
+        {activeTab === 'volunteers' && !loading && (
           <>
-
-            {/* CONTROLS: Count Pill & Search */}
-            <div className="filter-bar">
-              <div className="filter-summary-pill">
-                <span className="summary-count">{displayedVolunteers.length}</span>
-                <span>{displayedVolunteers.length === 1 ? 'Volunteer' : 'Volunteers'} Listed (Top 10)</span>
+            {displayedVolunteers.length === 0 ? (
+              <div className="pw-state-box">
+                <p>No volunteers match your search.</p>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="pw-btn-reset-filter"
+                >
+                  Clear Search
+                </button>
               </div>
+            ) : (
+              <div className="pw-cards-grid">
+                {displayedVolunteers.map((vol) => {
+                  const isRank1 = vol.position === 1;
+                  const isRank2 = vol.position === 2;
+                  const isRank3 = vol.position === 3;
+                  const isPodium = isRank1 || isRank2 || isRank3;
 
-              <div className="filter-controls-right">
-                <div className="search-box">
-                  <Search size={15} className="search-icon" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search volunteer, ward, or lead..."
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="search-clear-btn"
-                      title="Clear search"
+                  return (
+                    <div
+                      key={vol.userId || vol.position}
+                      className={`pw-ward-card ${isRank1 ? 'rank-1' : isRank2 ? 'rank-2' : isRank3 ? 'rank-3' : 'rank-standard'}`}
                     >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+                      {/* Top Accent Stripe for Top 3 */}
+                      {isPodium && (
+                        <div className={`pw-card-accent-bar ${isRank1 ? 'gold' : isRank2 ? 'silver' : 'bronze'}`} />
+                      )}
 
-            {/* LOADING STATE */}
-            {loading && !data && (
-              <div className="kiosk-state-card">
-                <RefreshCw size={36} className="spin-icon" style={{ color: '#008A2E', margin: '0 auto 16px' }} />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>Loading Volunteer Standings...</h3>
-                <p style={{ fontSize: '0.85rem', color: '#64748B', marginTop: 4 }}>
-                  Retrieving top fundraiser tallies
-                </p>
-              </div>
-            )}
-
-            {/* NO VOLUNTEERS */}
-            {!loading && displayedVolunteers.length === 0 && (
-              <div className="kiosk-state-card">
-                <p style={{ color: '#334155', fontSize: '1.1rem', fontWeight: 700 }}>No volunteers matched your search</p>
-                <p style={{ color: '#64748B', fontSize: '0.85rem', marginTop: 6 }}>Try clearing your search query</p>
-              </div>
-            )}
-
-            {/* VOLUNTEERS CARDS GRID: Clean & Public-Focused */}
-            <div className="wards-grid">
-              {displayedVolunteers.map((vol) => {
-                const isRank1 = vol.position === 1;
-                const isRank2 = vol.position === 2;
-                const isRank3 = vol.position === 3;
-                const rankClass = isRank1 ? 'rank-1' : isRank2 ? 'rank-2' : isRank3 ? 'rank-3' : 'rank-other';
-
-                return (
-                  <div
-                    key={vol.userId || vol.position}
-                    className={`ward-card ${rankClass}`}
-                  >
-                    <div>
-                      {/* Card Header: Rank & Total Kits Count Pill */}
-                      <div className="ward-card-header">
-                        <div className="ward-rank-box">
-                          <div className="rank-badge-icon">
-                            {isRank1 ? (
-                              <Trophy size={22} style={{ color: '#D97706' }} />
-                            ) : isRank2 ? (
-                              <Medal size={22} style={{ color: '#475569' }} />
-                            ) : isRank3 ? (
-                              <Award size={22} style={{ color: '#EA580C' }} />
-                            ) : (
-                              <span>#{vol.position}</span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="rank-tag">
-                              {isRank1 ? 'Gold • Rank 1' : isRank2 ? 'Silver • Rank 2' : isRank3 ? 'Bronze • Rank 3' : `Rank #${vol.position}`}
-                            </div>
-                          </div>
+                      {/* Header Row: Rank Badge & Hero Kit Count */}
+                      <div className="pw-card-header">
+                        <div className={`pw-rank-badge ${isRank1 ? 'gold' : isRank2 ? 'silver' : isRank3 ? 'bronze' : 'standard'}`}>
+                          {isRank1 ? <Trophy size={14} /> : isRank2 ? <Medal size={14} /> : isRank3 ? <Award size={14} /> : null}
+                          <span className="pw-rank-badge-num">#{vol.position}</span>
+                          {isPodium && (
+                            <span className="pw-rank-badge-label">
+                              {isRank1 ? 'Gold' : isRank2 ? 'Silver' : 'Bronze'}
+                            </span>
+                          )}
                         </div>
 
-                        {/* Total Kits Sponsored Pill */}
-                        <div className="kit-pill">
-                          <div className="kit-pill-val">
-                            <Package size={18} />
-                            <span>{vol.totalKitsCollected.toLocaleString()}</span>
+                        <div className="pw-hero-kit-pill">
+                          <Package size={17} className="pw-hero-kit-icon" />
+                          <div className="pw-hero-kit-data">
+                            <span className="pw-hero-kit-num">{vol.totalKitsCollected.toLocaleString()}</span>
+                            <span className="pw-hero-kit-unit">KITS</span>
                           </div>
-                          <div className="kit-pill-label">Kits Sponsored</div>
                         </div>
                       </div>
 
-                      {/* Volunteer Name */}
-                      <h3 className="ward-name-title" style={{ marginBottom: 14 }}>{vol.name}</h3>
+                      {/* Volunteer Name & Assigned Ward */}
+                      <div className="pw-card-identity">
+                        <div className="pw-card-title-row">
+                          <h3 className="pw-card-title">{vol.name}</h3>
+                          {vol.wardNumber > 0 && (
+                            <span className="pw-card-ward-pill">Ward {vol.wardNumber}</span>
+                          )}
+                        </div>
+                        <div className="pw-volunteer-location">
+                          <MapPin size={12} />
+                          <span>{vol.wardNumber > 0 ? vol.wardName : 'General Volunteer'}</span>
+                        </div>
+                      </div>
 
-                      {/* Metrics Box: Ward, Ward Lead, Donors */}
-                      <div className="metrics-box">
-                        {/* Assigned Ward */}
-                        <div className="metric-row">
-                          <div className="metric-label">
-                            <MapPin size={15} style={{ color: '#008A2E' }} />
-                            <span>Ward:</span>
+                      {/* Stat Cells: Role / Ward Lead & Donors */}
+                      <div className="pw-card-stat-cells">
+                        <div className="pw-stat-cell">
+                          <div className="pw-cell-icon blue">
+                            <UserCheck size={14} />
                           </div>
-                          <div className="metric-value-bold">
-                            {vol.wardNumber > 0 ? `Ward ${vol.wardNumber} • ${vol.wardName}` : 'No Ward Assigned'}
+                          <div className="pw-cell-content">
+                            <span className="pw-cell-value truncate" title={vol.wardLeadName || vol.role}>
+                              {vol.wardLeadName && vol.wardLeadName !== 'No Ward Lead' ? vol.wardLeadName : vol.role}
+                            </span>
+                            <span className="pw-cell-label">
+                              {vol.wardLeadName && vol.wardLeadName !== 'No Ward Lead' ? 'Ward Lead' : 'Role'}
+                            </span>
                           </div>
                         </div>
 
-                        {/* Ward Committee Lead */}
-                        {vol.wardNumber > 0 && vol.wardLeadName && vol.wardLeadName !== 'No Ward Lead' && (
-                          <div className="metric-row">
-                            <div className="metric-label">
-                              <UserCheck size={15} style={{ color: '#0284C7' }} />
-                              <span>Ward Lead:</span>
-                            </div>
-                            <div className="metric-value-bold" title={vol.wardLeadName}>
-                              {vol.wardLeadName}
-                            </div>
+                        <div className="pw-stat-cell">
+                          <div className="pw-cell-icon emerald">
+                            <HeartHandshake size={14} />
                           </div>
-                        )}
-
-                        {/* Kit Donors Count */}
-                        <div className="metric-row">
-                          <div className="metric-label">
-                            <Users size={15} style={{ color: '#008A2E' }} />
-                            <span>Donors:</span>
-                          </div>
-                          <div className="metric-value-highlight">
-                            {vol.donorsCount.toLocaleString()} Donors
+                          <div className="pw-cell-content">
+                            <span className="pw-cell-value">
+                              {vol.donorsCount.toLocaleString()} Donors
+                            </span>
+                            <span className="pw-cell-label">
+                              {vol.sponsorsCount > 0 ? `+${vol.sponsorsCount} Sponsors` : 'Direct Donors'}
+                            </span>
                           </div>
                         </div>
-
-                        {/* Item Sponsors Count (only shown when sponsors exist) */}
-                        {vol.sponsorsCount > 0 && (
-                          <div className="metric-row">
-                            <div className="metric-label">
-                              <Award size={15} style={{ color: '#D97706' }} />
-                              <span>Sponsors:</span>
-                            </div>
-                            <div className="metric-value-bold" style={{ color: '#D97706' }}>
-                              {vol.sponsorsCount.toLocaleString()} Sponsors
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </main>
 
-      {/* FOOTER: Strictly Locked, Display Only */}
-      <footer className="kiosk-footer">
-        <div className="kiosk-footer-inner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ShieldCheck size={16} style={{ color: '#008A2E' }} />
-            <span>Community Relief Campaign • Official Standings Scoreboard</span>
+      {/* ========================================================
+          7. CLEAN COMPACT FOOTER
+          ======================================================== */}
+      <footer className="pw-footer">
+        <div className="pw-footer-inner">
+          <div className="pw-footer-left">
+            <ShieldCheck size={15} className="pw-text-emerald" />
+            <span>Community Relief Campaign • Official Live Scoreboard</span>
           </div>
-          <div>
-            Last Updated: {lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          <div className="pw-footer-right">
+            Auto-refreshes every 30s • Authoritative Azure Cloud Sync
           </div>
         </div>
       </footer>
