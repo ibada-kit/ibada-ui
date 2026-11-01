@@ -233,9 +233,7 @@ export const PublicWardsView: React.FC = () => {
     }
     return list.sort((a, b) => {
       if (b.amountPaid !== a.amountPaid) return b.amountPaid - a.amountPaid;
-      const dateA = a.transactionDate ? new Date(a.transactionDate).getTime() : 0;
-      const dateB = b.transactionDate ? new Date(b.transactionDate).getTime() : 0;
-      return dateB - dateA;
+      return a.position - b.position;
     });
   }, [top10KitPurchases, searchQuery]);
 
@@ -247,15 +245,12 @@ export const PublicWardsView: React.FC = () => {
         (s) =>
           s.firmName.toLowerCase().includes(q) ||
           s.wardName.toLowerCase().includes(q) ||
-          s.itemName.toLowerCase().includes(q) ||
           (s.wardNumber > 0 && `ward ${s.wardNumber}`.includes(q))
       );
     }
     return list.sort((a, b) => {
       if (b.amountPaid !== a.amountPaid) return b.amountPaid - a.amountPaid;
-      const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
-      const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
-      return dateB - dateA;
+      return a.position - b.position;
     });
   }, [top10SponsorFirms, searchQuery]);
 
@@ -933,8 +928,6 @@ export const PublicWardsView: React.FC = () => {
                               <th>Ward</th>
                               <th>Kits</th>
                               <th>Amount Paid</th>
-                              <th>Status</th>
-                              <th>Date</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -942,7 +935,6 @@ export const PublicWardsView: React.FC = () => {
                               const isRank1 = item.position === 1;
                               const isRank2 = item.position === 2;
                               const isRank3 = item.position === 3;
-                              const isFullyPaid = item.balanceAmount <= 0;
 
                               return (
                                 <tr key={`kit-list-${item.position}-${item.donorName}`}>
@@ -970,16 +962,6 @@ export const PublicWardsView: React.FC = () => {
                                   <td>
                                     <span className="pw-table-amount">
                                       ₹{item.amountPaid.toLocaleString()}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className={`pw-status-pill ${isFullyPaid ? 'paid' : 'partial'}`}>
-                                      {isFullyPaid ? 'Fully Paid' : `Partial (₹${item.balanceAmount.toLocaleString()} Due)`}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className="pw-table-date">
-                                      {formatDateDisplay(item.transactionDate) || '---'}
                                     </span>
                                   </td>
                                 </tr>
@@ -1022,10 +1004,7 @@ export const PublicWardsView: React.FC = () => {
                               <th style={{ width: '64px' }}>Rank</th>
                               <th>Firm / Organization</th>
                               <th>Ward</th>
-                              <th>Sponsored Item</th>
                               <th>Amount Paid</th>
-                              <th>Status</th>
-                              <th>Date</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1033,7 +1012,6 @@ export const PublicWardsView: React.FC = () => {
                               const isRank1 = item.position === 1;
                               const isRank2 = item.position === 2;
                               const isRank3 = item.position === 3;
-                              const isFullyPaid = item.balanceAmount <= 0;
 
                               return (
                                 <tr key={`spon-list-${item.position}-${item.firmName}`}>
@@ -1054,23 +1032,8 @@ export const PublicWardsView: React.FC = () => {
                                     </span>
                                   </td>
                                   <td>
-                                    <span className="pw-table-kits">
-                                      {item.quantity > 1 ? `${item.quantity}x ` : ''}<strong>{item.itemName}</strong>
-                                    </span>
-                                  </td>
-                                  <td>
                                     <span className="pw-table-amount">
                                       ₹{item.amountPaid.toLocaleString()}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className={`pw-status-pill ${isFullyPaid ? 'paid' : 'partial'}`}>
-                                      {isFullyPaid ? 'Fully Paid' : `Partial (₹${item.balanceAmount.toLocaleString()} Due)`}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className="pw-table-date">
-                                      {formatDateDisplay(item.createdDate) || '---'}
                                     </span>
                                   </td>
                                 </tr>

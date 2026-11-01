@@ -402,10 +402,6 @@ export interface PublicKitDonorRank {
   wardName: string;
   kitCount: number;
   amountPaid: number;
-  totalAmount: number;
-  balanceAmount: number;
-  paymentStatus: string;
-  transactionDate?: string;
   rankBadge: string;
 }
 
@@ -414,13 +410,7 @@ export interface PublicSponsorFirmRank {
   firmName: string;
   wardNumber: number;
   wardName: string;
-  itemName: string;
-  quantity: number;
   amountPaid: number;
-  totalAmount: number;
-  balanceAmount: number;
-  paymentStatus: string;
-  createdDate?: string;
   rankBadge: string;
 }
 
