@@ -395,12 +395,43 @@ export interface PublicVolunteerRank {
   rankBadge: string;
 }
 
+export interface PublicKitDonorRank {
+  position: number;
+  donorName: string;
+  wardNumber: number;
+  wardName: string;
+  kitCount: number;
+  amountPaid: number;
+  totalAmount: number;
+  balanceAmount: number;
+  paymentStatus: string;
+  transactionDate?: string;
+  rankBadge: string;
+}
+
+export interface PublicSponsorFirmRank {
+  position: number;
+  firmName: string;
+  wardNumber: number;
+  wardName: string;
+  itemName: string;
+  quantity: number;
+  amountPaid: number;
+  totalAmount: number;
+  balanceAmount: number;
+  paymentStatus: string;
+  createdDate?: string;
+  rankBadge: string;
+}
+
 export interface PublicWardsResponse {
   totalKitsCollected: number;
   totalDonors: number;
   totalSponsors: number;
   wards: PublicWardRank[];
   topVolunteers?: PublicVolunteerRank[];
+  topKitDonors?: PublicKitDonorRank[];
+  topSponsorFirms?: PublicSponsorFirmRank[];
   generatedAt: string;
   filterPeriod?: string;
   filterFromDate?: string | null;
