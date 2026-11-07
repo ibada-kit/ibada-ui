@@ -1352,6 +1352,7 @@ export const sponsorshipsApi = {
 // -----------------------------------------------------------
 export interface KitPriceInfo {
   kitPrice: number;
+  blockWardKitCollection?: boolean;
   modifiedDate: string;
   modifiedBy: string;
 }
@@ -1397,6 +1398,23 @@ export const settingsApi = {
     if (data && data.kitPrice > 0) {
       setKitUnitPrice(data.kitPrice);
     }
+    return data;
+  },
+
+  // Updates status for blocking ward kit collection (Admin only)
+  updateWardKitCollectionStatus: async (token: string, blocked: boolean): Promise<KitPriceInfo> => {
+    const res = await fetch(`${API_BASE_URL}/Settings/ward-kit-collection-status`, {
+      method: 'PUT',
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ blockWardKitCollection: blocked })
+    });
+
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res, 'Failed to update ward kit collection status. Please try again.');
+      throw new Error(msg);
+    }
+
+    const data: KitPriceInfo = await res.json();
     return data;
   }
 };

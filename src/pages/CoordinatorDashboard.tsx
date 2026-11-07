@@ -33,6 +33,7 @@ import { formatKitBreakdownWithTotal } from '../utils/kitFormatters';
 interface CoordinatorDashboardProps {
   user: User;
   kitPrice?: number;
+  blockWardKitCollection?: boolean;
   onViewReceipt: (donation: Donation) => void;
   onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
@@ -42,6 +43,7 @@ interface CoordinatorDashboardProps {
 export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
   user,
   kitPrice = getKitUnitPrice(),
+  blockWardKitCollection = false,
   onViewReceipt,
   onViewSponsorshipReceipt,
   onOpenPayBalance,
@@ -968,6 +970,8 @@ export const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({
           )}
           <DonationForm
             kitPrice={kitPrice}
+            blockWardKitCollection={blockWardKitCollection}
+            user={user}
             onSuccess={(donation) => {
               setRecentTransactions(prev => [donation, ...prev]);
               const paid = donation.amountPaid !== undefined ? donation.amountPaid : donation.totalAmount;

@@ -55,6 +55,7 @@ export const App: React.FC = () => {
   const [activePayBalanceDonation, setActivePayBalanceDonation] = useState<Donation | null>(null);
   const [globalKitPrice, setGlobalKitPrice] = useState<number>(() => getKitUnitPrice());
   const [kitPriceInfo, setKitPriceInfo] = useState<KitPriceInfo | null>(null);
+  const [blockWardKitCollection, setBlockWardKitCollection] = useState<boolean>(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleUpdateKitPrice = async (newPrice: number) => {
@@ -69,14 +70,28 @@ export const App: React.FC = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
+  const handleUpdateWardKitCollectionStatus = async (blocked: boolean) => {
+    if (!currentUser?.token) {
+      alert('You must be logged in as Admin to update campaign settings.');
+      return;
+    }
+    const updated = await settingsApi.updateWardKitCollectionStatus(currentUser.token, blocked);
+    setBlockWardKitCollection(Boolean(updated.blockWardKitCollection));
+    setKitPriceInfo(updated);
+    setRefreshKey((prev) => prev + 1);
+  };
+
   useEffect(() => {
-    // Load authoritative kit price and modified date from Azure Table Storage
+    // Load authoritative kit price, block status, and modified date from Azure Table Storage
     settingsApi.getKitPrice()
       .then((info) => {
-        if (info && info.kitPrice > 0) {
-          setGlobalKitPrice(info.kitPrice);
+        if (info) {
+          if (info.kitPrice > 0) {
+            setGlobalKitPrice(info.kitPrice);
+            setKitUnitPrice(info.kitPrice);
+          }
           setKitPriceInfo(info);
-          setKitUnitPrice(info.kitPrice);
+          setBlockWardKitCollection(Boolean(info.blockWardKitCollection));
         }
       })
       .catch((err) => {
@@ -249,6 +264,7 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 kitPrice={globalKitPrice}
+                blockWardKitCollection={blockWardKitCollection}
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
@@ -261,6 +277,7 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 kitPrice={globalKitPrice}
+                blockWardKitCollection={blockWardKitCollection}
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
@@ -273,6 +290,7 @@ export const App: React.FC = () => {
                 key={refreshKey}
                 user={currentUser}
                 kitPrice={globalKitPrice}
+                blockWardKitCollection={blockWardKitCollection}
                 onViewReceipt={(don) => setActiveReceipt(don)}
                 onViewSponsorshipReceipt={(spon) => setActiveSponsorshipReceipt(spon)}
                 onOpenPayBalance={(spon) => setActivePayBalanceSponsorship(spon)}
@@ -287,7 +305,9 @@ export const App: React.FC = () => {
                   kitPrice={globalKitPrice}
                   kitPriceModifiedDate={kitPriceInfo?.modifiedDate}
                   kitPriceModifiedBy={kitPriceInfo?.modifiedBy}
+                  blockWardKitCollection={blockWardKitCollection}
                   onUpdateKitPrice={handleUpdateKitPrice}
+                  onUpdateWardKitCollectionStatus={handleUpdateWardKitCollectionStatus}
                 />
               ) : (
                 <HomeScreen
@@ -303,6 +323,7 @@ export const App: React.FC = () => {
           {isRecordModalOpen && (
             <RecordDonationModal
               kitPrice={globalKitPrice}
+              blockWardKitCollection={blockWardKitCollection}
               onClose={() => setIsRecordModalOpen(false)}
               onDonationRecorded={handleDonationRecorded}
               onSponsorshipRecorded={(spon) => {

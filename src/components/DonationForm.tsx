@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2, Clock, BookmarkCheck, GraduationCap, Plus, Minus } from 'lucide-react';
-import { donationsApi, getKitUnitPrice } from '../services/api';
-import type { Donation, SponsorshipRecord, PaymentOption, PaymentMode } from '../types';
+import { Package, User, CheckCircle, AlertCircle, RefreshCw, Building2, Clock, BookmarkCheck, GraduationCap, Plus, Minus, Lock, ShieldAlert } from 'lucide-react';
+import { donationsApi, getKitUnitPrice, getCurrentUser } from '../services/api';
+import type { Donation, SponsorshipRecord, PaymentOption, PaymentMode, User as UserType } from '../types';
 import { SponsorshipForm } from './SponsorshipForm';
 import { SponsorshipReceiptModal } from './SponsorshipReceiptModal';
 import { ReceiptModal } from './ReceiptModal';
@@ -10,6 +10,8 @@ import { CollectBalanceModal } from './CollectBalanceModal';
 interface DonationFormProps {
   kitPrice?: number;
   initialMode?: 'kit' | 'sponsorship';
+  blockWardKitCollection?: boolean;
+  user?: UserType | null;
   onSuccess?: (donation: Donation) => void;
   onSponsorshipSuccess?: (sponsorship: SponsorshipRecord) => void;
   onCancel?: () => void;
@@ -18,11 +20,32 @@ interface DonationFormProps {
 export const DonationForm: React.FC<DonationFormProps> = ({
   kitPrice = getKitUnitPrice(),
   initialMode = 'kit',
+  blockWardKitCollection = false,
+  user,
   onSuccess,
   onSponsorshipSuccess,
   onCancel
 }) => {
-  const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>(initialMode);
+  const currentUser = user !== undefined ? user : getCurrentUser();
+  const isWardUser = Boolean(
+    currentUser && (
+      currentUser.role === 'WardCommittee' ||
+      (currentUser.role === 'Volunteer' && (currentUser.wardNumber ?? 0) > 0)
+    )
+  );
+  const isKitBlocked = Boolean(isWardUser && blockWardKitCollection);
+
+  const [formMode, setFormMode] = useState<'kit' | 'sponsorship'>(() => {
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const urlMode = params?.get('mode');
+    if (urlMode === 'kit' || urlMode === 'sponsorship') {
+      return urlMode;
+    }
+    if (isKitBlocked) {
+      return 'sponsorship';
+    }
+    return initialMode;
+  });
   const [activeSponsorshipReceipt, setActiveSponsorshipReceipt] = useState<SponsorshipRecord | null>(null);
   const [activeDonationReceipt, setActiveDonationReceipt] = useState<Donation | null>(null);
   const [balanceDonationToCollect, setBalanceDonationToCollect] = useState<Donation | null>(null);
@@ -78,6 +101,11 @@ export const DonationForm: React.FC<DonationFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (isKitBlocked) {
+      setError('Relief Kit collection is currently closed for ward teams. Please record contributions as Sponsorship.');
+      return;
+    }
 
     const cleanPhone = whatsAppNumber.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
@@ -170,28 +198,55 @@ export const DonationForm: React.FC<DonationFormProps> = ({
         <button
           id="btn-switch-kit-donation"
           type="button"
-          onClick={() => setFormMode('kit')}
+          disabled={isKitBlocked}
+          onClick={() => {
+            if (!isKitBlocked) setFormMode('kit');
+          }}
+          title={isKitBlocked ? 'Relief Kit collection has closed for ward teams. Please record as Sponsorship.' : 'Relief Kit Donation'}
           style={{
             flex: 1,
             minWidth: 0,
             padding: '10px clamp(8px, 2.5vw, 14px)',
             borderRadius: 'var(--radius-lg)',
-            border: formMode === 'kit' ? '1px solid #A5D6B8' : 'none',
-            background: formMode === 'kit' ? '#EBF7EE' : 'transparent',
-            color: formMode === 'kit' ? '#008A2E' : '#64748B',
+            border: isKitBlocked 
+              ? '1px dashed #CBD5E1' 
+              : (formMode === 'kit' ? '1px solid #A5D6B8' : 'none'),
+            background: isKitBlocked 
+              ? '#F8FAFC' 
+              : (formMode === 'kit' ? '#EBF7EE' : 'transparent'),
+            color: isKitBlocked 
+              ? '#94A3B8' 
+              : (formMode === 'kit' ? '#008A2E' : '#64748B'),
             fontWeight: 800,
             fontSize: 'clamp(0.8rem, 2.8vw, 0.88rem)',
-            cursor: 'pointer',
+            cursor: isKitBlocked ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 6,
             transition: 'all 0.15s ease',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            opacity: isKitBlocked ? 0.75 : 1
           }}
         >
           <Package size={17} style={{ flexShrink: 0 }} />
           <span>Relief Kit Donation</span>
+          {isKitBlocked && (
+            <span style={{
+              fontSize: '0.64rem',
+              fontWeight: 800,
+              padding: '2px 6px',
+              borderRadius: 4,
+              background: '#FEE2E2',
+              color: '#DC2626',
+              border: '1px solid #FECACA',
+              marginLeft: 4,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase'
+            }}>
+              Closed
+            </span>
+          )}
         </button>
 
         <button
@@ -230,6 +285,109 @@ export const DonationForm: React.FC<DonationFormProps> = ({
           }}
           onCancel={onCancel}
         />
+      ) : isKitBlocked ? (
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 'var(--radius-xl)',
+          padding: '36px 24px',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: 'var(--shadow-sm)',
+          textAlign: 'center',
+          maxWidth: 580,
+          margin: '0 auto'
+        }}>
+          <div style={{
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
+            background: '#FEF2F2',
+            border: '2px solid #FECACA',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#DC2626',
+            margin: '0 auto 16px auto'
+          }}>
+            <Lock size={28} />
+          </div>
+
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 12px',
+            borderRadius: 20,
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            color: '#B91C1C',
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            marginBottom: 12
+          }}>
+            <ShieldAlert size={14} />
+            <span>Kit Donation is Closed for Ward Teams</span>
+          </div>
+
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: 800,
+            color: '#0F172A',
+            marginBottom: 10
+          }}>
+            Relief Kit Collection Target Achieved!
+          </h2>
+
+          <p style={{
+            fontSize: '0.88rem',
+            color: '#475569',
+            lineHeight: 1.6,
+            marginBottom: 20,
+            maxWidth: 480,
+            marginLeft: 'auto',
+            marginRight: 'auto'
+          }}>
+            All required relief food kits for the campaign have been collected! New kit donations are currently closed for ward-level teams. You can now exclusively collect donations as <strong>Sponsorships</strong>.
+          </p>
+
+          <div style={{
+            background: '#F0FDF4',
+            border: '1px solid #BBF7D0',
+            borderRadius: 12,
+            padding: '14px 16px',
+            textAlign: 'left',
+            marginBottom: 24,
+            fontSize: '0.82rem',
+            color: '#166534',
+            lineHeight: 1.5
+          }}>
+            <strong style={{ display: 'block', marginBottom: 4, color: '#14532D', fontSize: '0.85rem' }}>
+              ✓ Outstanding Balance Collection is Still Open:
+            </strong>
+            If previous donors committed to kit donations and need to pay their remaining balance, you can still collect their balance payment through the <em>"Outstanding Balances"</em> section on your dashboard.
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setFormMode('sponsorship')}
+            className="btn-primary"
+            style={{
+              width: '100%',
+              padding: '12px 20px',
+              background: 'linear-gradient(135deg, #2C82C9 0%, #1D4ED8 100%)',
+              fontWeight: 800,
+              fontSize: '0.92rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              borderRadius: 10,
+              boxShadow: '0 4px 12px rgba(44, 130, 201, 0.25)'
+            }}
+          >
+            <Building2 size={18} />
+            <span>Switch to Sponsorship Collection</span>
+          </button>
+        </div>
       ) : (
         <div style={{
           background: '#FFFFFF',

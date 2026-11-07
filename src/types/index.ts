@@ -432,3 +432,10 @@ export interface PublicWardsResponse {
   topperVolunteer?: PublicVolunteerRank | null;
 }
 
+export interface KitPriceInfo {
+  kitPrice: number;
+  blockWardKitCollection?: boolean;
+  modifiedDate: string;
+  modifiedBy: string;
+}
+
