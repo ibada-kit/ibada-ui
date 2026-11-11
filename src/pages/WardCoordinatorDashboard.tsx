@@ -40,6 +40,7 @@ import { formatKitBreakdownWithTotal } from '../utils/kitFormatters';
 interface WardCoordinatorDashboardProps {
   user: User;
   kitPrice?: number;
+  blockWardKitCollection?: boolean;
   onViewReceipt: (donation: Donation) => void;
   onViewSponsorshipReceipt?: (sponsorship: SponsorshipRecord) => void;
   onOpenPayBalance?: (sponsorship: SponsorshipRecord) => void;
@@ -49,6 +50,7 @@ interface WardCoordinatorDashboardProps {
 export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> = ({
   user,
   kitPrice = getKitUnitPrice(),
+  blockWardKitCollection = false,
   onViewReceipt,
   onViewSponsorshipReceipt,
   onOpenPayBalance,
@@ -1265,6 +1267,9 @@ export const WardCoordinatorDashboard: React.FC<WardCoordinatorDashboardProps> =
           )}
           <DonationForm
             kitPrice={kitPrice}
+            blockWardKitCollection={blockWardKitCollection}
+            user={user}
+            initialMode={blockWardKitCollection ? 'sponsorship' : 'kit'}
             onSuccess={(donation) => {
               setWardDonations(prev => [donation, ...prev]);
               const paid = donation.amountPaid !== undefined ? donation.amountPaid : donation.totalAmount;

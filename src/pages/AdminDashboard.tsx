@@ -23,7 +23,9 @@ import {
   CheckCircle2,
   XCircle,
   UserCheck,
-  UserX
+  UserX,
+  Lock,
+  Package
 } from 'lucide-react';
 import { ResetPasswordModal, type ResetTargetUser } from '../components/ResetPasswordModal';
 import { SponsorshipLeaderboardView } from '../components/SponsorshipLeaderboardView';
@@ -36,7 +38,9 @@ interface AdminDashboardProps {
   kitPrice: number;
   kitPriceModifiedDate?: string;
   kitPriceModifiedBy?: string;
+  blockWardKitCollection?: boolean;
   onUpdateKitPrice: (price: number) => Promise<void> | void;
+  onUpdateWardKitCollectionStatus?: (blocked: boolean) => Promise<void> | void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -44,13 +48,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   kitPrice,
   kitPriceModifiedDate,
   kitPriceModifiedBy,
-  onUpdateKitPrice
+  blockWardKitCollection = false,
+  onUpdateKitPrice,
+  onUpdateWardKitCollectionStatus
 }) => {
   const { wards: wardOptions } = useWards();
   const [activeTab, setActiveTab] = useState<'users' | 'targets' | 'reports' | 'sponsorships' | 'settings'>('users');
   
   const [coordinators, setCoordinators] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
   // User Management Filter & Search State
@@ -429,6 +436,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       } finally {
         setIsSavingPrice(false);
       }
+    }
+  };
+
+  // Handle Ward Kit Collection Toggle (persisted in Azure Table Storage)
+  const handleToggleWardKitCollection = async () => {
+    if (!onUpdateWardKitCollectionStatus) return;
+    const nextStatus = !blockWardKitCollection;
+    const confirmMessage = nextStatus
+      ? 'Are you sure you want to BLOCK Relief Kit collections for all Ward Coordinators and Ward Volunteers? They will be guided to collect Sponsorships only.'
+      : 'Are you sure you want to RE-OPEN Relief Kit collections for Ward Coordinators and Ward Volunteers?';
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setIsUpdatingStatus(true);
+      await onUpdateWardKitCollectionStatus(nextStatus);
+      setFeedbackMsg({
+        text: nextStatus
+          ? 'Ward Kit Collection is now BLOCKED. Ward teams are accepting sponsorships only.'
+          : 'Ward Kit Collection is now OPEN. Ward teams can collect both kits and sponsorships.',
+        isError: false
+      });
+    } catch (err: any) {
+      setFeedbackMsg({ text: err.message || 'Failed to update kit collection status.', isError: true });
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -1965,6 +1997,92 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               )}
             </div>
           </form>
+
+          {/* Card 2: Ward Relief Kit Collection Control */}
+          <div style={{
+            background: blockWardKitCollection ? '#FFFBFB' : '#F0FDF4',
+            border: blockWardKitCollection ? '1px solid #FECACA' : '1px solid #BBF7D0',
+            borderRadius: 'var(--radius-lg)',
+            padding: 18,
+            maxWidth: 440,
+            marginTop: 18
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                {blockWardKitCollection ? <Lock size={16} color="#DC2626" /> : <Package size={16} color="#16A34A" />}
+                <span>Ward Relief Kit Collection Control</span>
+              </label>
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                padding: '3px 8px',
+                borderRadius: 20,
+                background: blockWardKitCollection ? '#FEE2E2' : '#DCFCE7',
+                color: blockWardKitCollection ? '#DC2626' : '#15803D',
+                border: blockWardKitCollection ? '1px solid #FECACA' : '1px solid #86EFAC',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em'
+              }}>
+                {blockWardKitCollection ? 'Closed / Blocked' : 'Open / Active'}
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.76rem', color: '#475569', lineHeight: 1.5, margin: '6px 0 14px 0' }}>
+              {blockWardKitCollection
+                ? 'Relief kit collections are blocked for Ward Coordinators and Ward Volunteers. They are guided to collect Sponsorships only. Drive coordinators and volunteers remain active.'
+                : 'All teams (Ward and Drive) can actively collect and log Relief Kit donations.'}
+            </p>
+
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: 8,
+              padding: '10px 12px',
+              border: '1px solid var(--border-subtle)',
+              marginBottom: 14,
+              fontSize: '0.74rem',
+              color: '#334155'
+            }}>
+              <strong>Note on Balance Collection:</strong> Outstanding balance collection on already registered kit donations remains available at all times regardless of this toggle.
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleWardKitCollection}
+              disabled={isUpdatingStatus || !onUpdateWardKitCollectionStatus}
+              className="btn-primary"
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                background: blockWardKitCollection ? '#16A34A' : '#DC2626',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.84rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                borderRadius: 8,
+                cursor: 'pointer'
+              }}
+            >
+              {isUpdatingStatus ? (
+                <>
+                  <RefreshCw size={15} className="animate-spin" />
+                  <span>Updating...</span>
+                </>
+              ) : blockWardKitCollection ? (
+                <>
+                  <Package size={15} />
+                  <span>Re-open Ward Kit Collection</span>
+                </>
+              ) : (
+                <>
+                  <Lock size={15} />
+                  <span>Block Ward Kit Collection (Sponsorships Only)</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
